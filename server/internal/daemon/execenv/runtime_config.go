@@ -98,18 +98,21 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	// Inject available repositories section.
 	if len(ctx.Repos) > 0 {
 		b.WriteString("## Repositories\n\n")
-		b.WriteString("The following code repositories are available in this workspace.\n")
-		b.WriteString("Use `multica repo checkout <url>` to check out a repository into your working directory.\n\n")
-		b.WriteString("| URL | Description |\n")
-		b.WriteString("|-----|-------------|\n")
+		b.WriteString("The following code repositories are available in this workspace.\n\n")
 		for _, repo := range ctx.Repos {
 			desc := repo.Description
 			if desc == "" {
 				desc = "—"
 			}
-			fmt.Fprintf(&b, "| %s | %s |\n", repo.URL, desc)
+			if repo.Type == "local" {
+				fmt.Fprintf(&b, "- **Local repo**: `%s` — %s\n", repo.LocalPath, desc)
+				fmt.Fprintf(&b, "  Use `multica repo checkout %s` or `cd %s` to work in this directory.\n", repo.LocalPath, repo.LocalPath)
+			} else {
+				fmt.Fprintf(&b, "- **Remote repo**: `%s` — %s\n", repo.URL, desc)
+				b.WriteString("  Use `multica repo checkout <url>` to check out (creates a git worktree with a dedicated branch).\n")
+			}
 		}
-		b.WriteString("\nThe checkout command creates a git worktree with a dedicated branch. You can check out one or more repos as needed.\n\n")
+		b.WriteString("\n")
 	}
 
 	b.WriteString("### Workflow\n\n")

@@ -261,10 +261,11 @@ func newWorkspaceState(workspaceID string, runtimeIDs []string, reposVersion str
 func repoAllowlist(repos []RepoData) map[string]struct{} {
 	allowed := make(map[string]struct{}, len(repos))
 	for _, repo := range repos {
-		if repo.URL == "" {
-			continue
+		if repo.Type == "local" && repo.LocalPath != "" {
+			allowed["local:"+repo.LocalPath] = struct{}{}
+		} else if repo.URL != "" {
+			allowed[repo.URL] = struct{}{}
 		}
-		allowed[repo.URL] = struct{}{}
 	}
 	return allowed
 }
@@ -277,14 +278,14 @@ func (d *Daemon) setWorkspaceRepoSyncError(workspaceID, syncErr string) {
 	}
 }
 
-func (d *Daemon) workspaceRepoAllowed(workspaceID, repoURL string) bool {
+func (d *Daemon) workspaceRepoAllowed(workspaceID, key string) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	ws, ok := d.workspaces[workspaceID]
 	if !ok {
 		return false
 	}
-	_, allowed := ws.allowedRepoURLs[repoURL]
+	_, allowed := ws.allowedRepoURLs[key]
 	return allowed
 }
 
@@ -1484,11 +1485,15 @@ func mergeUsage(a, b map[string]agent.TokenUsage) map[string]agent.TokenUsage {
 	return merged
 }
 
-// repoDataToInfo converts daemon RepoData to repocache RepoInfo.
+// repoDataToInfo converts daemon RepoData to repocache RepoInfo,
+// skipping local repos (they don't need bare-clone caching).
 func repoDataToInfo(repos []RepoData) []repocache.RepoInfo {
-	info := make([]repocache.RepoInfo, len(repos))
-	for i, r := range repos {
-		info[i] = repocache.RepoInfo{URL: r.URL, Description: r.Description}
+	var info []repocache.RepoInfo
+	for _, r := range repos {
+		if r.Type == "local" {
+			continue
+		}
+		info = append(info, repocache.RepoInfo{URL: r.URL, Description: r.Description})
 	}
 	return info
 }
@@ -1499,7 +1504,12 @@ func convertReposForEnv(repos []RepoData) []execenv.RepoContextForEnv {
 	}
 	result := make([]execenv.RepoContextForEnv, len(repos))
 	for i, r := range repos {
-		result[i] = execenv.RepoContextForEnv{URL: r.URL, Description: r.Description}
+		result[i] = execenv.RepoContextForEnv{
+			URL:         r.URL,
+			Description: r.Description,
+			Type:        r.Type,
+			LocalPath:   r.LocalPath,
+		}
 	}
 	return result
 }

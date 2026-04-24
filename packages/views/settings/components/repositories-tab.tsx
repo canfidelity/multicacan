@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Plus, Trash2 } from "lucide-react";
+import { Save, Trash2, FolderOpen, Globe } from "lucide-react";
 import { Input } from "@multica/ui/components/ui/input";
 import { Button } from "@multica/ui/components/ui/button";
 import { Card, CardContent } from "@multica/ui/components/ui/card";
@@ -48,7 +48,11 @@ export function RepositoriesTab() {
   };
 
   const handleAddRepo = () => {
-    setRepos([...repos, { url: "", description: "" }]);
+    setRepos([...repos, { url: "", description: "", type: "remote" }]);
+  };
+
+  const handleAddLocalRepo = () => {
+    setRepos([...repos, { url: "", description: "", type: "local", local_path: "" }]);
   };
 
   const handleRemoveRepo = (index: number) => {
@@ -56,7 +60,10 @@ export function RepositoriesTab() {
   };
 
   const handleRepoChange = (index: number, field: keyof WorkspaceRepo, value: string) => {
-    setRepos(repos.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+    setRepos(repos.map((r, i) => {
+      if (i !== index) return r;
+      return { ...r, [field]: value };
+    }));
   };
 
   if (!workspace) return null;
@@ -69,27 +76,44 @@ export function RepositoriesTab() {
         <Card>
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Git repositories associated with this workspace. Agents use these to clone and work on code.
+              Repositories associated with this workspace. Add remote repos (cloned by agents) or local repos (agents work directly in the folder).
             </p>
 
             {repos.map((repo, index) => (
               <div key={index} className="flex gap-2">
                 <div className="flex-1 space-y-1.5">
-                  <Input
-                    type="url"
-                    value={repo.url}
-                    onChange={(e) => handleRepoChange(index, "url", e.target.value)}
-                    disabled={!canManageWorkspace}
-                    placeholder="https://git.example.com/org/repo.git"
-                    className="text-sm"
-                  />
+                  {(repo.type === "local") ? (
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={repo.local_path ?? ""}
+                        onChange={(e) => handleRepoChange(index, "local_path", e.target.value)}
+                        disabled={!canManageWorkspace}
+                        placeholder="/Users/you/projects/my-repo"
+                        className="text-sm"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Input
+                        type="url"
+                        value={repo.url}
+                        onChange={(e) => handleRepoChange(index, "url", e.target.value)}
+                        disabled={!canManageWorkspace}
+                        placeholder="https://git.example.com/org/repo.git"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
                   <Input
                     type="text"
                     value={repo.description}
                     onChange={(e) => handleRepoChange(index, "description", e.target.value)}
                     disabled={!canManageWorkspace}
                     placeholder="Description (e.g. Go backend + Next.js frontend)"
-                    className="text-sm"
+                    className="text-sm ml-5.5"
                   />
                 </div>
                 {canManageWorkspace && (
@@ -107,10 +131,16 @@ export function RepositoriesTab() {
 
             {canManageWorkspace && (
               <div className="flex items-center justify-between pt-1">
-                <Button variant="outline" size="sm" onClick={handleAddRepo}>
-                  <Plus className="h-3 w-3" />
-                  Add repository
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleAddRepo}>
+                    <Globe className="h-3 w-3" />
+                    Remote repo
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleAddLocalRepo}>
+                    <FolderOpen className="h-3 w-3" />
+                    Local repo
+                  </Button>
+                </div>
                 <Button
                   size="sm"
                   onClick={handleSave}

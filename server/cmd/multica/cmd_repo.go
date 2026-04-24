@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,9 +19,9 @@ var repoCmd = &cobra.Command{
 }
 
 var repoCheckoutCmd = &cobra.Command{
-	Use:   "checkout <url>",
+	Use:   "checkout <url-or-path>",
 	Short: "Check out a repository into the working directory",
-	Long:  "Creates a git worktree from the daemon's bare clone cache. Used by agents to check out repos on demand.",
+	Long:  "For remote repos, creates a git worktree from the daemon's bare clone cache. For local repos (absolute paths), returns the path directly.",
 	Args:  exactArgs(1),
 	RunE:  runRepoCheckout,
 }
@@ -30,7 +31,7 @@ func init() {
 }
 
 func runRepoCheckout(cmd *cobra.Command, args []string) error {
-	repoURL := args[0]
+	target := args[0]
 
 	daemonPort := os.Getenv("MULTICA_DAEMON_PORT")
 	if daemonPort == "" {
@@ -41,18 +42,24 @@ func runRepoCheckout(cmd *cobra.Command, args []string) error {
 	agentName := os.Getenv("MULTICA_AGENT_NAME")
 	taskID := os.Getenv("MULTICA_TASK_ID")
 
-	// Use current working directory as the checkout target.
 	workDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("get working directory: %w", err)
 	}
 
+	isLocal := strings.HasPrefix(target, "/") || strings.HasPrefix(target, "~/")
+
 	reqBody := map[string]string{
-		"url":          repoURL,
 		"workspace_id": workspaceID,
 		"workdir":      workDir,
 		"agent_name":   agentName,
 		"task_id":      taskID,
+	}
+	if isLocal {
+		reqBody["type"] = "local"
+		reqBody["local_path"] = target
+	} else {
+		reqBody["url"] = target
 	}
 
 	data, err := json.Marshal(reqBody)
@@ -86,7 +93,11 @@ func runRepoCheckout(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintf(os.Stdout, "%s\n", result.Path)
-	fmt.Fprintf(os.Stderr, "Checked out %s → %s (branch: %s)\n", repoURL, result.Path, result.BranchName)
+	if isLocal {
+		fmt.Fprintf(os.Stderr, "Using local repo: %s\n", result.Path)
+	} else {
+		fmt.Fprintf(os.Stderr, "Checked out %s → %s (branch: %s)\n", target, result.Path, result.BranchName)
+	}
 
 	return nil
 }

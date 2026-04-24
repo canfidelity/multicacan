@@ -414,8 +414,8 @@
 
 /* Image NodeView — centered block with max-width cap */
 .rich-text-editor .image-node {
-  display: block !important;
-  text-align: center;
+  display: inline !important;
+  vertical-align: middle;
 }
 
 .rich-text-editor .image-figure {
@@ -423,6 +423,7 @@
   display: inline-block;
   max-width: min(100%, 640px);
   margin: 0.75rem 0;
+  vertical-align: middle;
 }
 
 .rich-text-editor .image-figure.image-selected .image-content {
@@ -435,6 +436,69 @@
   width: 100%;
   height: auto;
   border-radius: var(--radius);
+}
+
+/* Readonly mode: images display large, block-like */
+.rich-text-editor.readonly .image-node {
+  display: block !important;
+  text-align: center;
+}
+
+.rich-text-editor.readonly .image-figure {
+  margin: 0.75rem 0;
+}
+
+/* Editable mode: compact inline thumbnails */
+.rich-text-editor:not(.readonly) .image-figure {
+  max-width: 40px;
+  max-height: 40px;
+  margin: 0 0.125rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.rich-text-editor:not(.readonly) .image-content {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.rich-text-editor:not(.readonly) .image-figure.image-selected .image-content {
+  outline-offset: 0;
+}
+
+.rich-text-editor:not(.readonly) .image-toolbar {
+  top: -0.375rem;
+  right: -0.375rem;
+  padding: 0;
+  gap: 0;
+  background: var(--destructive);
+  border-radius: 9999px;
+  opacity: 0;
+}
+
+.rich-text-editor:not(.readonly) .image-figure:hover .image-toolbar {
+  opacity: 1;
+}
+
+/* Only show delete button in compact mode */
+.rich-text-editor:not(.readonly) .image-toolbar button {
+  display: none;
+}
+
+.rich-text-editor:not(.readonly) .image-toolbar button:last-child {
+  display: flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
+}
+
+.rich-text-editor:not(.readonly) .image-toolbar button:last-child svg {
+  width: 0.625rem;
+  height: 0.625rem;
 }
 
 .rich-text-editor .image-uploading {

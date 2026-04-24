@@ -111,6 +111,8 @@ func agentToResponse(a db.Agent) AgentResponse {
 type RepoData struct {
 	URL         string `json:"url"`
 	Description string `json:"description"`
+	Type        string `json:"type,omitempty"`
+	LocalPath   string `json:"local_path,omitempty"`
 }
 
 type AgentTaskResponse struct {

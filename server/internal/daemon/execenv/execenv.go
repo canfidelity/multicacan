@@ -14,8 +14,10 @@ import (
 
 // RepoContextForEnv describes a workspace repo available for checkout.
 type RepoContextForEnv struct {
-	URL         string // remote URL
+	URL         string // remote URL (empty for local repos)
 	Description string // human-readable description
+	Type        string // "remote" or "local"; empty defaults to "remote"
+	LocalPath   string // absolute path on daemon machine (only for local repos)
 }
 
 // PrepareParams holds all inputs needed to set up an execution environment.

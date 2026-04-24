@@ -135,32 +135,49 @@ func normalizeWorkspaceRepos(repos []RepoData) []RepoData {
 	normalized := make([]RepoData, 0, len(repos))
 	seen := make(map[string]struct{}, len(repos))
 	for _, repo := range repos {
-		url := strings.TrimSpace(repo.URL)
-		if url == "" {
-			continue
+		if repo.Type == "local" {
+			localPath := strings.TrimSpace(repo.LocalPath)
+			if localPath == "" {
+				continue
+			}
+			if _, exists := seen["local:"+localPath]; exists {
+				continue
+			}
+			seen["local:"+localPath] = struct{}{}
+			normalized = append(normalized, RepoData{
+				Type:        "local",
+				LocalPath:   localPath,
+				Description: strings.TrimSpace(repo.Description),
+			})
+		} else {
+			url := strings.TrimSpace(repo.URL)
+			if url == "" {
+				continue
+			}
+			if _, exists := seen[url]; exists {
+				continue
+			}
+			seen[url] = struct{}{}
+			normalized = append(normalized, RepoData{
+				URL:         url,
+				Description: strings.TrimSpace(repo.Description),
+			})
 		}
-		if _, exists := seen[url]; exists {
-			continue
-		}
-		seen[url] = struct{}{}
-		normalized = append(normalized, RepoData{
-			URL:         url,
-			Description: strings.TrimSpace(repo.Description),
-		})
 	}
 	return normalized
 }
 
 func workspaceReposVersion(repos []RepoData) string {
-	urls := make([]string, 0, len(repos))
+	keys := make([]string, 0, len(repos))
 	for _, repo := range repos {
-		if repo.URL == "" {
-			continue
+		if repo.Type == "local" && repo.LocalPath != "" {
+			keys = append(keys, "local:"+repo.LocalPath)
+		} else if repo.URL != "" {
+			keys = append(keys, repo.URL)
 		}
-		urls = append(urls, repo.URL)
 	}
-	sort.Strings(urls)
-	sum := sha256.Sum256([]byte(strings.Join(urls, "\n")))
+	sort.Strings(keys)
+	sum := sha256.Sum256([]byte(strings.Join(keys, "\n")))
 	return hex.EncodeToString(sum[:])
 }
 

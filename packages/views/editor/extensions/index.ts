@@ -76,7 +76,7 @@ const ImageExtension = Image.extend({
     return ReactNodeViewRenderer(ImageView);
   },
 }).configure({
-  inline: false,
+  inline: true,
   allowBase64: false,
 });
 

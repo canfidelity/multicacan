@@ -50,6 +50,8 @@ type repoCheckoutRequest struct {
 	WorkDir     string `json:"workdir"`
 	AgentName   string `json:"agent_name"`
 	TaskID      string `json:"task_id"`
+	Type        string `json:"type,omitempty"`
+	LocalPath   string `json:"local_path,omitempty"`
 }
 
 // healthHandler returns the /health HTTP handler. Extracted from serveHealth
@@ -129,12 +131,35 @@ func (d *Daemon) serveHealth(ctx context.Context, ln net.Listener, startedAt tim
 			http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		if req.URL == "" {
-			http.Error(w, "url is required", http.StatusBadRequest)
-			return
-		}
 		if req.WorkspaceID == "" {
 			http.Error(w, "workspace_id is required", http.StatusBadRequest)
+			return
+		}
+
+		// Local repo: validate path exists and is configured, return directly.
+		if req.Type == "local" && req.LocalPath != "" {
+			if !d.workspaceRepoAllowed(req.WorkspaceID, "local:"+req.LocalPath) {
+				http.Error(w, "local repo path is not configured in this workspace", http.StatusBadRequest)
+				return
+			}
+			info, err := os.Stat(req.LocalPath)
+			if err != nil {
+				http.Error(w, "local repo path does not exist: "+req.LocalPath, http.StatusBadRequest)
+				return
+			}
+			if !info.IsDir() {
+				http.Error(w, "local repo path is not a directory: "+req.LocalPath, http.StatusBadRequest)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(repocache.WorktreeResult{
+				Path: req.LocalPath,
+			})
+			return
+		}
+
+		if req.URL == "" {
+			http.Error(w, "url is required", http.StatusBadRequest)
 			return
 		}
 		if req.WorkDir == "" {

@@ -6,6 +6,7 @@ import { ContentEditor, type ContentEditorRef } from "../../editor";
 import { SubmitButton } from "@multica/ui/components/common/submit-button";
 import { useChatStore, DRAFT_NEW_SESSION } from "@multica/core/chat";
 import { createLogger } from "@multica/core/logger";
+import type { UploadResult } from "@multica/core/hooks/use-file-upload";
 
 const logger = createLogger("chat.ui");
 
@@ -23,6 +24,8 @@ interface ChatInputProps {
   /** Rendered inside the rounded container, above the editor — attached
    *  context cards, drafts, etc. */
   topSlot?: ReactNode;
+  /** File upload handler — enables paste/drop image support when provided. */
+  onUploadFile?: (file: File) => Promise<UploadResult | null>;
 }
 
 export function ChatInput({
@@ -34,6 +37,7 @@ export function ChatInput({
   leftAdornment,
   rightAdornment,
   topSlot,
+  onUploadFile,
 }: ChatInputProps) {
   const editorRef = useRef<ContentEditorRef>(null);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
@@ -96,6 +100,7 @@ export function ChatInput({
               setInputDraft(draftKey, md);
             }}
             onSubmit={handleSend}
+            onUploadFile={onUploadFile}
             debounceMs={100}
             // Chat is short-form — the floating formatting toolbar is
             // more distraction than feature here.

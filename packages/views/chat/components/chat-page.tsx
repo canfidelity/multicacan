@@ -41,6 +41,8 @@ import {
   useRouteAnchorCandidate,
 } from "./context-anchor";
 import { createLogger } from "@multica/core/logger";
+import { useFileUpload } from "@multica/core/hooks/use-file-upload";
+import { toast } from "sonner";
 import type { Agent, ChatMessage, ChatSession } from "@multica/core/types";
 
 const uiLogger = createLogger("chat.ui");
@@ -53,6 +55,7 @@ export function ChatPage() {
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const setSelectedAgentId = useChatStore((s) => s.setSelectedAgentId);
   const user = useAuthStore((s) => s.user);
+  const { uploadWithToast } = useFileUpload(api, (err) => toast.error(err.message));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: sessions = [], isSuccess: sessionsLoaded } = useQuery(
@@ -263,6 +266,7 @@ export function ChatPage() {
             isRunning={!!pendingTaskId}
             disabled={isSessionArchived}
             agentName={activeAgent?.name}
+            onUploadFile={uploadWithToast}
             topSlot={<ContextAnchorCard />}
             leftAdornment={
               <AgentDropdown

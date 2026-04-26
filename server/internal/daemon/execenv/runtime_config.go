@@ -175,8 +175,8 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		case "claude":
 			// Claude discovers skills natively from .claude/skills/ — just list names.
 			b.WriteString("You have the following skills installed (discovered automatically):\n\n")
-		case "codex", "copilot", "opencode", "openclaw", "pi", "cursor", "kimi":
-			// Codex, Copilot, OpenCode, OpenClaw, Pi, Cursor, and Kimi discover skills natively from their respective paths — just list names.
+		case "codex", "copilot", "opencode", "openclaw", "pi", "cursor", "kimi", "claude-gg":
+			// Codex, Copilot, OpenCode, OpenClaw, Pi, Cursor, Kimi, and claude-gg (prompt-only) — just list skill names.
 			b.WriteString("You have the following skills installed (discovered automatically):\n\n")
 		case "gemini", "hermes":
 			// Gemini reads GEMINI.md directly; Hermes has no native skills discovery path

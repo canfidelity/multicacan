@@ -87,6 +87,8 @@ func ListModels(ctx context.Context, providerType, executablePath string) ([]Mod
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverOpenclawAgents(ctx, executablePath)
 		})
+	case "claude-gg":
+		return claudeGGStaticModels(), nil
 	default:
 		return nil, fmt.Errorf("unknown agent type: %q", providerType)
 	}

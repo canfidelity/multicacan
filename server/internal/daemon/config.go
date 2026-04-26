@@ -149,6 +149,14 @@ func LoadConfig(overrides Overrides) (Config, error) {
 			Model: strings.TrimSpace(os.Getenv("MULTICA_KIMI_MODEL")),
 		}
 	}
+	// claude-gg is an HTTP-based provider — no CLI binary required.
+	// It is registered whenever MULTICA_CLAUDE_GG_ENABLED is not "false".
+	if strings.ToLower(os.Getenv("MULTICA_CLAUDE_GG_ENABLED")) != "false" {
+		agents["claude-gg"] = AgentEntry{
+			Path:  "", // no CLI binary; claudeggBackend uses HTTP
+			Model: strings.TrimSpace(os.Getenv("MULTICA_CLAUDE_GG_MODEL")),
+		}
+	}
 	if len(agents) == 0 {
 		return Config{}, fmt.Errorf("no agent CLI found: install claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor-agent, or kimi and ensure it is on PATH")
 	}

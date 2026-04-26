@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import type { HUDState } from './game/PhaserGame'
+import type { HUDState, MobileInput } from './game/PhaserGame'
 
 const PhaserGame = dynamic(() => import('./game/PhaserGame'), { ssr: false })
 const PhaserHUD = dynamic(() => import('./game/PhaserHUD'), { ssr: false })
+const AevenGame = dynamic(() => import('./game/AevenGame'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'loading' | 'playing'
+type GameEngine = 'phaser' | 'aeven'
 type WalletState = { address: string | null }
 
 const CLASSES = [
@@ -188,10 +190,17 @@ function LoadingScreen({ name, cls, onDone }: { name: string; cls: string; onDon
 
 export default function GameSection() {
   const [gameState, setGameState] = useState<GameState>('idle')
+  const [gameEngine, setGameEngine] = useState<GameEngine>('aeven')
   const [playerName, setPlayerName] = useState('')
   const [selectedClass, setSelectedClass] = useState('warrior')
   const [hudState, setHudState] = useState<HUDState | null>(null)
   const [wallet, setWallet] = useState<WalletState>({ address: null })
+  const [isMobile, setIsMobile] = useState(false)
+  const mobileInputRef = useRef<MobileInput>({ dx: 0, dy: 0, attack: false, skills: [false, false, false, false] })
+
+  useEffect(() => {
+    setIsMobile('ontouchstart' in window || window.innerWidth <= 900)
+  }, [])
 
   const handleHUDUpdate = useCallback((state: HUDState) => {
     setHudState(state)
@@ -234,18 +243,47 @@ export default function GameSection() {
         {gameState === 'idle' && (
           <div className="pixel-card p-8 border-2 border-yellow-700 max-w-2xl mx-auto" style={{ boxShadow: '0 0 40px rgba(245,158,11,0.3)' }}>
             <PixelPreview />
-            <p className="text-gray-400 text-xs leading-relaxed mb-8 mt-6 text-center" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6 mt-6 text-center" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
               A real pixel MMORPG — explore the world, battle monsters, earn $VOX tokens. No download needed.
             </p>
-            <div className="grid grid-cols-3 gap-4 mb-8 text-center">
-              {[['WASD', 'Move'], ['SPACE', 'Attack'], ['SPACE/Q/E', 'Skills']].map(([k, v]) => (
-                <div key={k} className="border border-gray-700 p-3">
-                  <div className="text-yellow-400 font-pixel text-xs mb-1" style={{ fontSize: '9px' }}>{k}</div>
-                  <div className="text-gray-500 text-xs" style={{ fontFamily: 'monospace', fontSize: '11px' }}>{v}</div>
-                </div>
-              ))}
+
+            {/* Engine selector */}
+            <div className="mb-6">
+              <div className="font-pixel text-center text-gray-600 mb-3" style={{ fontSize: '8px' }}>SELECT ENGINE</div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setGameEngine('aeven')}
+                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  style={{
+                    background: gameEngine === 'aeven' ? 'rgba(20,10,40,0.95)' : 'rgba(10,8,20,0.6)',
+                    border: `2px solid ${gameEngine === 'aeven' ? '#8844cc' : 'rgba(80,60,120,0.4)'}`,
+                    boxShadow: gameEngine === 'aeven' ? '0 0 16px rgba(140,60,220,0.35)' : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>🏰</span>
+                  <span className="font-pixel text-purple-300" style={{ fontSize: '7px' }}>AEVEN MMO</span>
+                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Isometric · Multiplayer</span>
+                </button>
+                <button
+                  onClick={() => setGameEngine('phaser')}
+                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  style={{
+                    background: gameEngine === 'phaser' ? 'rgba(10,20,10,0.95)' : 'rgba(10,8,20,0.6)',
+                    border: `2px solid ${gameEngine === 'phaser' ? '#448844' : 'rgba(80,60,120,0.4)'}`,
+                    boxShadow: gameEngine === 'phaser' ? '0 0 16px rgba(60,160,60,0.3)' : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>⚔️</span>
+                  <span className="font-pixel text-green-400" style={{ fontSize: '7px' }}>PIXEL RPG</span>
+                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Top-down · Phaser 3</span>
+                </button>
+              </div>
             </div>
-            <button onClick={() => setGameState('name')} className="pixel-btn pixel-btn-primary font-pixel px-8 py-4 text-sm w-full">
+
+            <button
+              onClick={() => gameEngine === 'aeven' ? setGameState('playing') : setGameState('name')}
+              className="pixel-btn pixel-btn-primary font-pixel px-8 py-4 text-sm w-full"
+            >
               ▶ ENTER THE REALM
             </button>
           </div>
@@ -375,11 +413,17 @@ export default function GameSection() {
             className="pixel-card border-2 border-yellow-600 overflow-hidden relative"
             style={{ boxShadow: '0 0 50px rgba(245,158,11,0.4)' }}
           >
+            {gameEngine === 'aeven' ? (
+              /* Aeven isometric MMO */
+              <AevenGame onExit={() => setGameState('idle')} />
+            ) : (
+              <>
             {/* Phaser 3 game canvas */}
             <PhaserGame
               playerName={playerName || 'HERO'}
               playerClass={selectedClass}
               onHUDUpdate={handleHUDUpdate}
+              mobileInputRef={isMobile ? mobileInputRef : undefined}
             />
             {/* React HUD overlay */}
             <PhaserHUD
@@ -388,7 +432,10 @@ export default function GameSection() {
               onConnectWallet={handleConnectWallet}
               onMintNFT={handleMintNFT}
               onExit={() => setGameState('idle')}
+              mobileInputRef={isMobile ? mobileInputRef : undefined}
             />
+              </>
+            )}
           </div>
         )}
       </div>

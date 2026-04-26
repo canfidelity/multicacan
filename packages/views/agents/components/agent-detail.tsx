@@ -13,6 +13,7 @@ import {
   Settings,
   KeyRound,
   Terminal,
+  Server,
 } from "lucide-react";
 import type { Agent, RuntimeDevice, MemberWithUser } from "@multica/core/types";
 import {
@@ -38,12 +39,13 @@ import { TasksTab } from "./tabs/tasks-tab";
 import { SettingsTab } from "./tabs/settings-tab";
 import { EnvTab } from "./tabs/env-tab";
 import { CustomArgsTab } from "./tabs/custom-args-tab";
+import { McpTab } from "./tabs/mcp-tab";
 
 function getRuntimeDevice(agent: Agent, runtimes: RuntimeDevice[]): RuntimeDevice | undefined {
   return runtimes.find((runtime) => runtime.id === agent.runtime_id);
 }
 
-type DetailTab = "instructions" | "skills" | "tasks" | "env" | "custom_args" | "settings";
+type DetailTab = "instructions" | "skills" | "tasks" | "env" | "custom_args" | "mcp" | "settings";
 
 const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
   { id: "instructions", label: "Instructions", icon: FileText },
@@ -51,6 +53,7 @@ const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
   { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "env", label: "Environment", icon: KeyRound },
   { id: "custom_args", label: "Custom Args", icon: Terminal },
+  { id: "mcp", label: "MCP", icon: Server },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -179,6 +182,13 @@ export function AgentDetail({
           <CustomArgsTab
             agent={agent}
             runtimeDevice={runtimeDevice}
+            onSave={(updates) => onUpdate(agent.id, updates)}
+          />
+        )}
+        {activeTab === "mcp" && (
+          <McpTab
+            agent={agent}
+            readOnly={agent.mcp_config_redacted}
             onSave={(updates) => onUpdate(agent.id, updates)}
           />
         )}

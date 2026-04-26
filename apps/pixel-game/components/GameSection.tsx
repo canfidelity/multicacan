@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import type { HUDState } from './game/MMORPGGame'
 
-const PixelGame = dynamic(() => import('./game/PixelGame'), { ssr: false })
+const MMORPGGame = dynamic(() => import('./game/MMORPGGame'), { ssr: false })
+const GameHUD = dynamic(() => import('./game/GameHUD'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'loading' | 'playing'
+type WalletState = { address: string | null }
 
 const CLASSES = [
   { id: 'warrior', label: 'WARRIOR', icon: '⚔', desc: 'Tank & melee damage', stats: { STR: 5, AGI: 2, INT: 1 }, color: '#60a0ff', border: '#3060cc' },
@@ -187,6 +190,29 @@ export default function GameSection() {
   const [gameState, setGameState] = useState<GameState>('idle')
   const [playerName, setPlayerName] = useState('')
   const [selectedClass, setSelectedClass] = useState('warrior')
+  const [hudState, setHudState] = useState<HUDState | null>(null)
+  const [wallet, setWallet] = useState<WalletState>({ address: null })
+
+  const handleHUDUpdate = useCallback((state: HUDState) => {
+    setHudState(state)
+  }, [])
+
+  const handleConnectWallet = useCallback(async () => {
+    if (typeof window === 'undefined') return
+    const eth = (window as Window & { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum
+    if (!eth) { alert('MetaMask not found. Please install MetaMask.'); return }
+    try {
+      const accounts = await eth.request({ method: 'eth_requestAccounts' })
+      if (accounts[0]) setWallet({ address: accounts[0] })
+    } catch {
+      // user rejected
+    }
+  }, [])
+
+  const handleMintNFT = useCallback(() => {
+    if (!wallet.address) return
+    alert('Minting Character NFT... (demo)')
+  }, [wallet.address])
 
   return (
     <section id="game" className="relative py-24 px-4">
@@ -345,23 +371,24 @@ export default function GameSection() {
 
         {/* PLAYING */}
         {gameState === 'playing' && (
-          <div className="pixel-card border-2 border-yellow-600 overflow-hidden" style={{ boxShadow: '0 0 50px rgba(245,158,11,0.4)' }}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-black/50">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-green-400 font-pixel" style={{ fontSize: '8px' }}>LIVE — PixelRealms Alpha</span>
-              </div>
-              <div className="flex items-center gap-4 text-gray-500" style={{ fontFamily: 'monospace', fontSize: '10px' }}>
-                <span className="text-green-400">● 1,284 online</span>
-                <button onClick={() => setGameState('idle')} className="text-gray-600 hover:text-red-400 transition-colors" style={{ fontSize: '10px' }}>
-                  ✕ EXIT
-                </button>
-              </div>
-            </div>
-
-            {/* Game canvas */}
-            <PixelGame playerName={playerName || 'HERO'} playerClass={selectedClass} />
+          <div
+            className="pixel-card border-2 border-yellow-600 overflow-hidden relative"
+            style={{ boxShadow: '0 0 50px rgba(245,158,11,0.4)' }}
+          >
+            {/* Three.js game canvas */}
+            <MMORPGGame
+              playerName={playerName || 'HERO'}
+              playerClass={selectedClass}
+              onHUDUpdate={handleHUDUpdate}
+            />
+            {/* React HUD overlay */}
+            <GameHUD
+              hud={hudState}
+              walletAddress={wallet.address}
+              onConnectWallet={handleConnectWallet}
+              onMintNFT={handleMintNFT}
+              onExit={() => setGameState('idle')}
+            />
           </div>
         )}
       </div>

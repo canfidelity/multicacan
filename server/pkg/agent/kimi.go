@@ -195,7 +195,7 @@ func (b *kimiBackend) Execute(ctx context.Context, prompt string, opts ExecOptio
 		} else {
 			result, err := c.request(runCtx, "session/new", map[string]any{
 				"cwd":        cwd,
-				"mcpServers": []any{},
+				"mcpServers": parseMcpConfigToACPArray(opts.McpConfig),
 			})
 			if err != nil {
 				finalStatus = "failed"

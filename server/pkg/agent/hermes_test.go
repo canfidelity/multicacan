@@ -52,7 +52,7 @@ func TestExtractACPSessionIDInvalidJSON(t *testing.T) {
 
 func TestBuildHermesSessionParamsIncludesModel(t *testing.T) {
 	t.Parallel()
-	params := buildHermesSessionParams("/tmp/work", "gpt-4o")
+	params := buildHermesSessionParams("/tmp/work", "gpt-4o", nil)
 	if params["cwd"] != "/tmp/work" {
 		t.Errorf("cwd: got %v, want /tmp/work", params["cwd"])
 	}
@@ -66,9 +66,38 @@ func TestBuildHermesSessionParamsIncludesModel(t *testing.T) {
 
 func TestBuildHermesSessionParamsOmitsEmptyModel(t *testing.T) {
 	t.Parallel()
-	params := buildHermesSessionParams("/tmp/work", "")
+	params := buildHermesSessionParams("/tmp/work", "", nil)
 	if _, present := params["model"]; present {
 		t.Error("expected model key to be omitted when model is empty")
+	}
+}
+
+func TestParseMcpConfigToACPArray(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{"mcpServers":{"figma-mcp":{"command":"npx","args":["-y","figma-mcp"],"env":{"FIGMA_API_KEY":"token"}}}}`)
+	servers := parseMcpConfigToACPArray(raw)
+	if len(servers) != 1 {
+		t.Fatalf("expected 1 server, got %d", len(servers))
+	}
+	s, ok := servers[0].(map[string]any)
+	if !ok {
+		t.Fatalf("server entry is not map[string]any")
+	}
+	if s["name"] != "figma-mcp" {
+		t.Errorf("name: got %v, want figma-mcp", s["name"])
+	}
+	if s["command"] != "npx" {
+		t.Errorf("command: got %v, want npx", s["command"])
+	}
+}
+
+func TestParseMcpConfigToACPArrayEmpty(t *testing.T) {
+	t.Parallel()
+	if got := parseMcpConfigToACPArray(nil); len(got) != 0 {
+		t.Errorf("expected empty slice for nil input, got %v", got)
+	}
+	if got := parseMcpConfigToACPArray(json.RawMessage(`{}`)); len(got) != 0 {
+		t.Errorf("expected empty slice for empty mcpServers, got %v", got)
 	}
 }
 

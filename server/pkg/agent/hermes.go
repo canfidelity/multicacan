@@ -181,7 +181,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 			sessionID = opts.ResumeSessionID
 			_ = result
 		} else {
-			result, err := c.request(runCtx, "session/new", buildHermesSessionParams(cwd, opts.Model))
+			result, err := c.request(runCtx, "session/new", buildHermesSessionParams(cwd, opts.Model, opts.McpConfig))
 			if err != nil {
 				finalStatus = "failed"
 				finalError = fmt.Sprintf("hermes session/new failed: %v", err)
@@ -976,15 +976,47 @@ func extractACPSessionID(result json.RawMessage) string {
 // buildHermesSessionParams constructs the params map for the ACP `session/new`
 // request. The `model` field is only included when non-empty so Hermes falls
 // back to its default only when no explicit model was configured.
-func buildHermesSessionParams(cwd, model string) map[string]any {
+func buildHermesSessionParams(cwd, model string, mcpConfig json.RawMessage) map[string]any {
 	params := map[string]any{
 		"cwd":        cwd,
-		"mcpServers": []any{},
+		"mcpServers": parseMcpConfigToACPArray(mcpConfig),
 	}
 	if model != "" {
 		params["model"] = model
 	}
 	return params
+}
+
+// parseMcpConfigToACPArray converts the stored Claude-format MCP config JSON
+// into the ACP mcpServers array expected by session/new.
+//
+// Input (Claude --mcp-config format):
+//
+//	{"mcpServers": {"server-name": {"command": "...", "args": [...], "env": {...}}}}
+//
+// Output (ACP array format):
+//
+//	[{"name": "server-name", "command": "...", "args": [...], "env": {...}}]
+func parseMcpConfigToACPArray(raw json.RawMessage) []any {
+	if len(raw) == 0 {
+		return []any{}
+	}
+	var config struct {
+		McpServers map[string]json.RawMessage `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(raw, &config); err != nil || len(config.McpServers) == 0 {
+		return []any{}
+	}
+	servers := make([]any, 0, len(config.McpServers))
+	for name, cfg := range config.McpServers {
+		var serverConfig map[string]any
+		if err := json.Unmarshal(cfg, &serverConfig); err != nil {
+			continue
+		}
+		serverConfig["name"] = name
+		servers = append(servers, serverConfig)
+	}
+	return servers
 }
 
 // hermesToolNameFromTitle extracts a tool name from the ACP tool call title.

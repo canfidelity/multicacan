@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   onExit: () => void
@@ -8,13 +8,17 @@ interface Props {
 
 export default function DemonicStonesGame({ onExit }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [started, setStarted] = useState(false)
+  const [compiling, setCompiling] = useState(false)
 
   // Forward touch-triggered keyboard events into the iframe on mobile
   useEffect(() => {
+    if (!started) return
     const iframe = iframeRef.current
     if (!iframe) return
 
     const onLoad = () => {
+      setCompiling(false)
       try {
         const doc = iframe.contentDocument
         if (!doc) return
@@ -70,7 +74,7 @@ export default function DemonicStonesGame({ onExit }: Props) {
 
     iframe.addEventListener('load', onLoad)
     return () => iframe.removeEventListener('load', onLoad)
-  }, [])
+  }, [started])
 
   return (
     <div style={{ position: 'relative', width: '100%', background: '#0a0008' }}>
@@ -91,19 +95,98 @@ export default function DemonicStonesGame({ onExit }: Props) {
         ✕ EXIT
       </button>
 
-      <iframe
-        ref={iframeRef}
-        src="/demonic-stones/index.html"
-        style={{
-          display: 'block',
+      {/* Pre-load screen */}
+      {!started && (
+        <div style={{
           width: '100%',
           aspectRatio: '16 / 10',
-          border: 'none',
-          background: '#0a0008',
-        }}
-        allow="autoplay"
-        title="Demonic Stones"
-      />
+          background: 'radial-gradient(ellipse at center, #1a0005 0%, #0a0008 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          padding: 24,
+        }}>
+          <div style={{ fontSize: 48 }}>🪨</div>
+          <div style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 10,
+            color: '#cc4444',
+            textAlign: 'center',
+            lineHeight: 1.8,
+          }}>
+            DEMONIC STONES
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: '#888',
+            textAlign: 'center',
+            lineHeight: 1.6,
+            maxWidth: 280,
+          }}>
+            Godot 4 web export<br />
+            ~55MB indirilecek<br />
+            <span style={{ color: '#ff8844' }}>Mobilde 1-2 dk sürebilir</span>
+          </div>
+          <button
+            onClick={() => { setStarted(true); setCompiling(true) }}
+            style={{
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: 9,
+              color: '#fff',
+              background: 'linear-gradient(180deg, #8b0000, #500000)',
+              border: '2px solid #cc2222',
+              padding: '12px 24px',
+              cursor: 'pointer',
+              letterSpacing: 1,
+            }}
+          >
+            ▶ YÜKLE
+          </button>
+        </div>
+      )}
+
+      {/* Loading overlay while WASM compiling */}
+      {started && compiling && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 10,
+          background: 'rgba(10,0,8,0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#cc8844' }}>
+            İndiriliyor / Derleniyor...
+          </div>
+          <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#666' }}>
+            (mobilde 1-2 dk bekleyin)
+          </div>
+        </div>
+      )}
+
+      {/* Game iframe — only mounted after user taps YÜKLE */}
+      {started && (
+        <iframe
+          ref={iframeRef}
+          src="/demonic-stones/index.html"
+          style={{
+            display: 'block',
+            width: '100%',
+            aspectRatio: '16 / 10',
+            border: 'none',
+            background: '#0a0008',
+          }}
+          allow="autoplay"
+          title="Demonic Stones"
+        />
+      )}
     </div>
   )
 }

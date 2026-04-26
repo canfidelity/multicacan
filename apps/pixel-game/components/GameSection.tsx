@@ -2,10 +2,10 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import type { HUDState } from './game/MMORPGGame'
+import type { HUDState } from './game/PhaserGame'
 
-const MMORPGGame = dynamic(() => import('./game/MMORPGGame'), { ssr: false })
-const GameHUD = dynamic(() => import('./game/GameHUD'), { ssr: false })
+const PhaserGame = dynamic(() => import('./game/PhaserGame'), { ssr: false })
+const PhaserHUD = dynamic(() => import('./game/PhaserHUD'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'loading' | 'playing'
 type WalletState = { address: string | null }
@@ -375,14 +375,14 @@ export default function GameSection() {
             className="pixel-card border-2 border-yellow-600 overflow-hidden relative"
             style={{ boxShadow: '0 0 50px rgba(245,158,11,0.4)' }}
           >
-            {/* Three.js game canvas */}
-            <MMORPGGame
+            {/* Phaser 3 game canvas */}
+            <PhaserGame
               playerName={playerName || 'HERO'}
               playerClass={selectedClass}
               onHUDUpdate={handleHUDUpdate}
             />
             {/* React HUD overlay */}
-            <GameHUD
+            <PhaserHUD
               hud={hudState}
               walletAddress={wallet.address}
               onConnectWallet={handleConnectWallet}

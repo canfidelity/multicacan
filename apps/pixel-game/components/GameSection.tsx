@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 
-const GameCanvas = dynamic(() => import('./game/GameCanvas'), { ssr: false })
+const GameCanvas = dynamic(() => import('./game/ThreeGame'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'launch' | 'playing'
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 
-const PixelGame = dynamic(() => import('./game/PixelGame'), { ssr: false })
+const MMORPGGame = dynamic(() => import('./game/MMORPGGame'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'loading' | 'playing'
 
@@ -12,7 +12,7 @@ const CLASSES = [
   { id: 'mage',    label: 'MAGE',    icon: '🔮', desc: 'AOE magic, high burst', stats: { STR: 1, AGI: 2, INT: 5 }, color: '#cc66ff', border: '#8822cc' },
   { id: 'rogue',   label: 'ROGUE',   icon: '🗡', desc: 'Fast crit strikes', stats: { STR: 3, AGI: 5, INT: 2 }, color: '#44ff88', border: '#22aa55' },
   { id: 'archer',  label: 'ARCHER',  icon: '🏹', desc: 'Long range attacks', stats: { STR: 2, AGI: 4, INT: 3 }, color: '#ffcc44', border: '#aa8800' },
-  { id: 'knight',  label: 'KNIGHT',  icon: '🛡', desc: 'Heavy armor, stun', stats: { STR: 4, AGI: 2, INT: 1 }, color: '#ff8844', border: '#cc4400' },
+  { id: 'paladin', label: 'PALADIN', icon: '✝', desc: 'Holy warrior, heals allies', stats: { STR: 4, AGI: 2, INT: 3 }, color: '#f0d020', border: '#b09000' },
 ]
 
 // Pixel portrait SVG per class
@@ -66,17 +66,18 @@ function ClassPortrait({ cls, size = 80 }: { cls: string; size?: number }) {
       <rect x="12" y="20" width="8" height="28" fill="#8a5520"/>
       <rect x="60" y="26" width="8" height="20" fill="#8a5520"/>
     `,
-    knight: `
-      <rect x="20" y="4" width="40" height="32" fill="#888"/>
-      <rect x="16" y="8" width="8" height="20" fill="#777"/>
-      <rect x="56" y="8" width="8" height="20" fill="#777"/>
-      <rect x="28" y="20" width="24" height="8" fill="#555"/>
-      <rect x="24" y="14" width="12" height="10" fill="#aaa"/>
-      <rect x="44" y="14" width="12" height="10" fill="#aaa"/>
-      <rect x="20" y="36" width="40" height="24" fill="#999"/>
-      <rect x="16" y="38" width="8" height="18" fill="#888"/>
-      <rect x="56" y="38" width="8" height="18" fill="#888"/>
-      <rect x="28" y="36" width="24" height="4" fill="#f0c030"/>
+    paladin: `
+      <rect x="24" y="4" width="32" height="4" fill="#d4a020"/>
+      <rect x="20" y="8" width="40" height="8" fill="#e8b830"/>
+      <rect x="24" y="16" width="32" height="20" fill="#f5c580"/>
+      <rect x="28" y="24" width="8" height="6" fill="#f0d020"/>
+      <rect x="44" y="24" width="8" height="6" fill="#f0d020"/>
+      <rect x="32" y="32" width="16" height="4" fill="#f5c580"/>
+      <rect x="20" y="36" width="40" height="24" fill="#d4a020"/>
+      <rect x="28" y="40" width="24" height="4" fill="#ffffff"/>
+      <rect x="36" y="36" width="8" height="12" fill="#ffffff"/>
+      <rect x="16" y="40" width="8" height="16" fill="#c09010"/>
+      <rect x="56" y="40" width="8" height="16" fill="#c09010"/>
     `,
   }
   return (
@@ -361,7 +362,7 @@ export default function GameSection() {
             </div>
 
             {/* Game canvas */}
-            <PixelGame playerName={playerName || 'HERO'} playerClass={selectedClass} />
+            <MMORPGGame playerName={playerName || 'HERO'} playerClass={selectedClass} />
           </div>
         )}
       </div>

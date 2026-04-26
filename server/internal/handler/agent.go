@@ -144,6 +144,8 @@ type AgentTaskResponse struct {
 	ChatSessionID         string         `json:"chat_session_id,omitempty"`         // non-empty for chat tasks
 	ChatMessage           string         `json:"chat_message,omitempty"`            // user message for chat tasks
 	AutopilotRunID        string         `json:"autopilot_run_id,omitempty"`        // non-empty for autopilot-spawned tasks
+	IssueTitle            string         `json:"issue_title,omitempty"`             // pre-fetched issue title to reduce agent round trips
+	IssueDescription      string         `json:"issue_description,omitempty"`       // pre-fetched issue description to reduce agent round trips
 }
 
 // TaskAgentData holds agent info included in claim responses so the daemon

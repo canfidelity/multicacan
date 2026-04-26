@@ -64,6 +64,14 @@ JOIN agent_skill ask ON ask.skill_id = s.id
 WHERE ask.agent_id = $1
 ORDER BY s.name ASC;
 
+-- name: ListSkillFilesForAgent :many
+SELECT sf.*
+FROM skill_file sf
+JOIN skill s ON s.id = sf.skill_id
+JOIN agent_skill ask ON ask.skill_id = s.id
+WHERE ask.agent_id = $1
+ORDER BY s.name, sf.path;
+
 -- name: AddAgentSkill :exec
 INSERT INTO agent_skill (agent_id, skill_id)
 VALUES ($1, $2)

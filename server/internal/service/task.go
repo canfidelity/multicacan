@@ -822,20 +822,28 @@ func (s *TaskService) updateAgentStatus(ctx context.Context, agentID pgtype.UUID
 }
 
 // LoadAgentSkills loads an agent's skills with their files for task execution.
+// Uses a single JOIN query for files instead of one query per skill (avoids N+1).
 func (s *TaskService) LoadAgentSkills(ctx context.Context, agentID pgtype.UUID) []AgentSkillData {
 	skills, err := s.Queries.ListAgentSkills(ctx, agentID)
 	if err != nil || len(skills) == 0 {
 		return nil
 	}
 
+	// Fetch all skill files for this agent in one query.
+	allFiles, _ := s.Queries.ListSkillFilesForAgent(ctx, agentID)
+	filesBySkillID := make(map[string][]AgentSkillFileData, len(skills))
+	for _, f := range allFiles {
+		skillID := util.UUIDToString(f.SkillID)
+		filesBySkillID[skillID] = append(filesBySkillID[skillID], AgentSkillFileData{Path: f.Path, Content: f.Content})
+	}
+
 	result := make([]AgentSkillData, 0, len(skills))
 	for _, sk := range skills {
-		data := AgentSkillData{Name: sk.Name, Content: sk.Content}
-		files, _ := s.Queries.ListSkillFiles(ctx, sk.ID)
-		for _, f := range files {
-			data.Files = append(data.Files, AgentSkillFileData{Path: f.Path, Content: f.Content})
-		}
-		result = append(result, data)
+		result = append(result, AgentSkillData{
+			Name:    sk.Name,
+			Content: sk.Content,
+			Files:   filesBySkillID[util.UUIDToString(sk.ID)],
+		})
 	}
 	return result
 }

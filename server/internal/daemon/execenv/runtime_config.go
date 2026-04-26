@@ -130,25 +130,43 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	} else if ctx.TriggerCommentID != "" {
 		// Comment-triggered: focus on reading and replying
 		b.WriteString("**This task was triggered by a NEW comment.** Your primary job is to respond to THIS specific comment, even if you have handled similar requests before in this session.\n\n")
-		fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand the issue context\n", ctx.IssueID)
-		fmt.Fprintf(&b, "2. Run `multica issue comment list %s --output json` to read the conversation\n", ctx.IssueID)
+		step := 1
+		if ctx.IssueTitle == "" {
+			fmt.Fprintf(&b, "%d. Run `multica issue get %s --output json` to understand the issue context\n", step, ctx.IssueID)
+			step++
+		}
+		fmt.Fprintf(&b, "%d. Run `multica issue comment list %s --output json` to read the conversation\n", step, ctx.IssueID)
+		step++
 		b.WriteString("   - If the output is very large or truncated, use pagination: `--limit 30` to get the latest 30 comments, or `--since <timestamp>` to fetch only recent ones\n")
-		fmt.Fprintf(&b, "3. Find the triggering comment (ID: `%s`) and understand what is being asked — do NOT confuse it with previous comments\n", ctx.TriggerCommentID)
-		b.WriteString("4. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
-		b.WriteString("5. If a reply IS warranted: do any requested work first, then **decide whether to include any `@mention` link.** The default is NO mention. Only mention when you are escalating to a human owner who is not yet involved, delegating a concrete new sub-task to another agent for the first time, or the user explicitly asked you to loop someone in. Never @mention the agent you are replying to as a thank-you or sign-off.\n")
-		b.WriteString("6. **If you reply, post it as a comment — this step is mandatory when you reply.** Text in your terminal or run logs is NOT delivered to the user. ")
+		fmt.Fprintf(&b, "%d. Find the triggering comment (ID: `%s`) and understand what is being asked — do NOT confuse it with previous comments\n", step, ctx.TriggerCommentID)
+		step++
+		fmt.Fprintf(&b, "%d. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n", step)
+		step++
+		fmt.Fprintf(&b, "%d. If a reply IS warranted: do any requested work first, then **decide whether to include any `@mention` link.** The default is NO mention. Only mention when you are escalating to a human owner who is not yet involved, delegating a concrete new sub-task to another agent for the first time, or the user explicitly asked you to loop someone in. Never @mention the agent you are replying to as a thank-you or sign-off.\n", step)
+		step++
+		fmt.Fprintf(&b, "%d. **If you reply, post it as a comment — this step is mandatory when you reply.** Text in your terminal or run logs is NOT delivered to the user. ", step)
 		b.WriteString(BuildCommentReplyInstructions(ctx.IssueID, ctx.TriggerCommentID))
-		b.WriteString("7. Do NOT change the issue status unless the comment explicitly asks for it\n\n")
+		step++
+		fmt.Fprintf(&b, "%d. Do NOT change the issue status unless the comment explicitly asks for it\n\n", step)
 	} else {
 		// Assignment-triggered: defer to agent Skills for workflow specifics.
 		b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
-		fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand your task\n", ctx.IssueID)
-		fmt.Fprintf(&b, "2. Run `multica issue status %s in_progress`\n", ctx.IssueID)
-		b.WriteString("3. Read comments for additional context or human instructions\n")
-		b.WriteString("4. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
-		fmt.Fprintf(&b, "5. **Post your final results as a comment — this step is mandatory**: `multica issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID)
-		fmt.Fprintf(&b, "6. When done, run `multica issue status %s in_review`\n", ctx.IssueID)
-		fmt.Fprintf(&b, "7. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", ctx.IssueID)
+		step := 1
+		if ctx.IssueTitle == "" {
+			fmt.Fprintf(&b, "%d. Run `multica issue get %s --output json` to understand your task\n", step, ctx.IssueID)
+			step++
+		}
+		fmt.Fprintf(&b, "%d. Run `multica issue status %s in_progress`\n", step, ctx.IssueID)
+		step++
+		fmt.Fprintf(&b, "%d. Read comments for additional context or human instructions\n", step)
+		step++
+		fmt.Fprintf(&b, "%d. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n", step)
+		step++
+		fmt.Fprintf(&b, "%d. **Post your final results as a comment — this step is mandatory**: `multica issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", step, ctx.IssueID)
+		step++
+		fmt.Fprintf(&b, "%d. When done, run `multica issue status %s in_review`\n", step, ctx.IssueID)
+		step++
+		fmt.Fprintf(&b, "%d. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", step, ctx.IssueID)
 	}
 
 	if len(ctx.AgentSkills) > 0 {

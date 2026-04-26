@@ -1039,6 +1039,8 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// via `multica repo checkout <url>`.
 	taskCtx := execenv.TaskContextForEnv{
 		IssueID:           task.IssueID,
+		IssueTitle:        task.IssueTitle,
+		IssueDescription:  task.IssueDescription,
 		TriggerCommentID:  task.TriggerCommentID,
 		AgentID:           agentID,
 		AgentName:         agentName,

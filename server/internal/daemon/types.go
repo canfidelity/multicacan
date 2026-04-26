@@ -42,6 +42,8 @@ type Task struct {
 	TriggerAuthorName     string     `json:"trigger_author_name,omitempty"`     // display name of the triggering comment author
 	ChatSessionID         string     `json:"chat_session_id,omitempty"`         // non-empty for chat tasks
 	ChatMessage           string     `json:"chat_message,omitempty"`            // user message content for chat tasks
+	IssueTitle            string     `json:"issue_title,omitempty"`             // pre-fetched issue title to avoid agent round trip
+	IssueDescription      string     `json:"issue_description,omitempty"`       // pre-fetched issue description to avoid agent round trip
 }
 
 // AgentData holds agent details returned by the claim endpoint.

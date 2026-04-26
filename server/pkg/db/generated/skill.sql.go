@@ -407,3 +407,39 @@ func (q *Queries) UpsertSkillFile(ctx context.Context, arg UpsertSkillFileParams
 	)
 	return i, err
 }
+
+const listSkillFilesForAgent = `-- name: ListSkillFilesForAgent :many
+SELECT sf.id, sf.skill_id, sf.path, sf.content, sf.created_at, sf.updated_at
+FROM skill_file sf
+JOIN skill s ON s.id = sf.skill_id
+JOIN agent_skill ask ON ask.skill_id = s.id
+WHERE ask.agent_id = $1
+ORDER BY s.name, sf.path
+`
+
+func (q *Queries) ListSkillFilesForAgent(ctx context.Context, agentID pgtype.UUID) ([]SkillFile, error) {
+	rows, err := q.db.Query(ctx, listSkillFilesForAgent, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SkillFile{}
+	for rows.Next() {
+		var i SkillFile
+		if err := rows.Scan(
+			&i.ID,
+			&i.SkillID,
+			&i.Path,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

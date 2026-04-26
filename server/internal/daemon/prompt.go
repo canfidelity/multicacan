@@ -20,7 +20,22 @@ func BuildPrompt(task Task) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	if task.IssueTitle != "" {
+		fmt.Fprintf(&b, "Issue title: %s\n", task.IssueTitle)
+		if task.IssueDescription != "" {
+			desc := task.IssueDescription
+			const maxDescLen = 2000
+			if len(desc) > maxDescLen {
+				desc = desc[:maxDescLen] + "...(truncated)"
+			}
+			fmt.Fprintf(&b, "\n%s\n\n", desc)
+		} else {
+			b.WriteString("\n")
+		}
+		fmt.Fprintf(&b, "Start by running `multica issue comment list %s --output json` to read any additional context, then complete the task.\n", task.IssueID)
+	} else {
+		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	}
 	return b.String()
 }
 
@@ -49,7 +64,12 @@ func buildCommentPrompt(task Task) string {
 			b.WriteString("⚠️ The triggering comment was posted by another agent. Before replying, decide whether a reply is warranted at all. If that comment was an acknowledgment, thanks, or sign-off and no concrete question or task is being asked of you, do NOT reply — silence is the preferred way to end agent-to-agent threads. If you do reply, do not @mention the other agent as a sign-off (that re-triggers them and starts a loop).\n\n")
 		}
 	}
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
+	if task.IssueTitle != "" {
+		fmt.Fprintf(&b, "Issue title: %s\n\n", task.IssueTitle)
+		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to read the full issue details and conversation, then decide how to proceed.\n\n", task.IssueID)
+	} else {
+		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
+	}
 	b.WriteString(execenv.BuildCommentReplyInstructions(task.IssueID, task.TriggerCommentID))
 	return b.String()
 }

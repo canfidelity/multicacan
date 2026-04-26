@@ -1,0 +1,213 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pixel-purple: #6B21A8;
+  --pixel-gold: #F59E0B;
+  --pixel-dark: #0F0A1E;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0F0A1E;
+  color: white;
+  font-family: 'Press Start 2P', cursive;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel art border style */
+.pixel-border {
+  border: 4px solid;
+  box-shadow:
+    inset -4px -4px 0px rgba(0,0,0,0.4),
+    inset 4px 4px 0px rgba(255,255,255,0.2);
+}
+
+.pixel-border-gold {
+  border-color: #F59E0B;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 4px #F59E0B,
+    0 0 20px rgba(245, 158, 11, 0.5),
+    inset 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+.pixel-border-purple {
+  border-color: #9333EA;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 4px #9333EA,
+    0 0 20px rgba(147, 51, 234, 0.5),
+    inset 0 0 20px rgba(147, 51, 234, 0.1);
+}
+
+/* Pixel button */
+.pixel-btn {
+  position: relative;
+  cursor: pointer;
+  image-rendering: pixelated;
+  user-select: none;
+  transition: transform 0.1s;
+}
+
+.pixel-btn:active {
+  transform: translateY(2px);
+}
+
+.pixel-btn-primary {
+  background: #F59E0B;
+  color: #000;
+  border-top: 4px solid #FCD34D;
+  border-left: 4px solid #FCD34D;
+  border-right: 4px solid #92400E;
+  border-bottom: 4px solid #92400E;
+}
+
+.pixel-btn-primary:hover {
+  background: #FCD34D;
+}
+
+.pixel-btn-secondary {
+  background: #9333EA;
+  color: #fff;
+  border-top: 4px solid #A855F7;
+  border-left: 4px solid #A855F7;
+  border-right: 4px solid #581C87;
+  border-bottom: 4px solid #581C87;
+}
+
+.pixel-btn-secondary:hover {
+  background: #A855F7;
+}
+
+/* Scanline effect */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Pixel character SVG sprites */
+.pixel-char {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Glowing text */
+.glow-gold {
+  text-shadow:
+    0 0 10px #F59E0B,
+    0 0 20px #F59E0B,
+    0 0 40px #F59E0B;
+}
+
+.glow-purple {
+  text-shadow:
+    0 0 10px #9333EA,
+    0 0 20px #9333EA,
+    0 0 40px #9333EA;
+}
+
+.glow-cyan {
+  text-shadow:
+    0 0 10px #06B6D4,
+    0 0 20px #06B6D4,
+    0 0 40px #06B6D4;
+}
+
+/* Pixel card */
+.pixel-card {
+  background: rgba(15, 10, 30, 0.9);
+  border: 2px solid #9333EA;
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 20px rgba(147, 51, 234, 0.3),
+    inset 0 0 30px rgba(147, 51, 234, 0.05);
+}
+
+/* Stars background animation */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* CRT flicker */
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  98% { opacity: 1; }
+  99% { opacity: 0.8; }
+}
+
+.crt-effect {
+  animation: crt-flicker 8s infinite;
+}
+
+/* Pixel progress bar */
+.pixel-progress {
+  background: #1a1a2e;
+  border: 2px solid #9333EA;
+  height: 16px;
+  position: relative;
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9333EA, #06B6D4);
+  position: relative;
+}
+
+.pixel-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: rgba(255,255,255,0.2);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0F0A1E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9333EA;
+  border: 2px solid #0F0A1E;
+}
+
+/* Pixel grid background */
+.bg-pixel-grid {
+  background-image:
+    linear-gradient(rgba(147, 51, 234, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 51, 234, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

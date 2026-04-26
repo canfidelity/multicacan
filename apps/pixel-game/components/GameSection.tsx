@@ -7,9 +7,10 @@ import type { HUDState, MobileInput } from './game/PhaserGame'
 const PhaserGame = dynamic(() => import('./game/PhaserGame'), { ssr: false })
 const PhaserHUD = dynamic(() => import('./game/PhaserHUD'), { ssr: false })
 const AevenGame = dynamic(() => import('./game/AevenGame'), { ssr: false })
+const DemonicStonesGame = dynamic(() => import('./game/DemonicStonesGame'), { ssr: false })
 
 type GameState = 'idle' | 'name' | 'class' | 'loading' | 'playing'
-type GameEngine = 'phaser' | 'aeven'
+type GameEngine = 'phaser' | 'aeven' | 'demonic-stones'
 type WalletState = { address: string | null }
 
 const CLASSES = [
@@ -250,7 +251,7 @@ export default function GameSection() {
             {/* Engine selector */}
             <div className="mb-6">
               <div className="font-pixel text-center text-gray-600 mb-3" style={{ fontSize: '8px' }}>SELECT ENGINE</div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setGameEngine('aeven')}
                   className="p-3 flex flex-col items-center gap-1 transition-all"
@@ -277,11 +278,24 @@ export default function GameSection() {
                   <span className="font-pixel text-green-400" style={{ fontSize: '7px' }}>PIXEL RPG</span>
                   <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Top-down · Phaser 3</span>
                 </button>
+                <button
+                  onClick={() => setGameEngine('demonic-stones')}
+                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  style={{
+                    background: gameEngine === 'demonic-stones' ? 'rgba(30,5,5,0.95)' : 'rgba(10,8,20,0.6)',
+                    border: `2px solid ${gameEngine === 'demonic-stones' ? '#882222' : 'rgba(80,60,120,0.4)'}`,
+                    boxShadow: gameEngine === 'demonic-stones' ? '0 0 16px rgba(180,40,40,0.35)' : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>🪨</span>
+                  <span className="font-pixel text-red-400" style={{ fontSize: '7px' }}>DEMONIC STONES</span>
+                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Godot 4 · Action RPG</span>
+                </button>
               </div>
             </div>
 
             <button
-              onClick={() => gameEngine === 'aeven' ? setGameState('playing') : setGameState('name')}
+              onClick={() => (gameEngine === 'aeven' || gameEngine === 'demonic-stones') ? setGameState('playing') : setGameState('name')}
               className="pixel-btn pixel-btn-primary font-pixel px-8 py-4 text-sm w-full"
             >
               ▶ ENTER THE REALM
@@ -416,6 +430,9 @@ export default function GameSection() {
             {gameEngine === 'aeven' ? (
               /* Aeven isometric MMO */
               <AevenGame onExit={() => setGameState('idle')} />
+            ) : gameEngine === 'demonic-stones' ? (
+              /* Demonic Stones Godot 4 action RPG */
+              <DemonicStonesGame onExit={() => setGameState('idle')} />
             ) : (
               <>
             {/* Phaser 3 game canvas */}

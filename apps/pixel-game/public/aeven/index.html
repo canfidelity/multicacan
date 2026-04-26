@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>New Aeven</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #1e1e28;
+      }
+      canvas {
+        display: block;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #1e1e28;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        color: #fff;
+        transition: opacity 0.3s;
+      }
+      #loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #loading-title {
+        font-size: 24px;
+        margin-bottom: 24px;
+      }
+      #loading-bar-bg {
+        width: 50%;
+        max-width: 400px;
+        height: 16px;
+        background: #3c3c50;
+        border: 2px solid #8c8ca0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      #loading-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: #64c878;
+        transition: width 0.15s;
+      }
+      #loading-pct {
+        font-size: 16px;
+        margin-top: 8px;
+        color: #b4b4c8;
+      }
+      #loading-label {
+        font-size: 14px;
+        margin-top: 4px;
+        color: #8c8ca0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-overlay">
+      <div id="loading-title">Loading...</div>
+      <div id="loading-bar-bg">
+        <div id="loading-bar-fill"></div>
+      </div>
+      <div id="loading-pct">0%</div>
+      <div id="loading-label">Initializing...</div>
+    </div>
+    <canvas
+      id="glcanvas"
+      tabindex="1"
+      style="image-rendering: pixelated"
+    ></canvas>
+    <script src="mq_js_bundle.js"></script>
+    <script src="sapp_jsutils.js"></script>
+    <script src="quad-storage.js"></script>
+    <script src="auth.js"></script>
+    <script src="network.js"></script>
+    <script src="loading.js"></script>
+
+    <script>
+      // Disable browser context menu so the in-game one works on right-click
+      document.getElementById("glcanvas").addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+      });
+
+      // Prevent early focus events that cause RefCell double-borrow panic in miniquad.
+      // The canvas starts non-focusable; we restore tabindex after WASM init settles.
+      document.getElementById("glcanvas").removeAttribute("tabindex");
+      load("isometric_client.wasm");
+      setTimeout(function () {
+        var canvas = document.getElementById("glcanvas");
+        canvas.setAttribute("tabindex", "1");
+        canvas.focus();
+      }, 500);
+
+      // ── Mobile soft keyboard fix ────────────────────────────────────────────
+      // Miniquad renders text inputs inside the WebGL canvas. On mobile the
+      // native soft keyboard never opens because there is no real <input>.
+      // Solution: a hidden off-screen <input> is focused on every tap so the
+      // OS opens the keyboard, then every keystroke is forwarded to the canvas
+      // as a synthetic KeyboardEvent that Miniquad can consume.
+      (function () {
+        var kb = document.createElement("input");
+        kb.type = "text";
+        kb.setAttribute("autocomplete", "off");
+        kb.setAttribute("autocorrect", "off");
+        kb.setAttribute("autocapitalize", "none");
+        kb.setAttribute("spellcheck", "false");
+        kb.style.cssText =
+          "position:fixed;left:-9999px;top:50%;width:1px;height:1px;" +
+          "opacity:0;border:none;outline:none;background:transparent;";
+        document.body.appendChild(kb);
+
+        var canvas = document.getElementById("glcanvas");
+
+        // Open keyboard on every tap
+        canvas.addEventListener("touchend", function (e) {
+          kb.value = "";
+          kb.focus();
+        }, { passive: true });
+
+        // Forward physical key events (external keyboard / desktop fallback)
+        function forwardKey(type, e) {
+          var evt = new KeyboardEvent(type, {
+            key: e.key,
+            code: e.code,
+            keyCode: e.keyCode,
+            which: e.which,
+            charCode: type === "keypress" ? (e.key.length === 1 ? e.key.charCodeAt(0) : 0) : 0,
+            shiftKey: e.shiftKey,
+            ctrlKey: e.ctrlKey,
+            altKey: e.altKey,
+            bubbles: true,
+            cancelable: true,
+          });
+          canvas.dispatchEvent(evt);
+        }
+
+        kb.addEventListener("keydown",  function (e) { forwardKey("keydown",  e); });
+        kb.addEventListener("keyup",    function (e) { forwardKey("keyup",    e); });
+        kb.addEventListener("keypress", function (e) { forwardKey("keypress", e); });
+
+        // Handle soft keyboard character input (fires when the IME commits text)
+        kb.addEventListener("input", function (e) {
+          var chars = (e.data || kb.value) + "";
+          for (var i = 0; i < chars.length; i++) {
+            var c = chars[i];
+            var code = "Key" + c.toUpperCase();
+            ["keydown", "keypress", "keyup"].forEach(function (type) {
+              canvas.dispatchEvent(new KeyboardEvent(type, {
+                key: c,
+                code: code,
+                keyCode: c.charCodeAt(0),
+                which: c.charCodeAt(0),
+                charCode: type === "keypress" ? c.charCodeAt(0) : 0,
+                bubbles: true,
+                cancelable: true,
+              }));
+            });
+          }
+          // Reset so next input event always has a fresh delta
+          kb.value = "";
+        });
+      })();
+    </script>
+  </body>
+</html>

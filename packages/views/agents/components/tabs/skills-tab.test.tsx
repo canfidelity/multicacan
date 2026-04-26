@@ -37,6 +37,7 @@ const agent: Agent = {
   avatar_url: null,
   runtime_mode: "local",
   runtime_config: {},
+  mcp_config: null,
   custom_env: {},
   custom_args: [],
   custom_env_redacted: false,

@@ -242,7 +242,7 @@ export default function GameSection() {
 
         {/* IDLE */}
         {gameState === 'idle' && (
-          <div className="pixel-card p-8 border-2 border-yellow-700 max-w-2xl mx-auto" style={{ boxShadow: '0 0 40px rgba(245,158,11,0.3)' }}>
+          <div className="pixel-card px-3 py-6 sm:p-8 border-2 border-yellow-700 max-w-2xl mx-auto" style={{ boxShadow: '0 0 40px rgba(245,158,11,0.3)' }}>
             <PixelPreview />
             <p className="text-gray-400 text-xs leading-relaxed mb-6 mt-6 text-center" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
               A real pixel MMORPG — explore the world, battle monsters, earn $VOX tokens. No download needed.
@@ -251,45 +251,45 @@ export default function GameSection() {
             {/* Engine selector */}
             <div className="mb-6">
               <div className="font-pixel text-center text-gray-600 mb-3" style={{ fontSize: '8px' }}>SELECT ENGINE</div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-1 sm:gap-3">
                 <button
                   onClick={() => setGameEngine('aeven')}
-                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  className="p-2 sm:p-3 flex flex-col items-center gap-1 transition-all"
                   style={{
                     background: gameEngine === 'aeven' ? 'rgba(20,10,40,0.95)' : 'rgba(10,8,20,0.6)',
                     border: `2px solid ${gameEngine === 'aeven' ? '#8844cc' : 'rgba(80,60,120,0.4)'}`,
                     boxShadow: gameEngine === 'aeven' ? '0 0 16px rgba(140,60,220,0.35)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>🏰</span>
-                  <span className="font-pixel text-purple-300" style={{ fontSize: '7px' }}>AEVEN MMO</span>
-                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Isometric · Multiplayer</span>
+                  <span style={{ fontSize: 20 }}>🏰</span>
+                  <span className="font-pixel text-purple-300" style={{ fontSize: '6px' }}>AEVEN MMO</span>
+                  <span className="text-gray-600 hidden sm:block" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Isometric · Multi</span>
                 </button>
                 <button
                   onClick={() => setGameEngine('phaser')}
-                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  className="p-2 sm:p-3 flex flex-col items-center gap-1 transition-all"
                   style={{
                     background: gameEngine === 'phaser' ? 'rgba(10,20,10,0.95)' : 'rgba(10,8,20,0.6)',
                     border: `2px solid ${gameEngine === 'phaser' ? '#448844' : 'rgba(80,60,120,0.4)'}`,
                     boxShadow: gameEngine === 'phaser' ? '0 0 16px rgba(60,160,60,0.3)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>⚔️</span>
-                  <span className="font-pixel text-green-400" style={{ fontSize: '7px' }}>PIXEL RPG</span>
-                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Top-down · Phaser 3</span>
+                  <span style={{ fontSize: 20 }}>⚔️</span>
+                  <span className="font-pixel text-green-400" style={{ fontSize: '6px' }}>PIXEL RPG</span>
+                  <span className="text-gray-600 hidden sm:block" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Top-down · Phaser</span>
                 </button>
                 <button
                   onClick={() => setGameEngine('demonic-stones')}
-                  className="p-3 flex flex-col items-center gap-1 transition-all"
+                  className="p-2 sm:p-3 flex flex-col items-center gap-1 transition-all"
                   style={{
                     background: gameEngine === 'demonic-stones' ? 'rgba(30,5,5,0.95)' : 'rgba(10,8,20,0.6)',
                     border: `2px solid ${gameEngine === 'demonic-stones' ? '#882222' : 'rgba(80,60,120,0.4)'}`,
                     boxShadow: gameEngine === 'demonic-stones' ? '0 0 16px rgba(180,40,40,0.35)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>🪨</span>
-                  <span className="font-pixel text-red-400" style={{ fontSize: '7px' }}>DEMONIC STONES</span>
-                  <span className="text-gray-600" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Godot 4 · Action RPG</span>
+                  <span style={{ fontSize: 20 }}>🪨</span>
+                  <span className="font-pixel text-red-400" style={{ fontSize: '6px' }}>D-STONES</span>
+                  <span className="text-gray-600 hidden sm:block" style={{ fontFamily: 'monospace', fontSize: '9px' }}>Godot 4 · Action</span>
                 </button>
               </div>
             </div>

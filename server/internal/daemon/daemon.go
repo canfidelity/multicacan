@@ -1184,9 +1184,9 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// workspace dir rather than the task workdir, so the AGENTS.md written by
 	// execenv.InjectRuntimeConfig is never read. Pass agent instructions inline
 	// via SystemPrompt so the backend can prepend them to the --message payload.
-	// Other providers already surface instructions through their runtime config
-	// file and don't need this.
-	if provider == "openclaw" {
+	// claude-gg is an HTTP-only backend with no CLI and no config file — it
+	// receives everything via the API request, so instructions must go inline too.
+	if provider == "openclaw" || provider == "claude-gg" {
 		execOpts.SystemPrompt = instructions
 	}
 

@@ -59,6 +59,7 @@ export const mockAgents: Agent[] = [
     status: "idle",
     runtime_mode: "cloud",
     runtime_config: {},
+    mcp_config: null,
     custom_env: {},
     custom_args: [],
     custom_env_redacted: false,

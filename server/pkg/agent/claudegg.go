@@ -363,17 +363,57 @@ func (b *claudeggBackend) callAPI(
 		return nil, nil, fmt.Errorf("claude-gg: marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		baseURL+"/v1/chat/completions", bytes.NewReader(reqBody))
-	if err != nil {
-		return nil, nil, fmt.Errorf("claude-gg: create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
+	// Retry up to 3 times on transient server errors (524 Cloudflare timeout,
+	// 502 Bad Gateway, 503 Service Unavailable) with exponential backoff.
+	const maxRetries = 3
+	retryDelays := []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, nil, fmt.Errorf("claude-gg: HTTP request: %w", err)
+	var (
+		resp    *http.Response
+		doErr   error
+		attempt int
+	)
+	for attempt = 0; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+			baseURL+"/v1/chat/completions", bytes.NewReader(reqBody))
+		if err != nil {
+			return nil, nil, fmt.Errorf("claude-gg: create request: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, doErr = http.DefaultClient.Do(req)
+		if doErr != nil {
+			if attempt < maxRetries && ctx.Err() == nil {
+				b.cfg.Logger.Warn("claude-gg: request error, retrying",
+					"attempt", attempt+1, "error", doErr)
+				select {
+				case <-ctx.Done():
+					return nil, nil, ctx.Err()
+				case <-time.After(retryDelays[attempt]):
+				}
+				continue
+			}
+			return nil, nil, fmt.Errorf("claude-gg: HTTP request: %w", doErr)
+		}
+
+		// Retry on transient HTTP errors.
+		if resp.StatusCode == 524 || resp.StatusCode == 502 || resp.StatusCode == 503 {
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+			resp.Body.Close()
+			if attempt < maxRetries && ctx.Err() == nil {
+				b.cfg.Logger.Warn("claude-gg: transient error, retrying",
+					"attempt", attempt+1, "status", resp.StatusCode, "body", strings.TrimSpace(string(body)))
+				select {
+				case <-ctx.Done():
+					return nil, nil, ctx.Err()
+				case <-time.After(retryDelays[attempt]):
+				}
+				continue
+			}
+			return nil, nil, fmt.Errorf("claude-gg: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+		break // success or non-retryable error
 	}
 	defer resp.Body.Close()
 

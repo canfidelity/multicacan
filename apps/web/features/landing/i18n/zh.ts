@@ -177,6 +177,69 @@ export function createZhDict(allowSignup: boolean): LandingDict {
     ],
   },
 
+  pricing: {
+    label: "\u4ef7\u683c",
+    headlineMain: "\u514d\u8d39\u5f00\u59cb\uff0c",
+    headlineFaded: "\u51c6\u5907\u597d\u4e86\u518d\u6269\u5c55\u3002",
+    plans: [
+      {
+        name: "\u5f00\u6e90\u7248",
+        price: "\u514d\u8d39",
+        priceSub: "\u6c38\u4e45\u514d\u8d39",
+        description:
+          "\u5728\u81ea\u5df1\u7684\u57fa\u7840\u8bbe\u65bd\u4e0a\u81ea\u6258\u7ba1\uff0c\u5168\u9762\u63a7\u5236\uff0c\u6ca1\u6709\u9650\u5236\u3002",
+        cta: "\u5f00\u59cb\u4f7f\u7528",
+        ctaHref: "/login",
+        features: [
+          "\u65e0\u9650\u4e2a Agent",
+          "\u65e0\u9650\u95ee\u9898\u4e0e\u9879\u76ee",
+          "\u652f\u6301\u6240\u6709\u8fd0\u884c\u65f6\uff08Claude Code\u3001Codex\u3001Gemini\u2026\uff09",
+          "\u53ef\u590d\u7528\u6280\u80fd",
+          "\u5b9e\u65f6 WebSocket \u6d41\u5f0f\u4f20\u8f93",
+          "\u793e\u533a\u652f\u6301",
+          "Apache 2.0 \u8bb8\u53ef\u8bc1",
+        ],
+      },
+      {
+        name: "\u4e91\u7248\u672c",
+        badge: "\u6700\u53d7\u6b22\u8fce",
+        price: "\u514d\u8d39",
+        priceSub: "\u5f00\u59cb\u4f7f\u7528",
+        description:
+          "Multica \u6258\u7ba1\u6258\u7ba1\uff0c\u65e0\u9700\u57fa\u7840\u8bbe\u65bd\uff0c\u5373\u523b\u8bbe\u7f6e\u3002",
+        cta: "\u5f00\u59cb\u514d\u8d39\u8bd5\u7528",
+        ctaHref: "/login",
+        highlighted: true,
+        features: [
+          "\u5305\u542b\u5f00\u6e90\u7248\u6240\u6709\u529f\u80fd",
+          "\u6258\u7ba1\u6258\u7ba1\u548c\u66f4\u65b0",
+          "\u4e91\u7aef Agent \u8fd0\u884c\u65f6",
+          "\u81ea\u52a8\u5907\u4efd",
+          "Web + \u684c\u9762\u5e94\u7528",
+          "\u90ae\u4ef6\u652f\u6301",
+        ],
+      },
+      {
+        name: "\u4f01\u4e1a\u7248",
+        price: "\u5b9a\u5236",
+        priceSub: "\u6bcf\u4e2a\u5de5\u4f5c\u533a",
+        description:
+          "\u4e13\u5c5e\u652f\u6301\u3001\u7b26\u5408\u5408\u89c4\u7684\u90e8\u7f72\u548c\u81ea\u5b9a\u4e49\u96c6\u6210\u3002",
+        cta: "\u8054\u7cfb\u6211\u4eec",
+        ctaHref: "mailto:hello@multica.ai",
+        features: [
+          "\u5305\u542b\u4e91\u7248\u672c\u6240\u6709\u529f\u80fd",
+          "SSO / SAML",
+          "\u4e13\u5c5e Slack \u9891\u9053",
+          "\u81ea\u5b9a\u4e49 SLA",
+          "\u5ba1\u8ba1\u65e5\u5fd7",
+          "\u81ea\u5b9a\u4e49\u96c6\u6210",
+          "\u4f18\u5148\u652f\u6301",
+        ],
+      },
+    ],
+  },
+
   faq: {
     label: "\u5e38\u89c1\u95ee\u9898",
     headline: "\u95ee\u4e0e\u7b54\u3002",
@@ -225,6 +288,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
         links: [
           { label: "\u529f\u80fd\u7279\u6027", href: "#features" },
           { label: "\u5982\u4f55\u5de5\u4f5c", href: "#how-it-works" },
+          { label: "\u4ef7\u683c", href: "#pricing" },
           { label: "更新日志", href: "/changelog" },
           { label: "下载", href: "/download" },
         ],

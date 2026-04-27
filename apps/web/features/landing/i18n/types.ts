@@ -52,6 +52,22 @@ export type LandingDict = {
     cta: string;
     highlights: { title: string; description: string }[];
   };
+  pricing: {
+    label: string;
+    headlineMain: string;
+    headlineFaded: string;
+    plans: {
+      name: string;
+      badge?: string;
+      price: string;
+      priceSub: string;
+      description: string;
+      cta: string;
+      ctaHref: string;
+      features: string[];
+      highlighted?: boolean;
+    }[];
+  };
   faq: {
     label: string;
     headline: string;

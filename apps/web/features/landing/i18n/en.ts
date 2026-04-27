@@ -177,6 +177,69 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     ],
   },
 
+  pricing: {
+    label: "Pricing",
+    headlineMain: "Start free,",
+    headlineFaded: "scale when you\u2019re ready.",
+    plans: [
+      {
+        name: "Open Source",
+        price: "Free",
+        priceSub: "forever",
+        description:
+          "Self-host on your own infrastructure. Full control, no strings attached.",
+        cta: "Get started",
+        ctaHref: "/login",
+        features: [
+          "Unlimited agents",
+          "Unlimited issues & projects",
+          "All runtimes (Claude Code, Codex, Gemini\u2026)",
+          "Reusable skills",
+          "Real-time WebSocket streaming",
+          "Community support",
+          "Apache 2.0 license",
+        ],
+      },
+      {
+        name: "Cloud",
+        badge: "Most popular",
+        price: "Free",
+        priceSub: "to start",
+        description:
+          "Multica-managed hosting. Zero infrastructure, instant setup.",
+        cta: "Start free trial",
+        ctaHref: "/login",
+        highlighted: true,
+        features: [
+          "Everything in Open Source",
+          "Managed hosting & updates",
+          "Cloud agent runtimes",
+          "Automatic backups",
+          "Web + Desktop app",
+          "Email support",
+        ],
+      },
+      {
+        name: "Enterprise",
+        price: "Custom",
+        priceSub: "per workspace",
+        description:
+          "Dedicated support, compliance-ready deployments, and custom integrations.",
+        cta: "Contact us",
+        ctaHref: "mailto:hello@multica.ai",
+        features: [
+          "Everything in Cloud",
+          "SSO / SAML",
+          "Dedicated Slack channel",
+          "Custom SLA",
+          "Audit logs",
+          "Custom integrations",
+          "Priority support",
+        ],
+      },
+    ],
+  },
+
   faq: {
     label: "FAQ",
     headline: "Questions & answers.",
@@ -225,6 +288,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         links: [
           { label: "Features", href: "#features" },
           { label: "How it Works", href: "#how-it-works" },
+          { label: "Pricing", href: "#pricing" },
           { label: "Changelog", href: "/changelog" },
           { label: "Download", href: "/download" },
         ],

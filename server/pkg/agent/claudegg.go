@@ -466,14 +466,29 @@ func (b *claudeggBackend) callAPI(
 			return nil, nil, parseErr
 		}
 
-		// Fallback: if the model embedded tool calls as XML in the content field
-		// (Claude's native format) instead of using the structured tool_calls field.
-		if len(result.ToolCalls) == 0 && strings.Contains(result.Content, "<tool_call>") {
+		// Handle XML-style tool calls in content.
+		//
+		// Two cases require stripping <tool_call> XML from content:
+		//
+		// Case 1 — pure XML mode: streaming delivered NO structured tool_calls
+		// and the model put everything in content (Claude native format).
+		// Extract the tool calls from the XML and mark XMLFormat=true.
+		//
+		// Case 2 — mixed mode: streaming delivered structured tool_calls AND the
+		// model also wrote the <tool_call> tags as plain text in delta.Content
+		// (both formats at once). The tool calls are already captured via the
+		// streaming path, but content still contains the raw XML tags — those
+		// must be stripped so they don't leak into comments or lastTextContent.
+		if strings.Contains(result.Content, "<tool_call>") {
 			prefix, xmlCalls := extractXMLToolCalls(result.Content)
-			if len(xmlCalls) > 0 {
+			if len(result.ToolCalls) == 0 && len(xmlCalls) > 0 {
+				// Case 1: no streaming tool calls — use the XML-extracted ones.
 				result.Content = prefix
 				result.ToolCalls = xmlCalls
 				result.XMLFormat = true
+			} else {
+				// Case 2: streaming tool calls already captured — just strip the XML text.
+				result.Content = prefix
 			}
 		}
 

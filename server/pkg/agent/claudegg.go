@@ -156,7 +156,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 	maxTurns := opts.MaxTurns
 	if maxTurns <= 0 {
-		maxTurns = 20
+		maxTurns = 50
 	}
 
 	messages := buildClaudeGGMessages(opts.SystemPrompt, prompt)
@@ -174,10 +174,11 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 		defer cancel()
 
 		var (
-			totalUsage  TokenUsage
-			finalOutput string
-			finalStatus = "completed"
-			finalError  string
+			totalUsage      TokenUsage
+			finalOutput     string
+			lastTextContent string // last non-empty text seen across all turns
+			finalStatus     = "completed"
+			finalError      string
 		)
 
 		trySend(msgCh, Message{Type: MessageStatus, Status: "running"})
@@ -206,14 +207,21 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 				break
 			}
 
-			// Emit assistant text to the activity stream.
+			// Emit assistant text to the activity stream and track it.
 			if apiResp.Content != "" {
 				trySend(msgCh, Message{Type: MessageText, Content: apiResp.Content})
+				lastTextContent = apiResp.Content
 			}
 
 			// No tool calls → this is the model's final response.
 			if len(apiResp.ToolCalls) == 0 || turn == maxTurns-1 {
 				finalOutput = apiResp.Content
+				// If the last turn produced no text (e.g. only tool calls), fall back
+				// to the most recent non-empty text seen across all turns so the daemon
+				// always has something to post as a result comment.
+				if finalOutput == "" {
+					finalOutput = lastTextContent
+				}
 				break
 			}
 

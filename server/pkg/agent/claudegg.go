@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 )
@@ -356,7 +358,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 	return &Session{Messages: msgCh, Result: resCh}, nil
 }
 
-// claudeGGAPIResponse holds the parsed result of a single non-streaming API call.
+// claudeGGAPIResponse holds the parsed result of a single API call.
 type claudeGGAPIResponse struct {
 	Content   string
 	ToolCalls []claudeGGToolCall
@@ -366,7 +368,10 @@ type claudeGGAPIResponse struct {
 	XMLFormat bool
 }
 
-// callAPI makes a single non-streaming request to the OpenAI-compatible endpoint.
+// callAPI makes a streaming request to the OpenAI-compatible endpoint and
+// assembles the full response from SSE chunks. Using streaming avoids the
+// long wait for non-streaming responses (the API starts emitting data within
+// seconds instead of blocking until the full completion is ready).
 func (b *claudeggBackend) callAPI(
 	ctx context.Context,
 	messages []map[string]any,
@@ -376,23 +381,26 @@ func (b *claudeggBackend) callAPI(
 		"model":    model,
 		"messages": messages,
 		"tools":    []any{claudeGGBashTool},
-		"stream":   false,
+		"stream":   true,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("claude-gg: marshal request: %w", err)
 	}
 
-	// Retry up to 2 times on transient server errors (524 Cloudflare timeout,
-	// 502 Bad Gateway, 503 Service Unavailable) with exponential backoff.
+	// Retry up to 2 times on transient errors with exponential backoff.
 	const maxRetries = 2
 	retryDelays := []time.Duration{2 * time.Second, 5 * time.Second}
 
-	var (
-		resp    *http.Response
-		doErr   error
-		attempt int
-	)
-	for attempt = 0; attempt <= maxRetries; attempt++ {
+	// httpClient uses ResponseHeaderTimeout so we fail fast when the server
+	// doesn't respond, but once headers arrive we read the stream freely
+	// (bounded only by the caller's ctx which carries the overall task timeout).
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 15 * time.Second,
+		},
+	}
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 			baseURL+"/v1/chat/completions", bytes.NewReader(reqBody))
 		if err != nil {
@@ -400,10 +408,9 @@ func (b *claudeggBackend) callAPI(
 		}
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "text/event-stream")
 
-		// Use a per-request timeout so hung connections don't block indefinitely.
-		httpClient := &http.Client{Timeout: 45 * time.Second}
-		resp, doErr = httpClient.Do(req)
+		resp, doErr := httpClient.Do(req)
 		if doErr != nil {
 			if attempt < maxRetries && ctx.Err() == nil {
 				b.cfg.Logger.Warn("claude-gg: request error, retrying",
@@ -434,51 +441,146 @@ func (b *claudeggBackend) callAPI(
 			}
 			return nil, nil, fmt.Errorf("claude-gg: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 		}
-		break // success or non-retryable error
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, nil, fmt.Errorf("claude-gg: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			resp.Body.Close()
+			return nil, nil, fmt.Errorf("claude-gg: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
 
-	var raw claudeGGNonStreamResponse
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, nil, fmt.Errorf("claude-gg: decode response: %w", err)
-	}
-	if len(raw.Choices) == 0 {
-		return nil, nil, fmt.Errorf("claude-gg: empty choices in response")
-	}
+		// Parse the SSE stream.
+		result, usage, parseErr := b.parseStream(resp.Body)
+		resp.Body.Close()
+		if parseErr != nil {
+			if attempt < maxRetries && ctx.Err() == nil {
+				b.cfg.Logger.Warn("claude-gg: stream parse error, retrying",
+					"attempt", attempt+1, "error", parseErr)
+				select {
+				case <-ctx.Done():
+					return nil, nil, ctx.Err()
+				case <-time.After(retryDelays[attempt]):
+				}
+				continue
+			}
+			return nil, nil, parseErr
+		}
 
-	msg := raw.Choices[0].Message
-	result := &claudeGGAPIResponse{
-		Content:   msg.Content,
-		ToolCalls: msg.ToolCalls,
-	}
+		// Fallback: if the model embedded tool calls as XML in the content field
+		// (Claude's native format) instead of using the structured tool_calls field.
+		if len(result.ToolCalls) == 0 && strings.Contains(result.Content, "<tool_call>") {
+			prefix, xmlCalls := extractXMLToolCalls(result.Content)
+			if len(xmlCalls) > 0 {
+				result.Content = prefix
+				result.ToolCalls = xmlCalls
+				result.XMLFormat = true
+			}
+		}
 
-	// Fallback: if the model embedded tool calls as XML in the content field
-	// (Claude's native format) instead of using the structured tool_calls field,
-	// extract them so the execution loop can run them normally.
-	if len(result.ToolCalls) == 0 && strings.Contains(msg.Content, "<tool_call>") {
-		prefix, xmlCalls := extractXMLToolCalls(msg.Content)
-		if len(xmlCalls) > 0 {
-			result.Content = prefix
-			result.ToolCalls = xmlCalls
-			result.XMLFormat = true
+		return result, usage, nil
+	}
+	// Unreachable, but satisfies the compiler.
+	return nil, nil, fmt.Errorf("claude-gg: exhausted retries")
+}
+
+// tcAccum accumulates streaming tool call fragments by index.
+type tcAccum struct {
+	id        string
+	name      string
+	arguments strings.Builder
+}
+
+// parseStream reads an SSE body and assembles a complete claudeGGAPIResponse.
+func (b *claudeggBackend) parseStream(body io.Reader) (*claudeGGAPIResponse, *TokenUsage, error) {
+	var (
+		content  strings.Builder
+		tcMap    = map[int]*tcAccum{}
+		usage    *TokenUsage
+	)
+
+	scanner := bufio.NewScanner(body)
+	// Increase buffer for large tool-call argument chunks.
+	scanner.Buffer(make([]byte, 64*1024), 64*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		data := strings.TrimPrefix(line, "data: ")
+		if data == "[DONE]" {
+			break
+		}
+
+		var chunk claudeGGStreamChunk
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			// Skip malformed chunks; non-JSON lines are common in SSE.
+			continue
+		}
+
+		if chunk.Usage != nil {
+			usage = &TokenUsage{
+				InputTokens:  chunk.Usage.PromptTokens,
+				OutputTokens: chunk.Usage.CompletionTokens,
+			}
+		}
+
+		if len(chunk.Choices) == 0 {
+			continue
+		}
+		delta := chunk.Choices[0].Delta
+
+		if delta.Content != "" {
+			content.WriteString(delta.Content)
+		}
+
+		for _, tc := range delta.ToolCalls {
+			acc := tcMap[tc.Index]
+			if acc == nil {
+				acc = &tcAccum{}
+				tcMap[tc.Index] = acc
+			}
+			if tc.ID != "" {
+				acc.id = tc.ID
+			}
+			if tc.Function.Name != "" {
+				acc.name = tc.Function.Name
+			}
+			acc.arguments.WriteString(tc.Function.Arguments)
 		}
 	}
 
-
-	var usage *TokenUsage
-	if raw.Usage != nil {
-		usage = &TokenUsage{
-			InputTokens:  raw.Usage.PromptTokens,
-			OutputTokens: raw.Usage.CompletionTokens,
-		}
+	if err := scanner.Err(); err != nil {
+		return nil, nil, fmt.Errorf("claude-gg: stream read error: %w", err)
 	}
 
-	return result, usage, nil
+	// Convert accumulated tool calls (sorted by index) to the standard type.
+	indices := make([]int, 0, len(tcMap))
+	for idx := range tcMap {
+		indices = append(indices, idx)
+	}
+	sort.Ints(indices)
+
+	toolCalls := make([]claudeGGToolCall, 0, len(indices))
+	for i, idx := range indices {
+		acc := tcMap[idx]
+		id := acc.id
+		if id == "" {
+			id = fmt.Sprintf("stream-call-%d", i)
+		}
+		toolCalls = append(toolCalls, claudeGGToolCall{
+			ID:   id,
+			Type: "function",
+			Function: claudeGGToolCallFunc{
+				Name:      acc.name,
+				Arguments: acc.arguments.String(),
+			},
+		})
+	}
+
+	return &claudeGGAPIResponse{
+		Content:   content.String(),
+		ToolCalls: toolCalls,
+	}, usage, nil
 }
 
 // runBash executes a shell command in the given working directory and returns
@@ -551,22 +653,34 @@ func buildClaudeGGMessages(systemPrompt, userPrompt string) []map[string]any {
 	return msgs
 }
 
-// --- Non-streaming response types ---
+// --- Streaming response types ---
 
-type claudeGGNonStreamResponse struct {
-	Choices []claudeGGNonStreamChoice `json:"choices"`
-	Usage   *claudeGGUsage            `json:"usage,omitempty"`
+type claudeGGStreamChunk struct {
+	Choices []claudeGGStreamChoice `json:"choices"`
+	Usage   *claudeGGUsage         `json:"usage,omitempty"`
 }
 
-type claudeGGNonStreamChoice struct {
-	Message      claudeGGAssistantMessage `json:"message"`
-	FinishReason string                   `json:"finish_reason"`
+type claudeGGStreamChoice struct {
+	Delta        claudeGGStreamDelta `json:"delta"`
+	FinishReason *string             `json:"finish_reason"`
 }
 
-type claudeGGAssistantMessage struct {
-	Role      string             `json:"role"`
-	Content   string             `json:"content"`
-	ToolCalls []claudeGGToolCall `json:"tool_calls,omitempty"`
+type claudeGGStreamDelta struct {
+	Role      string                   `json:"role,omitempty"`
+	Content   string                   `json:"content,omitempty"`
+	ToolCalls []claudeGGStreamToolCall `json:"tool_calls,omitempty"`
+}
+
+type claudeGGStreamToolCall struct {
+	Index    int                        `json:"index"`
+	ID       string                     `json:"id,omitempty"`
+	Type     string                     `json:"type,omitempty"`
+	Function claudeGGStreamToolCallFunc `json:"function"`
+}
+
+type claudeGGStreamToolCallFunc struct {
+	Name      string `json:"name,omitempty"`
+	Arguments string `json:"arguments,omitempty"`
 }
 
 type claudeGGToolCall struct {

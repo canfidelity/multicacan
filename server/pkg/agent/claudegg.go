@@ -13,6 +13,90 @@ import (
 	"time"
 )
 
+// extractXMLToolCalls parses <tool_call>...</tool_call> blocks that Claude models
+// sometimes embed directly in the content field instead of using the structured
+// OpenAI tool_calls field. Returns the text before the first tool call (the
+// "prefix") and all parsed tool calls. Hallucinated <tool_response> blocks that
+// the model generates between calls are silently dropped — we replace them with
+// real execution results.
+func extractXMLToolCalls(content string) (prefix string, calls []claudeGGToolCall) {
+	const (
+		startTag = "<tool_call>"
+		endTag   = "</tool_call>"
+	)
+
+	firstIdx := strings.Index(content, startTag)
+	if firstIdx == -1 {
+		return content, nil
+	}
+	prefix = strings.TrimSpace(content[:firstIdx])
+
+	s := content[firstIdx:]
+	id := 0
+	for {
+		start := strings.Index(s, startTag)
+		if start == -1 {
+			break
+		}
+		end := strings.Index(s, endTag)
+		if end == -1 || end < start {
+			break
+		}
+		body := strings.TrimSpace(s[start+len(startTag) : end])
+		s = s[end+len(endTag):]
+
+		// Support two JSON shapes:
+		//   {"name":"bash","arguments":{"command":"..."}}
+		//   {"name":"bash","input":{"command":"..."}}
+		var raw struct {
+			Name      string          `json:"name"`
+			Arguments json.RawMessage `json:"arguments"`
+			Input     json.RawMessage `json:"input"`
+		}
+		if err := json.Unmarshal([]byte(body), &raw); err != nil {
+			continue
+		}
+		args := raw.Arguments
+		if len(args) == 0 {
+			args = raw.Input
+		}
+		if len(args) == 0 {
+			continue
+		}
+		calls = append(calls, claudeGGToolCall{
+			ID:   fmt.Sprintf("xml-call-%d", id),
+			Type: "function",
+			Function: claudeGGToolCallFunc{
+				Name:      raw.Name,
+				Arguments: string(args),
+			},
+		})
+		id++
+	}
+	return prefix, calls
+}
+
+// buildXMLAssistantContent reconstructs the assistant message content with
+// tool calls in XML format (without hallucinated responses). This is used
+// when feeding history back to a model that uses XML-style tool calling.
+func buildXMLAssistantContent(prefix string, calls []claudeGGToolCall) string {
+	var sb strings.Builder
+	if prefix != "" {
+		sb.WriteString(prefix)
+	}
+	for _, tc := range calls {
+		sb.WriteString("\n<tool_call>\n")
+		// Re-encode the call JSON cleanly.
+		enc, _ := json.Marshal(map[string]any{
+			"name":      tc.Function.Name,
+			"arguments": json.RawMessage(tc.Function.Arguments),
+		})
+		sb.Write(enc)
+		sb.WriteString("\n</tool_call>")
+	}
+	return sb.String()
+}
+
 // claudeggBackend implements Backend by making direct HTTP requests to
 // the claude.gg OpenAI-compatible API. It runs a tool-execution loop that
 // allows the model to execute bash commands (multica CLI, git, etc.) in the
@@ -133,52 +217,103 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 				break
 			}
 
-			// Add the assistant message (with tool_calls) to conversation history.
-			messages = append(messages, map[string]any{
-				"role":       "assistant",
-				"content":    apiResp.Content,
-				"tool_calls": apiResp.ToolCalls,
-			})
-
-			// Execute each tool call and collect results.
-			for _, tc := range apiResp.ToolCalls {
-				var inputArgs map[string]any
-				_ = json.Unmarshal([]byte(tc.Function.Arguments), &inputArgs)
-
-				trySend(msgCh, Message{
-					Type:   MessageToolUse,
-					Tool:   tc.Function.Name,
-					CallID: tc.ID,
-					Input:  inputArgs,
-				})
-
-				var toolOutput string
-				switch tc.Function.Name {
-				case "bash":
-					var args struct {
-						Command string `json:"command"`
-					}
-					if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
-						toolOutput = fmt.Sprintf("error parsing bash arguments: %v", jsonErr)
-					} else {
-						toolOutput = b.runBash(args.Command, opts.Cwd)
-					}
-				default:
-					toolOutput = fmt.Sprintf("unknown tool %q — only \"bash\" is supported", tc.Function.Name)
-				}
-
-				trySend(msgCh, Message{
-					Type:   MessageToolResult,
-					Tool:   tc.Function.Name,
-					CallID: tc.ID,
-					Output: toolOutput,
-				})
-
+			if apiResp.XMLFormat {
+				// XML-style tool calls: the model used <tool_call> tags in content.
+				// History must mirror this format — structured tool_calls / tool-role
+				// messages are not used. Instead we append the assistant turn with
+				// reconstructed XML (minus hallucinated responses) and then one user
+				// message per tool result wrapped in <tool_response> tags.
 				messages = append(messages, map[string]any{
-					"role":         "tool",
-					"tool_call_id": tc.ID,
-					"content":      toolOutput,
+					"role":    "assistant",
+					"content": buildXMLAssistantContent(apiResp.Content, apiResp.ToolCalls),
 				})
+
+				for _, tc := range apiResp.ToolCalls {
+					var inputArgs map[string]any
+					_ = json.Unmarshal([]byte(tc.Function.Arguments), &inputArgs)
+
+					trySend(msgCh, Message{
+						Type:   MessageToolUse,
+						Tool:   tc.Function.Name,
+						CallID: tc.ID,
+						Input:  inputArgs,
+					})
+
+					var toolOutput string
+					switch tc.Function.Name {
+					case "bash":
+						var args struct {
+							Command string `json:"command"`
+						}
+						if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
+							toolOutput = fmt.Sprintf("error parsing bash arguments: %v", jsonErr)
+						} else {
+							toolOutput = b.runBash(args.Command, opts.Cwd)
+						}
+					default:
+						toolOutput = fmt.Sprintf("unknown tool %q — only \"bash\" is supported", tc.Function.Name)
+					}
+
+					trySend(msgCh, Message{
+						Type:   MessageToolResult,
+						Tool:   tc.Function.Name,
+						CallID: tc.ID,
+						Output: toolOutput,
+					})
+
+					messages = append(messages, map[string]any{
+						"role":    "user",
+						"content": "<tool_response>\n" + toolOutput + "\n</tool_response>",
+					})
+				}
+			} else {
+				// OpenAI-style structured tool_calls: append assistant message with
+				// tool_calls field, then individual tool-role result messages.
+				messages = append(messages, map[string]any{
+					"role":       "assistant",
+					"content":    apiResp.Content,
+					"tool_calls": apiResp.ToolCalls,
+				})
+
+				for _, tc := range apiResp.ToolCalls {
+					var inputArgs map[string]any
+					_ = json.Unmarshal([]byte(tc.Function.Arguments), &inputArgs)
+
+					trySend(msgCh, Message{
+						Type:   MessageToolUse,
+						Tool:   tc.Function.Name,
+						CallID: tc.ID,
+						Input:  inputArgs,
+					})
+
+					var toolOutput string
+					switch tc.Function.Name {
+					case "bash":
+						var args struct {
+							Command string `json:"command"`
+						}
+						if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
+							toolOutput = fmt.Sprintf("error parsing bash arguments: %v", jsonErr)
+						} else {
+							toolOutput = b.runBash(args.Command, opts.Cwd)
+						}
+					default:
+						toolOutput = fmt.Sprintf("unknown tool %q — only \"bash\" is supported", tc.Function.Name)
+					}
+
+					trySend(msgCh, Message{
+						Type:   MessageToolResult,
+						Tool:   tc.Function.Name,
+						CallID: tc.ID,
+						Output: toolOutput,
+					})
+
+					messages = append(messages, map[string]any{
+						"role":         "tool",
+						"tool_call_id": tc.ID,
+						"content":      toolOutput,
+					})
+				}
 			}
 		}
 
@@ -206,6 +341,10 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 type claudeGGAPIResponse struct {
 	Content   string
 	ToolCalls []claudeGGToolCall
+	// XMLFormat is true when tool calls were extracted from inline XML tags in
+	// the content field rather than from the structured tool_calls field. The
+	// conversation history format differs between the two modes.
+	XMLFormat bool
 }
 
 // callAPI makes a single non-streaming request to the OpenAI-compatible endpoint.
@@ -255,6 +394,18 @@ func (b *claudeggBackend) callAPI(
 	result := &claudeGGAPIResponse{
 		Content:   msg.Content,
 		ToolCalls: msg.ToolCalls,
+	}
+
+	// Fallback: if the model embedded tool calls as XML in the content field
+	// (Claude's native format) instead of using the structured tool_calls field,
+	// extract them so the execution loop can run them normally.
+	if len(result.ToolCalls) == 0 && strings.Contains(msg.Content, "<tool_call>") {
+		prefix, xmlCalls := extractXMLToolCalls(msg.Content)
+		if len(xmlCalls) > 0 {
+			result.Content = prefix
+			result.ToolCalls = xmlCalls
+			result.XMLFormat = true
+		}
 	}
 
 	var usage *TokenUsage

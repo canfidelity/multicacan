@@ -110,7 +110,7 @@ type claudeggBackend struct {
 	cfg Config
 }
 
-// claudeGGBashTool is the single tool exposed to the model: a bash executor.
+// claudeGGBashTool is the bash executor tool exposed to the model.
 var claudeGGBashTool = map[string]any{
 	"type": "function",
 	"function": map[string]any{
@@ -128,6 +128,38 @@ var claudeGGBashTool = map[string]any{
 		},
 	},
 }
+
+// claudeGGTaskCompleteTool signals that the agent has finished the task.
+// Using tool_choice:"required" forces the model to always call a tool, so
+// the only way to end the loop is to explicitly call task_complete — this
+// eliminates premature completion caused by text-only planning turns.
+var claudeGGTaskCompleteTool = map[string]any{
+	"type": "function",
+	"function": map[string]any{
+		"name":        "task_complete",
+		"description": "Signal that you have fully completed the task. Call this ONLY when all requested work is done and the result comment has been posted via `multica issue comment add`. Do NOT call this while still planning or mid-execution.",
+		"parameters": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"result": map[string]any{
+					"type":        "string",
+					"description": "A brief summary of what was accomplished.",
+				},
+			},
+			"required": []string{"result"},
+		},
+	},
+}
+
+// claudeGGTools is the full tool list sent on every request.
+var claudeGGTools = []any{claudeGGBashTool, claudeGGTaskCompleteTool}
+
+// historyLimit is the maximum number of bytes kept per tool result in history.
+const historyLimit = 8 * 1024 // 8 KiB
+
+// maxHistoryMessages caps the conversation history to prevent context bloat
+// and hallucination from overly long histories.
+const maxHistoryMessages = 30
 
 func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecOptions) (*Session, error) {
 	apiKey := b.cfg.Env["CLAUDE_GG_API_KEY"]
@@ -183,9 +215,16 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 		trySend(msgCh, Message{Type: MessageStatus, Status: "running"})
 
-		// Tool-execution loop: each iteration calls the API, executes any tool
-		// calls, feeds results back, and repeats until a text-only reply is produced.
+		// Tool-execution loop: the model must call either bash (to do work) or
+		// task_complete (to signal it's done). tool_choice:"required" prevents
+		// text-only planning turns that previously caused premature completion.
 		for turn := 0; turn < maxTurns; turn++ {
+			// Trim history to avoid context bloat and hallucination.
+			if len(messages) > maxHistoryMessages {
+				// Always keep the system message (index 0) and trim the middle.
+				messages = append(messages[:1], messages[len(messages)-maxHistoryMessages+1:]...)
+			}
+
 			b.cfg.Logger.Info("claude-gg turn", "turn", turn+1, "model", model, "base_url", baseURL, "messages", len(messages))
 
 			apiResp, usage, err := b.callAPI(runCtx, messages, model, apiKey, baseURL)
@@ -224,15 +263,46 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 				lastTextContent = apiResp.Content
 			}
 
-			// No tool calls → this is the model's final response.
-			if len(apiResp.ToolCalls) == 0 || turn == maxTurns-1 {
-				finalOutput = apiResp.Content
-				// If the last turn produced no text (e.g. only tool calls), fall back
-				// to the most recent non-empty text seen across all turns so the daemon
-				// always has something to post as a result comment.
-				if finalOutput == "" {
-					finalOutput = lastTextContent
+			// Max turns reached — force stop.
+			if turn == maxTurns-1 {
+				finalOutput = lastTextContent
+				break
+			}
+
+			// No tool calls on this turn. With tool_choice:"required" this should
+			// not normally happen, but handle it gracefully: treat as a planning
+			// turn and continue (do NOT break — that's the old premature-exit bug).
+			if len(apiResp.ToolCalls) == 0 {
+				b.cfg.Logger.Warn("claude-gg: text-only turn (tool_choice ignored?), continuing", "turn", turn+1)
+				messages = append(messages, map[string]any{
+					"role":    "assistant",
+					"content": apiResp.Content,
+				})
+				messages = append(messages, map[string]any{
+					"role":    "user",
+					"content": "Continue. Use bash to perform the next step, or call task_complete if you are fully done.",
+				})
+				continue
+			}
+
+			// Check whether the model called task_complete.
+			taskDone := false
+			for _, tc := range apiResp.ToolCalls {
+				if tc.Function.Name == "task_complete" {
+					var args struct {
+						Result string `json:"result"`
+					}
+					_ = json.Unmarshal([]byte(tc.Function.Arguments), &args)
+					if args.Result != "" {
+						finalOutput = args.Result
+					} else {
+						finalOutput = lastTextContent
+					}
+					taskDone = true
+					break
 				}
+			}
+			if taskDone {
 				break
 			}
 
@@ -270,7 +340,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 							toolOutput = b.runBash(args.Command, opts.Cwd)
 						}
 					default:
-						toolOutput = fmt.Sprintf("unknown tool %q — only \"bash\" is supported", tc.Function.Name)
+						toolOutput = fmt.Sprintf("unknown tool %q", tc.Function.Name)
 					}
 
 					trySend(msgCh, Message{
@@ -282,7 +352,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 					messages = append(messages, map[string]any{
 						"role":    "user",
-						"content": "<tool_response>\n" + toolOutput + "\n</tool_response>",
+						"content": "<tool_response>\n" + truncateBytes([]byte(toolOutput), historyLimit) + "\n</tool_response>",
 					})
 				}
 			} else {
@@ -317,7 +387,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 							toolOutput = b.runBash(args.Command, opts.Cwd)
 						}
 					default:
-						toolOutput = fmt.Sprintf("unknown tool %q — only \"bash\" is supported", tc.Function.Name)
+						toolOutput = fmt.Sprintf("unknown tool %q", tc.Function.Name)
 					}
 
 					trySend(msgCh, Message{
@@ -330,7 +400,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 					messages = append(messages, map[string]any{
 						"role":         "tool",
 						"tool_call_id": tc.ID,
-						"content":      toolOutput,
+						"content":      truncateBytes([]byte(toolOutput), historyLimit),
 					})
 				}
 			}
@@ -373,10 +443,11 @@ func (b *claudeggBackend) callAPI(
 	model, apiKey, baseURL string,
 ) (*claudeGGAPIResponse, *TokenUsage, error) {
 	reqBody, err := json.Marshal(map[string]any{
-		"model":    model,
-		"messages": messages,
-		"tools":    []any{claudeGGBashTool},
-		"stream":   false,
+		"model":       model,
+		"messages":    messages,
+		"tools":       claudeGGTools,
+		"tool_choice": "required",
+		"stream":      false,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("claude-gg: marshal request: %w", err)

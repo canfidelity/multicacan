@@ -97,6 +97,7 @@ function CommentInput({ issueId, onSubmit }: CommentInputProps) {
         <Button
           size="icon-sm"
           disabled={isEmpty || submitting}
+          onPointerDown={(e) => e.preventDefault()}
           onClick={handleSubmit}
         >
           {submitting ? (

@@ -448,10 +448,12 @@
   margin: 0.75rem 0;
 }
 
-/* Editable mode: compact inline thumbnails */
+/* Editable mode: wide badge-style inline thumbnails */
 .rich-text-editor:not(.readonly) .image-figure {
-  max-width: 40px;
-  max-height: 40px;
+  width: 96px;
+  max-width: 96px;
+  height: 26px;
+  max-height: 26px;
   margin: 0 0.125rem;
   border-radius: 6px;
   overflow: hidden;
@@ -460,8 +462,8 @@
 }
 
 .rich-text-editor:not(.readonly) .image-content {
-  width: 40px;
-  height: 40px;
+  width: 96px;
+  height: 26px;
   object-fit: cover;
   border-radius: 5px;
 }
@@ -484,21 +486,21 @@
   opacity: 1;
 }
 
-/* Only show delete button in compact mode */
+/* Only show delete button in badge mode */
 .rich-text-editor:not(.readonly) .image-toolbar button {
   display: none;
 }
 
 .rich-text-editor:not(.readonly) .image-toolbar button:last-child {
   display: flex;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
   color: white;
 }
 
 .rich-text-editor:not(.readonly) .image-toolbar button:last-child svg {
-  width: 0.625rem;
-  height: 0.625rem;
+  width: 0.5rem;
+  height: 0.5rem;
 }
 
 .rich-text-editor .image-uploading {

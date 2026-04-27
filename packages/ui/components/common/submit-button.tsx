@@ -14,14 +14,14 @@ interface SubmitButtonProps {
 function SubmitButton({ onClick, disabled, loading, running, onStop }: SubmitButtonProps) {
   if (running) {
     return (
-      <Button size="icon-sm" onClick={onStop}>
+      <Button size="icon-sm" onPointerDown={(e) => e.preventDefault()} onClick={onStop}>
         <Square className="fill-current" />
       </Button>
     );
   }
 
   return (
-    <Button size="icon-sm" disabled={disabled || loading} onClick={onClick}>
+    <Button size="icon-sm" disabled={disabled || loading} onPointerDown={(e) => e.preventDefault()} onClick={onClick}>
       {loading ? (
         <Loader2 className="animate-spin" />
       ) : (

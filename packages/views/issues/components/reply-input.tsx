@@ -128,6 +128,7 @@ function ReplyInput({
           <button
             type="button"
             disabled={isEmpty || submitting}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={handleSubmit}
             className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >

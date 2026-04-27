@@ -382,10 +382,10 @@ func (b *claudeggBackend) callAPI(
 		return nil, nil, fmt.Errorf("claude-gg: marshal request: %w", err)
 	}
 
-	// Retry up to 3 times on transient server errors (524 Cloudflare timeout,
+	// Retry up to 2 times on transient server errors (524 Cloudflare timeout,
 	// 502 Bad Gateway, 503 Service Unavailable) with exponential backoff.
-	const maxRetries = 3
-	retryDelays := []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second}
+	const maxRetries = 2
+	retryDelays := []time.Duration{2 * time.Second, 5 * time.Second}
 
 	var (
 		resp    *http.Response
@@ -402,7 +402,7 @@ func (b *claudeggBackend) callAPI(
 		req.Header.Set("Content-Type", "application/json")
 
 		// Use a per-request timeout so hung connections don't block indefinitely.
-		httpClient := &http.Client{Timeout: 90 * time.Second}
+		httpClient := &http.Client{Timeout: 45 * time.Second}
 		resp, doErr = httpClient.Do(req)
 		if doErr != nil {
 			if attempt < maxRetries && ctx.Err() == nil {

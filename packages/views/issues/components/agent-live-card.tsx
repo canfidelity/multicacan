@@ -403,9 +403,10 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
               )}
             </div>
           ) : (
-            <div className="border-t border-info/10 px-3 py-3">
+            <div className="border-t border-info/10 px-3 py-3 flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin text-info shrink-0" />
               <p className="text-xs text-muted-foreground">
-                Live log is not available for this agent provider. Results will appear when the task completes.
+                Waiting for agent response...
               </p>
             </div>
           )}

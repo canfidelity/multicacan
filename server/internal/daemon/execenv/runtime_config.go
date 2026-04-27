@@ -235,6 +235,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("Good: \"Fixed the login redirect. PR: https://...\"\n")
 	b.WriteString("Bad: \"1. Read the issue 2. Found the bug in auth.go 3. Created branch 4. ...\"\n")
 	b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
+	b.WriteString("\n⛔ **NEVER include raw XML tool tags in comments.** Tags like `<tool_use>`, `<tool_result>`, `<tool_call>`, `<tool_response>`, or `<function_calls>` are internal execution traces — they must NEVER appear in a `multica issue comment add` call. Comments must be clean, human-readable text only.\n")
 
 	return b.String()
 }

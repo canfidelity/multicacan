@@ -13,37 +13,52 @@ import (
 	"time"
 )
 
-// extractXMLToolCalls parses <tool_call>...</tool_call> blocks that Claude models
-// sometimes embed directly in the content field instead of using the structured
-// OpenAI tool_calls field. Returns the text before the first tool call (the
-// "prefix") and all parsed tool calls. Hallucinated <tool_response> blocks that
-// the model generates between calls are silently dropped — we replace them with
-// real execution results.
+// extractXMLToolCalls parses XML tool-call blocks that Claude models sometimes
+// embed directly in the content field instead of using the structured OpenAI
+// tool_calls field. It handles two tag variants:
+//   - <tool_call>...</tool_call>  (Claude's native format)
+//   - <tool_use>...</tool_use>    (alternate format used by some model versions)
+//
+// Returns the text before the first tool call (the "prefix") and all parsed
+// tool calls. Hallucinated response blocks (<tool_response>, <tool_result>)
+// that the model generates between calls are silently dropped — we replace
+// them with real execution results.
 func extractXMLToolCalls(content string) (prefix string, calls []claudeGGToolCall) {
-	const (
-		startTag = "<tool_call>"
-		endTag   = "</tool_call>"
-	)
+	// Try both tag variants; use whichever appears first.
+	type tagPair struct{ start, end string }
+	variants := []tagPair{
+		{"<tool_call>", "</tool_call>"},
+		{"<tool_use>", "</tool_use>"},
+	}
 
-	firstIdx := strings.Index(content, startTag)
+	chosen := tagPair{}
+	firstIdx := -1
+	for _, v := range variants {
+		idx := strings.Index(content, v.start)
+		if idx != -1 && (firstIdx == -1 || idx < firstIdx) {
+			firstIdx = idx
+			chosen = v
+		}
+	}
 	if firstIdx == -1 {
 		return content, nil
 	}
+
 	prefix = strings.TrimSpace(content[:firstIdx])
 
 	s := content[firstIdx:]
 	id := 0
 	for {
-		start := strings.Index(s, startTag)
+		start := strings.Index(s, chosen.start)
 		if start == -1 {
 			break
 		}
-		end := strings.Index(s, endTag)
+		end := strings.Index(s, chosen.end)
 		if end == -1 || end < start {
 			break
 		}
-		body := strings.TrimSpace(s[start+len(startTag) : end])
-		s = s[end+len(endTag):]
+		body := strings.TrimSpace(s[start+len(chosen.start) : end])
+		s = s[end+len(chosen.end):]
 
 		// Support two JSON shapes:
 		//   {"name":"bash","arguments":{"command":"..."}}
@@ -529,9 +544,11 @@ func (b *claudeggBackend) callAPI(
 	}
 
 	// Fallback: if the model embedded tool calls as XML in the content field
-	// (Claude's native format) instead of using the structured tool_calls field,
-	// extract them so the execution loop can run them normally.
-	if len(result.ToolCalls) == 0 && strings.Contains(msg.Content, "<tool_call>") {
+	// (Claude's native format, or the <tool_use> variant) instead of using the
+	// structured tool_calls field, extract them so the execution loop can run
+	// them normally.
+	if len(result.ToolCalls) == 0 &&
+		(strings.Contains(msg.Content, "<tool_call>") || strings.Contains(msg.Content, "<tool_use>")) {
 		prefix, xmlCalls := extractXMLToolCalls(msg.Content)
 		if len(xmlCalls) > 0 {
 			result.Content = prefix

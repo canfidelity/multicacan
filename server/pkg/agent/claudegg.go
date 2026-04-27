@@ -207,6 +207,17 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 				break
 			}
 
+			// If the model returned neither text nor tool calls the API returned
+			// an empty response — retry the same turn (don't advance conversation).
+			if apiResp.Content == "" && len(apiResp.ToolCalls) == 0 {
+				b.cfg.Logger.Warn("claude-gg: empty response, retrying turn", "turn", turn+1)
+				select {
+				case <-runCtx.Done():
+				case <-time.After(5 * time.Second):
+				}
+				continue
+			}
+
 			// Emit assistant text to the activity stream and track it.
 			if apiResp.Content != "" {
 				trySend(msgCh, Message{Type: MessageText, Content: apiResp.Content})
@@ -390,7 +401,9 @@ func (b *claudeggBackend) callAPI(
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, doErr = http.DefaultClient.Do(req)
+		// Use a per-request timeout so hung connections don't block indefinitely.
+		httpClient := &http.Client{Timeout: 90 * time.Second}
+		resp, doErr = httpClient.Do(req)
 		if doErr != nil {
 			if attempt < maxRetries && ctx.Err() == nil {
 				b.cfg.Logger.Warn("claude-gg: request error, retrying",
@@ -455,6 +468,7 @@ func (b *claudeggBackend) callAPI(
 			result.XMLFormat = true
 		}
 	}
+
 
 	var usage *TokenUsage
 	if raw.Usage != nil {

@@ -7,6 +7,7 @@ import { HelpLauncher } from "./help-launcher";
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -351,7 +352,10 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   });
   const deletePin = useDeletePin();
   const reorderPins = useReorderPins();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   // Local presentational copy of pinnedItems for drop-animation stability.
   // Follows TQ at rest; frozen during a drag gesture so a mid-drag cache

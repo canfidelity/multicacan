@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+// BuildRuntimeConfig returns the runtime configuration content for the given
+// provider. This is the same content that InjectRuntimeConfig would write to
+// a config file. Use this for HTTP-based providers (e.g. claude-gg) that
+// cannot read config files natively and must receive instructions inline.
+func BuildRuntimeConfig(provider string, ctx TaskContextForEnv) string {
+	return buildMetaSkillContent(provider, ctx)
+}
+
 // InjectRuntimeConfig writes the meta skill content into the runtime-specific
 // config file so the agent discovers its environment through its native mechanism.
 //
@@ -222,11 +230,25 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("do NOT attempt to work around it. Instead, post a comment mentioning the workspace owner to request the missing functionality.\n\n")
 
 	b.WriteString("## Output\n\n")
-	b.WriteString("⚠️ **Final results MUST be delivered via `multica issue comment add`.** The user does NOT see your terminal output, assistant chat text, or run logs — only comments on the issue. A task that finishes without a result comment is invisible to the user, even if the work itself was correct.\n\n")
-	b.WriteString("Keep comments concise and natural — state the outcome, not the process.\n")
-	b.WriteString("Good: \"Fixed the login redirect. PR: https://...\"\n")
-	b.WriteString("Bad: \"1. Read the issue 2. Found the bug in auth.go 3. Created branch 4. ...\"\n")
-	b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
+	if provider == "claude-gg" {
+		// claude-gg uses a bash tool-execution loop: the model's final TEXT
+		// response is automatically posted as a comment by the daemon.
+		// Calling `multica issue comment add` at the end would create a duplicate.
+		b.WriteString("⚠️ **Your final text response is automatically posted as a comment — do NOT call `multica issue comment add` at the end.**\n\n")
+		b.WriteString("- ✅ Use the `bash` tool with `multica issue comment add` only for **intermediate** progress updates during long tasks.\n")
+		b.WriteString("- ✅ For the **final answer**: just write it as your text response — it will be posted automatically.\n")
+		b.WriteString("- ❌ Do NOT end with a `bash` call to `multica issue comment add` — that would post a duplicate comment.\n\n")
+		b.WriteString("Keep your final response concise and natural — state the outcome, not the process.\n")
+		b.WriteString("Good: \"Fixed the login redirect. PR: https://...\"\n")
+		b.WriteString("Bad: \"1. Read the issue 2. Found the bug in auth.go 3. Created branch 4. ...\"\n")
+		b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
+	} else {
+		b.WriteString("⚠️ **Final results MUST be delivered via `multica issue comment add`.** The user does NOT see your terminal output, assistant chat text, or run logs — only comments on the issue. A task that finishes without a result comment is invisible to the user, even if the work itself was correct.\n\n")
+		b.WriteString("Keep comments concise and natural — state the outcome, not the process.\n")
+		b.WriteString("Good: \"Fixed the login redirect. PR: https://...\"\n")
+		b.WriteString("Bad: \"1. Read the issue 2. Found the bug in auth.go 3. Created branch 4. ...\"\n")
+		b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
+	}
 
 	return b.String()
 }

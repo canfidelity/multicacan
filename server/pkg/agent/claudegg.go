@@ -284,7 +284,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 					messages = append(messages, map[string]any{
 						"role":    "user",
-						"content": "<tool_response>\n" + toolOutput + "\n</tool_response>",
+						"content": "<tool_response>\n" + truncateBytes([]byte(toolOutput), historyLimit) + "\n</tool_response>",
 					})
 				}
 			} else {
@@ -332,7 +332,7 @@ func (b *claudeggBackend) Execute(ctx context.Context, prompt string, opts ExecO
 					messages = append(messages, map[string]any{
 						"role":         "tool",
 						"tool_call_id": tc.ID,
-						"content":      toolOutput,
+						"content":      truncateBytes([]byte(toolOutput), historyLimit),
 					})
 				}
 			}
@@ -378,10 +378,11 @@ func (b *claudeggBackend) callAPI(
 	model, apiKey, baseURL string,
 ) (*claudeGGAPIResponse, *TokenUsage, error) {
 	reqBody, err := json.Marshal(map[string]any{
-		"model":    model,
-		"messages": messages,
-		"tools":    []any{claudeGGBashTool},
-		"stream":   true,
+		"model":      model,
+		"messages":   messages,
+		"tools":      []any{claudeGGBashTool},
+		"stream":     true,
+		"max_tokens": 8192, // cap generation length to reduce per-turn latency
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("claude-gg: marshal request: %w", err)
@@ -582,6 +583,13 @@ func (b *claudeggBackend) parseStream(body io.Reader) (*claudeGGAPIResponse, *To
 		ToolCalls: toolCalls,
 	}, usage, nil
 }
+
+// historyLimit is the maximum number of bytes kept for a tool result that is
+// fed back into the conversation history. The full output is still emitted to
+// the live activity stream; this limit only affects what the model sees in
+// subsequent turns. Keeping history lean reduces per-turn token counts and
+// therefore per-turn API latency.
+const historyLimit = 6 * 1024 // 6 KiB per tool result in history
 
 // runBash executes a shell command in the given working directory and returns
 // its combined stdout+stderr. Output is capped at 64 KiB. Custom env vars

@@ -18,10 +18,16 @@ type secretPattern struct {
 // xmlBlockPattern matches XML tool-call blocks that claude.gg and similar
 // proxies embed directly in the assistant's text output. These must be
 // stripped before the output reaches issue comments or chat messages.
+// Complete paired blocks are stripped first; then a second pass removes any
+// orphan open/close tags that weren't part of a complete block (e.g. a
+// lone </tool_response> that the model echoed from a prior history message).
 var xmlBlockPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)<tool_response>.*?</tool_response>`),
 	regexp.MustCompile(`(?s)<tool_use>.*?</tool_use>`),
 	regexp.MustCompile(`(?s)<tool_result>.*?</tool_result>`),
+	regexp.MustCompile(`(?s)<tool_call>.*?</tool_call>`),
+	// Orphan tags left over after block stripping (or echoed by the model).
+	regexp.MustCompile(`</?(?:tool_response|tool_use|tool_result|tool_call)>`),
 }
 
 // multiNewlineRe collapses two or more consecutive newlines into one,

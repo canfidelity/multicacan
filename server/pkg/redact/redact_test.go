@@ -241,6 +241,44 @@ func TestStripXMLToolBlocks(t *testing.T) {
 	}
 }
 
+func TestStripOrphanXMLTags(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"orphan closing tool_response",
+			"Here is the result.\n</tool_response>\nDone.",
+			"Here is the result.\nDone.",
+		},
+		{
+			"orphan opening tool_call",
+			"Starting work.\n<tool_call>\nDone.",
+			"Starting work.\nDone.",
+		},
+		{
+			"orphan tool_result tag",
+			"Output: </tool_result> end",
+			"Output:  end",
+		},
+		{
+			"complete tool_call block stripped",
+			"Before.\n<tool_call>\n{\"name\":\"Bash\"}\n</tool_call>\nAfter.",
+			"Before.\nAfter.",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Text(tc.input)
+			if got != tc.want {
+				t.Fatalf("expected:\n%q\ngot:\n%q", tc.want, got)
+			}
+		})
+	}
+}
+
 func TestRedactMultipleSecrets(t *testing.T) {
 	t.Parallel()
 	input := "Keys: AKIAIOSFODNN7EXAMPLE and ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn"

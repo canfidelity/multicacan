@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Server } from "lucide-react";
+import { Server, ArrowLeft } from "lucide-react";
 import { useDefaultLayout } from "react-resizable-panels";
+import { useIsMobile } from "@multica/ui/hooks/use-mobile";
+import { Button } from "@multica/ui/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ResizablePanelGroup,
@@ -60,6 +62,75 @@ export default function RuntimesPage({ topSlot, bootstrapping }: RuntimesPagePro
     ? selectedId
     : runtimes[0]?.id ?? "";
   const selected = runtimes.find((r) => r.id === effectiveSelectedId) ?? null;
+
+  const isMobile = useIsMobile();
+
+  // -- Mobile layout: list / detail toggle -----------------------------------
+
+  if (isMobile) {
+    if (isLoading || fetching) {
+      return (
+        <div className="flex flex-1 flex-col min-h-0">
+          <div className="flex h-12 shrink-0 items-center border-b px-4">
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="h-5 w-5 rounded" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (selected) {
+      return (
+        <div className="flex flex-1 flex-col min-h-0">
+          <div className="flex h-12 shrink-0 items-center border-b px-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedId("")}
+              className="gap-1.5 text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Runtimes
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <RuntimeDetail key={selected.id} runtime={selected} />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-1 flex-col min-h-0">
+        {topSlot}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <RuntimeList
+            runtimes={runtimes}
+            selectedId={effectiveSelectedId}
+            onSelect={setSelectedId}
+            filter={filter}
+            onFilterChange={setFilter}
+            ownerFilter={ownerFilter}
+            onOwnerFilterChange={setOwnerFilter}
+            updatableIds={updatableIds}
+            bootstrapping={bootstrapping}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // -- Desktop layout: resizable two-panel -----------------------------------
 
   if (isLoading || fetching) {
     return (

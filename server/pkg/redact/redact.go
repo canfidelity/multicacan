@@ -24,6 +24,10 @@ var xmlBlockPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)<tool_result>.*?</tool_result>`),
 }
 
+// multiNewlineRe collapses two or more consecutive newlines into one,
+// used to clean up gaps left after XML block removal.
+var multiNewlineRe = regexp.MustCompile(`\n{2,}`)
+
 // Patterns are checked in order; first match wins per position.
 var patterns = []secretPattern{
 	// AWS access key IDs (always start with AKIA)
@@ -94,10 +98,19 @@ func init() {
 // blocks that some LLM proxies embed directly in assistant text output.
 func Text(s string) string {
 	// Strip XML tool blocks first so they don't interfere with secret scanning.
+	// When blocks are removed, collapse any resulting consecutive blank lines and
+	// trim leading/trailing whitespace so the output is presentable.
+	stripped := false
 	for _, re := range xmlBlockPatterns {
-		s = re.ReplaceAllString(s, "")
+		if re.MatchString(s) {
+			s = re.ReplaceAllString(s, "")
+			stripped = true
+		}
 	}
-	s = strings.TrimSpace(s)
+	if stripped {
+		s = multiNewlineRe.ReplaceAllString(s, "\n")
+		s = strings.TrimSpace(s)
+	}
 
 	for _, p := range patterns {
 		s = p.re.ReplaceAllString(s, p.replacement)

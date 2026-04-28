@@ -203,6 +203,44 @@ func TestInputMapNil(t *testing.T) {
 	}
 }
 
+func TestStripXMLToolBlocks(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"tool_response stripped",
+			"Repo checkout edildi.\n\n<tool_response>\nimport { foo } from \"./bar\";\n</tool_response>",
+			"Repo checkout edildi.",
+		},
+		{
+			"tool_use stripped",
+			"Running command.\n<tool_use>\n{\"name\": \"Bash\", \"input\": {}}\n</tool_use>\nDone.",
+			"Running command.\nDone.",
+		},
+		{
+			"tool_result stripped",
+			"Result: <tool_result>some output</tool_result> ok",
+			"Result:  ok",
+		},
+		{
+			"normal text unchanged",
+			"Fixed the login redirect. PR: https://example.com/pr/1",
+			"Fixed the login redirect. PR: https://example.com/pr/1",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Text(tc.input)
+			if got != tc.want {
+				t.Fatalf("expected:\n%q\ngot:\n%q", tc.want, got)
+			}
+		})
+	}
+}
+
 func TestRedactMultipleSecrets(t *testing.T) {
 	t.Parallel()
 	input := "Keys: AKIAIOSFODNN7EXAMPLE and ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn"

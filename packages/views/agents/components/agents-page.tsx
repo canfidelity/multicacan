@@ -47,12 +47,14 @@ export function AgentsPage() {
 
   const archivedCount = useMemo(() => agents.filter((a) => !!a.archived_at).length, [agents]);
 
-  // Select first agent on initial load or when filter changes
+  // Auto-select first agent on initial load or when filter changes (desktop only).
+  // On mobile the user navigates explicitly — auto-selecting would break the back button.
   useEffect(() => {
+    if (isMobile) return;
     if (filteredAgents.length > 0 && !filteredAgents.some((a) => a.id === selectedId)) {
       setSelectedId(filteredAgents[0]!.id);
     }
-  }, [filteredAgents, selectedId]);
+  }, [filteredAgents, selectedId, isMobile]);
 
   const handleCreate = async (data: CreateAgentRequest) => {
     const agent = await api.createAgent(data);

@@ -1010,7 +1010,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
       )}
       {isMobile && (
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="right" showCloseButton={false} className="w-[320px] overflow-y-auto p-4">
+          <SheetContent side="right" className="w-[320px] overflow-y-auto p-4">
             {sidebarContent}
           </SheetContent>
         </Sheet>

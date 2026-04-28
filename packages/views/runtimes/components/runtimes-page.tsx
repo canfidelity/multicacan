@@ -57,13 +57,17 @@ export default function RuntimesPage({ topSlot, bootstrapping }: RuntimesPagePro
   useWSEvent("daemon:register", handleDaemonEvent);
   const updatableIds = useUpdatableRuntimeIds(wsId);
 
-  // Auto-select first runtime if nothing selected
+  // Auto-select first runtime if nothing selected (desktop only — mobile uses explicit selection)
   const effectiveSelectedId = selectedId && runtimes.some((r) => r.id === selectedId)
     ? selectedId
     : runtimes[0]?.id ?? "";
   const selected = runtimes.find((r) => r.id === effectiveSelectedId) ?? null;
 
   const isMobile = useIsMobile();
+
+  // On mobile use explicit selectedId so the back button actually works.
+  // effectiveSelectedId auto-selects the first item which would prevent returning to the list.
+  const mobileSelected = runtimes.find((r) => r.id === selectedId) ?? null;
 
   // -- Mobile layout: list / detail toggle -----------------------------------
 
@@ -89,7 +93,7 @@ export default function RuntimesPage({ topSlot, bootstrapping }: RuntimesPagePro
       );
     }
 
-    if (selected) {
+    if (mobileSelected) {
       return (
         <div className="flex flex-1 flex-col min-h-0">
           <div className="flex h-12 shrink-0 items-center border-b px-2">
@@ -104,7 +108,7 @@ export default function RuntimesPage({ topSlot, bootstrapping }: RuntimesPagePro
             </Button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <RuntimeDetail key={selected.id} runtime={selected} />
+            <RuntimeDetail key={mobileSelected.id} runtime={mobileSelected} />
           </div>
         </div>
       );

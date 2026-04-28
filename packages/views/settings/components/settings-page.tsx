@@ -49,40 +49,50 @@ export function SettingsPage({ extraAccountTabs }: SettingsPageProps = {}) {
       {/* Left nav (desktop) / Top nav (mobile) */}
       <div className={isMobile ? "shrink-0 border-b overflow-x-auto px-2 py-1" : "w-52 shrink-0 border-r overflow-y-auto p-4"}>
         {!isMobile && <h1 className="text-sm font-semibold mb-4 px-2">Settings</h1>}
-        <TabsList variant="line" className={isMobile ? "flex-row whitespace-nowrap" : "flex-col items-stretch"}>
-          {/* My Account group */}
-          <span className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
-            My Account
-          </span>
-          {accountTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-          {extraAccountTabs?.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-
-          {/* Workspace group */}
-          <span className="px-2 pb-1 pt-4 text-xs font-medium text-muted-foreground truncate">
-            {workspaceName ?? "Workspace"}
-          </span>
-          {workspaceTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {isMobile ? (
+          /* Mobile: flat horizontal scrollable tab bar — no group labels */
+          <TabsList variant="line" className="flex-row whitespace-nowrap gap-0.5">
+            {[...accountTabs, ...(extraAccountTabs ?? []), ...workspaceTabs].map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        ) : (
+          /* Desktop: vertical list with group labels */
+          <TabsList variant="line" className="flex-col items-stretch">
+            <span className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+              My Account
+            </span>
+            {accountTabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+            {extraAccountTabs?.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+            <span className="px-2 pb-1 pt-4 text-xs font-medium text-muted-foreground truncate">
+              {workspaceName ?? "Workspace"}
+            </span>
+            {workspaceTabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
       </div>
 
       {/* Right content */}
       <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="w-full max-w-3xl mx-auto p-6">
+        <div className="w-full max-w-3xl mx-auto p-4 sm:p-6">
           <TabsContent value="profile"><AccountTab /></TabsContent>
           <TabsContent value="appearance"><AppearanceTab /></TabsContent>
           <TabsContent value="tokens"><TokensTab /></TabsContent>

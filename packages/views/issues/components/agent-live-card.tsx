@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@multica/ui
 import { useActorName } from "@multica/core/workspace/hooks";
 import { redactSecrets } from "../utils/redact";
 import { AgentTranscriptDialog } from "./agent-transcript-dialog";
+import { resolveXmlTextBlocks } from "../../common/timeline-utils";
 
 // ─── Shared types & helpers ─────────────────────────────────────────────────
 
@@ -82,18 +83,19 @@ function getToolSummary(item: TimelineItem): string {
 
 /** Build a chronologically ordered timeline from raw messages. */
 function buildTimeline(msgs: TaskMessagePayload[]): TimelineItem[] {
-  const items: TimelineItem[] = [];
-  for (const msg of msgs) {
-    items.push({
+  const raw: TimelineItem[] = msgs
+    .map((msg) => ({
       seq: msg.seq,
       type: msg.type,
       tool: msg.tool,
       content: msg.content ? redactSecrets(msg.content) : msg.content,
       input: msg.input,
       output: msg.output ? redactSecrets(msg.output) : msg.output,
-    });
-  }
-  return items.sort((a, b) => a.seq - b.seq);
+    }))
+    .sort((a, b) => a.seq - b.seq);
+
+  // Parse <tool_call>/<tool_response> XML embedded by proxies like claude.gg.
+  return resolveXmlTextBlocks(raw);
 }
 
 // ─── Per-task state ─────────────────────────────────────────────────────────

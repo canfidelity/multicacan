@@ -1071,6 +1071,138 @@ type TaskMessageBatchRequest struct {
 	Messages []TaskMessageRequest `json:"messages"`
 }
 
+// expandXMLMessages expands text messages that contain inline <tool_call>,
+// <tool_use>, or <tool_response> XML blocks emitted by claude.gg and similar
+// proxies into discrete tool_use, tool_result, and text messages, then
+// re-sequences the whole batch. Messages without embedded XML pass through
+// unchanged. This is the canonical storage-level fix: all clients benefit
+// automatically regardless of which daemon version or frontend version is
+// running.
+func expandXMLMessages(msgs []TaskMessageRequest) []TaskMessageRequest {
+	needsExpansion := false
+	for _, m := range msgs {
+		if m.Type == "text" &&
+			(strings.Contains(m.Content, "<tool_call>") ||
+				strings.Contains(m.Content, "<tool_use>") ||
+				strings.Contains(m.Content, "<tool_response>")) {
+			needsExpansion = true
+			break
+		}
+	}
+	if !needsExpansion {
+		return msgs
+	}
+
+	var expanded []TaskMessageRequest
+	for _, m := range msgs {
+		if m.Type != "text" ||
+			(!strings.Contains(m.Content, "<tool_call>") &&
+				!strings.Contains(m.Content, "<tool_use>") &&
+				!strings.Contains(m.Content, "<tool_response>")) {
+			expanded = append(expanded, m)
+			continue
+		}
+		expanded = append(expanded, splitXMLParts(m.Content)...)
+	}
+
+	// Re-sequence starting from the first seq in the original batch.
+	startSeq := 0
+	if len(msgs) > 0 {
+		startSeq = msgs[0].Seq
+	}
+	for i := range expanded {
+		expanded[i].Seq = startSeq + i
+	}
+	return expanded
+}
+
+// splitXMLParts parses inline XML tool blocks from a single text content string
+// and returns a slice of TaskMessageRequests (text, tool_use, tool_result).
+func splitXMLParts(content string) []TaskMessageRequest {
+	var results []TaskMessageRequest
+	remaining := content
+
+	for remaining != "" {
+		// Determine which XML block tag appears first.
+		type tagPair struct{ start, end string }
+		candidates := []tagPair{
+			{"<tool_call>", "</tool_call>"},
+			{"<tool_use>", "</tool_use>"},
+			{"<tool_response>", "</tool_response>"},
+		}
+
+		firstIdx := -1
+		var chosen tagPair
+		for _, c := range candidates {
+			idx := strings.Index(remaining, c.start)
+			if idx != -1 && (firstIdx == -1 || idx < firstIdx) {
+				firstIdx = idx
+				chosen = c
+			}
+		}
+
+		if firstIdx == -1 {
+			// No more XML blocks — emit remaining text.
+			if trimmed := strings.TrimSpace(remaining); trimmed != "" {
+				results = append(results, TaskMessageRequest{Type: "text", Content: trimmed})
+			}
+			break
+		}
+
+		// Emit text before this block.
+		if prefix := strings.TrimSpace(remaining[:firstIdx]); prefix != "" {
+			results = append(results, TaskMessageRequest{Type: "text", Content: prefix})
+		}
+
+		// Find the closing tag.
+		rest := remaining[firstIdx+len(chosen.start):]
+		endIdx := strings.Index(rest, chosen.end)
+		if endIdx == -1 {
+			// Unclosed tag — treat everything that remains as text.
+			if trimmed := strings.TrimSpace(remaining[firstIdx:]); trimmed != "" {
+				results = append(results, TaskMessageRequest{Type: "text", Content: trimmed})
+			}
+			break
+		}
+
+		blockBody := strings.TrimSpace(rest[:endIdx])
+		remaining = rest[endIdx+len(chosen.end):]
+
+		if chosen.start == "<tool_response>" {
+			if blockBody != "" {
+				results = append(results, TaskMessageRequest{Type: "tool_result", Output: blockBody})
+			}
+			continue
+		}
+
+		// <tool_call> / <tool_use>: parse JSON body.
+		var raw struct {
+			Name      string          `json:"name"`
+			Arguments json.RawMessage `json:"arguments"`
+			Input     json.RawMessage `json:"input"`
+		}
+		if err := json.Unmarshal([]byte(blockBody), &raw); err != nil || raw.Name == "" {
+			// Malformed JSON — emit as text.
+			results = append(results, TaskMessageRequest{Type: "text", Content: blockBody})
+			continue
+		}
+		args := raw.Arguments
+		if len(args) == 0 {
+			args = raw.Input
+		}
+		var inputMap map[string]any
+		if len(args) > 0 {
+			_ = json.Unmarshal(args, &inputMap)
+		}
+		results = append(results, TaskMessageRequest{
+			Type:  "tool_use",
+			Tool:  raw.Name,
+			Input: inputMap,
+		})
+	}
+	return results
+}
+
 // ReportTaskMessages receives a batch of agent execution messages from the daemon.
 func (h *Handler) ReportTaskMessages(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskId")
@@ -1103,7 +1235,10 @@ func (h *Handler) ReportTaskMessages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, msg := range req.Messages {
+	// Expand any inline XML tool blocks before storing (handles claude.gg proxy output).
+	messages := expandXMLMessages(req.Messages)
+
+	for _, msg := range messages {
 		// Redact sensitive information before persisting or broadcasting.
 		msg.Content = redact.Text(msg.Content)
 		msg.Output = redact.Text(msg.Output)

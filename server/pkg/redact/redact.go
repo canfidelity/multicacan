@@ -15,6 +15,15 @@ type secretPattern struct {
 	replacement string
 }
 
+// xmlBlockPattern matches XML tool-call blocks that claude.gg and similar
+// proxies embed directly in the assistant's text output. These must be
+// stripped before the output reaches issue comments or chat messages.
+var xmlBlockPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?s)<tool_response>.*?</tool_response>`),
+	regexp.MustCompile(`(?s)<tool_use>.*?</tool_use>`),
+	regexp.MustCompile(`(?s)<tool_result>.*?</tool_result>`),
+}
+
 // Patterns are checked in order; first match wins per position.
 var patterns = []secretPattern{
 	// AWS access key IDs (always start with AKIA)
@@ -81,8 +90,15 @@ func init() {
 
 // Text scans the input string for known secret patterns and replaces
 // matches with safe placeholders. It also masks the local user's home
-// directory path to prevent leaking the username.
+// directory path to prevent leaking the username, and strips XML tool-call
+// blocks that some LLM proxies embed directly in assistant text output.
 func Text(s string) string {
+	// Strip XML tool blocks first so they don't interfere with secret scanning.
+	for _, re := range xmlBlockPatterns {
+		s = re.ReplaceAllString(s, "")
+	}
+	s = strings.TrimSpace(s)
+
 	for _, p := range patterns {
 		s = p.re.ReplaceAllString(s, p.replacement)
 	}

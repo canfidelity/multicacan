@@ -16,6 +16,7 @@ import { taskMessagesOptions } from "@multica/core/chat/queries";
 import { Markdown } from "@multica/views/common/markdown";
 import type { ChatMessage, TaskMessagePayload } from "@multica/core/types";
 import type { ChatTimelineItem } from "@multica/core/chat";
+import { resolveXmlTextBlocks } from "../../common/timeline-utils";
 
 // ─── Public component ────────────────────────────────────────────────────
 
@@ -155,7 +156,7 @@ function AssistantMessage({
     enabled: !!taskId,
   });
 
-  const timeline: ChatTimelineItem[] = (taskMessages ?? []).map(toTimelineItem);
+  const timeline: ChatTimelineItem[] = resolveXmlTextBlocks((taskMessages ?? []).map(toTimelineItem));
 
   return (
     <div className="w-full space-y-1.5">

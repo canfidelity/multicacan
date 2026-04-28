@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useIsMobile } from "@multica/ui/hooks/use-mobile";
 import {
   AlertCircle,
   AlertTriangle,
@@ -259,6 +260,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
   );
 
   const canEdit = useCanEditSkill(skill, wsId);
+  const isMobile = useIsMobile();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -627,8 +629,8 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
 
       {/* Body: file tree | editor | sidebar */}
       <div className="flex flex-1 min-h-0">
-        {/* File tree */}
-        <aside className="flex w-56 shrink-0 flex-col border-r">
+        {/* File tree - desktop only */}
+        {!isMobile && <aside className="flex w-56 shrink-0 flex-col border-r">
           <div className="flex h-10 shrink-0 items-center justify-between border-b px-3">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Files · {totalFileCount(skill)}
@@ -681,7 +683,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
               </Button>
             </div>
           )}
-        </aside>
+        </aside>}
 
         {/* Editor */}
         <section className="flex min-w-0 flex-1 flex-col">
@@ -821,8 +823,8 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
           )}
         </section>
 
-        {/* Sidebar */}
-        <aside className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l bg-muted/20 px-4 py-4">
+        {/* Sidebar - desktop only */}
+        {!isMobile && <aside className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l bg-muted/20 px-4 py-4">
           <div>
             <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Metadata
@@ -889,7 +891,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
                 : `Only the creator${creator ? ` (${creator.name})` : ""} or a workspace admin can edit this skill.`}
             </p>
           </div>
-        </aside>
+        </aside>}
       </div>
 
       {/* Delete confirmation */}

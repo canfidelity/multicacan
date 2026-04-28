@@ -4,6 +4,7 @@ import React from "react";
 import { User, Palette, Key, Settings, Users, FolderGit2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@multica/ui/components/ui/tabs";
 import { useCurrentWorkspace } from "@multica/core/paths";
+import { useIsMobile } from "@multica/ui/hooks/use-mobile";
 import { AccountTab } from "./account-tab";
 import { AppearanceTab } from "./appearance-tab";
 import { TokensTab } from "./tokens-tab";
@@ -37,13 +38,18 @@ interface SettingsPageProps {
 
 export function SettingsPage({ extraAccountTabs }: SettingsPageProps = {}) {
   const workspaceName = useCurrentWorkspace()?.name;
+  const isMobile = useIsMobile();
 
   return (
-    <Tabs defaultValue="profile" orientation="vertical" className="flex-1 min-h-0 gap-0">
-      {/* Left nav */}
-      <div className="w-52 shrink-0 border-r overflow-y-auto p-4">
-        <h1 className="text-sm font-semibold mb-4 px-2">Settings</h1>
-        <TabsList variant="line" className="flex-col items-stretch">
+    <Tabs
+      defaultValue="profile"
+      orientation={isMobile ? "horizontal" : "vertical"}
+      className={`flex-1 min-h-0 gap-0${isMobile ? " flex-col" : ""}`}
+    >
+      {/* Left nav (desktop) / Top nav (mobile) */}
+      <div className={isMobile ? "shrink-0 border-b overflow-x-auto px-2 py-1" : "w-52 shrink-0 border-r overflow-y-auto p-4"}>
+        {!isMobile && <h1 className="text-sm font-semibold mb-4 px-2">Settings</h1>}
+        <TabsList variant="line" className={isMobile ? "flex-row whitespace-nowrap" : "flex-col items-stretch"}>
           {/* My Account group */}
           <span className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
             My Account

@@ -506,7 +506,8 @@ export default function SkillsPage() {
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-auto">
+          <div className="min-w-[640px]">
           <ListColumnHeader />
           <div className="divide-y">
             {filtered.map((skill) => {
@@ -534,6 +535,7 @@ export default function SkillsPage() {
                 />
               );
             })}
+          </div>
           </div>
         </div>
       )}

@@ -98,7 +98,9 @@ export function PairSidebar({
               onValueChange={(v) => { if (v) setSelectedAgentId(v); }}
             >
               <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Select agent" />
+                <SelectValue placeholder="Select agent">
+                  {agents.find((a) => a.id === selectedAgentId)?.name ?? "Select agent"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {agents.map((a) => (

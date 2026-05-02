@@ -1246,7 +1246,7 @@ export class ApiClient {
   }
 
   async stopPairSession(issueId: string): Promise<void> {
-    await this.fetch(`/api/issues/${issueId}/pair/stop`, { method: "POST" });
+    await this.fetch(`/api/issues/${issueId}/pair/end`, { method: "POST" });
   }
 
   async listPairSuggestions(sessionId: string): Promise<import("../types/events").PairSuggestion[]> {

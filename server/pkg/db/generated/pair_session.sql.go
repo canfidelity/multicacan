@@ -15,7 +15,7 @@ const claimPairSession = `-- name: ClaimPairSession :one
 UPDATE pair_session
 SET work_dir = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at
+RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene
 `
 
 type ClaimPairSessionParams struct {
@@ -39,14 +39,76 @@ func (q *Queries) ClaimPairSession(ctx context.Context, arg ClaimPairSessionPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
+	)
+	return i, err
+}
+
+const consumeIssueInterventions = `-- name: ConsumeIssueInterventions :many
+UPDATE pair_intervention
+SET consumed = TRUE
+WHERE issue_id = $1 AND consumed = FALSE
+RETURNING id, session_id, issue_id, content, consumed, created_at
+`
+
+// Returns all unconsumed interventions for an issue and marks them consumed.
+func (q *Queries) ConsumeIssueInterventions(ctx context.Context, issueID pgtype.UUID) ([]PairIntervention, error) {
+	rows, err := q.db.Query(ctx, consumeIssueInterventions, issueID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PairIntervention{}
+	for rows.Next() {
+		var i PairIntervention
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.IssueID,
+			&i.Content,
+			&i.Consumed,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const createPairIntervention = `-- name: CreatePairIntervention :one
+INSERT INTO pair_intervention (session_id, issue_id, content)
+VALUES ($1, $2, $3)
+RETURNING id, session_id, issue_id, content, consumed, created_at
+`
+
+type CreatePairInterventionParams struct {
+	SessionID pgtype.UUID `json:"session_id"`
+	IssueID   pgtype.UUID `json:"issue_id"`
+	Content   string      `json:"content"`
+}
+
+func (q *Queries) CreatePairIntervention(ctx context.Context, arg CreatePairInterventionParams) (PairIntervention, error) {
+	row := q.db.QueryRow(ctx, createPairIntervention, arg.SessionID, arg.IssueID, arg.Content)
+	var i PairIntervention
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.IssueID,
+		&i.Content,
+		&i.Consumed,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const createPairSession = `-- name: CreatePairSession :one
-INSERT INTO pair_session (workspace_id, issue_id, agent_id, started_by, runtime_id, work_dir)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at
+INSERT INTO pair_session (workspace_id, issue_id, agent_id, started_by, runtime_id, work_dir, intervene)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene
 `
 
 type CreatePairSessionParams struct {
@@ -56,6 +118,7 @@ type CreatePairSessionParams struct {
 	StartedBy   pgtype.UUID `json:"started_by"`
 	RuntimeID   pgtype.UUID `json:"runtime_id"`
 	WorkDir     pgtype.Text `json:"work_dir"`
+	Intervene   bool        `json:"intervene"`
 }
 
 func (q *Queries) CreatePairSession(ctx context.Context, arg CreatePairSessionParams) (PairSession, error) {
@@ -66,6 +129,7 @@ func (q *Queries) CreatePairSession(ctx context.Context, arg CreatePairSessionPa
 		arg.StartedBy,
 		arg.RuntimeID,
 		arg.WorkDir,
+		arg.Intervene,
 	)
 	var i PairSession
 	err := row.Scan(
@@ -81,6 +145,7 @@ func (q *Queries) CreatePairSession(ctx context.Context, arg CreatePairSessionPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
 	)
 	return i, err
 }
@@ -114,7 +179,7 @@ const endPairSession = `-- name: EndPairSession :one
 UPDATE pair_session
 SET status = 'ended', ended_at = now(), updated_at = now()
 WHERE id = $1
-RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at
+RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene
 `
 
 func (q *Queries) EndPairSession(ctx context.Context, id pgtype.UUID) (PairSession, error) {
@@ -133,6 +198,7 @@ func (q *Queries) EndPairSession(ctx context.Context, id pgtype.UUID) (PairSessi
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
 	)
 	return i, err
 }
@@ -141,7 +207,7 @@ const endPairSessionByIssue = `-- name: EndPairSessionByIssue :many
 UPDATE pair_session
 SET status = 'ended', ended_at = now(), updated_at = now()
 WHERE issue_id = $1 AND status = 'active'
-RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at
+RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene
 `
 
 func (q *Queries) EndPairSessionByIssue(ctx context.Context, issueID pgtype.UUID) ([]PairSession, error) {
@@ -166,6 +232,7 @@ func (q *Queries) EndPairSessionByIssue(ctx context.Context, issueID pgtype.UUID
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndedAt,
+			&i.Intervene,
 		); err != nil {
 			return nil, err
 		}
@@ -178,7 +245,7 @@ func (q *Queries) EndPairSessionByIssue(ctx context.Context, issueID pgtype.UUID
 }
 
 const getActivePairSessionForIssue = `-- name: GetActivePairSessionForIssue :one
-SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at FROM pair_session
+SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session
 WHERE issue_id = $1 AND status = 'active'
 ORDER BY created_at DESC
 LIMIT 1
@@ -200,12 +267,13 @@ func (q *Queries) GetActivePairSessionForIssue(ctx context.Context, issueID pgty
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
 	)
 	return i, err
 }
 
 const getPairSession = `-- name: GetPairSession :one
-SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at FROM pair_session WHERE id = $1
+SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session WHERE id = $1
 `
 
 func (q *Queries) GetPairSession(ctx context.Context, id pgtype.UUID) (PairSession, error) {
@@ -224,12 +292,13 @@ func (q *Queries) GetPairSession(ctx context.Context, id pgtype.UUID) (PairSessi
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
 	)
 	return i, err
 }
 
 const listActivePairSessionsByRuntime = `-- name: ListActivePairSessionsByRuntime :many
-SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at FROM pair_session
+SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session
 WHERE runtime_id = $1 AND status = 'active'
 ORDER BY created_at ASC
 `
@@ -256,6 +325,7 @@ func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context, runtimeID
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndedAt,
+			&i.Intervene,
 		); err != nil {
 			return nil, err
 		}
@@ -268,7 +338,7 @@ func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context, runtimeID
 }
 
 const listPairSessionsByIssue = `-- name: ListPairSessionsByIssue :many
-SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at FROM pair_session
+SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session
 WHERE issue_id = $1
 ORDER BY created_at DESC
 LIMIT 20
@@ -296,6 +366,7 @@ func (q *Queries) ListPairSessionsByIssue(ctx context.Context, issueID pgtype.UU
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndedAt,
+			&i.Intervene,
 		); err != nil {
 			return nil, err
 		}
@@ -343,7 +414,7 @@ const updatePairSessionDiffHash = `-- name: UpdatePairSessionDiffHash :one
 UPDATE pair_session
 SET last_diff_hash = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at
+RETURNING id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene
 `
 
 type UpdatePairSessionDiffHashParams struct {
@@ -367,6 +438,7 @@ func (q *Queries) UpdatePairSessionDiffHash(ctx context.Context, arg UpdatePairS
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Intervene,
 	)
 	return i, err
 }

@@ -25,6 +25,7 @@ func (h *Handler) StartPairSession(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AgentID   string `json:"agent_id"`
 		RuntimeID string `json:"runtime_id"`
+		Intervene bool   `json:"intervene"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.AgentID == "" {
 		writeError(w, http.StatusBadRequest, "agent_id required")
@@ -75,6 +76,7 @@ func (h *Handler) StartPairSession(w http.ResponseWriter, r *http.Request) {
 		StartedBy:   parseUUID(userID),
 		RuntimeID:   runtimeID,
 		WorkDir:     workDir,
+		Intervene:   req.Intervene,
 	})
 	if err != nil {
 		slog.Error("pair: create session failed", "error", err)
@@ -247,6 +249,52 @@ func (h *Handler) DaemonListActivePairSessions(w http.ResponseWriter, r *http.Re
 		sessions = []db.PairSession{}
 	}
 	writeJSON(w, http.StatusOK, sessions)
+}
+
+// DaemonPostPairIntervention stores an intervention from the pair agent to be injected
+// into the worker agent's next task prompt.
+// POST /api/daemon/pair-sessions/{sessionId}/intervention
+func (h *Handler) DaemonPostPairIntervention(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "sessionId")
+
+	var req struct {
+		IssueID string `json:"issue_id"`
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Content == "" || req.IssueID == "" {
+		writeError(w, http.StatusBadRequest, "issue_id and content required")
+		return
+	}
+
+	intervention, err := h.Queries.CreatePairIntervention(r.Context(), db.CreatePairInterventionParams{
+		SessionID: parseUUID(sessionID),
+		IssueID:   parseUUID(req.IssueID),
+		Content:   req.Content,
+	})
+	if err != nil {
+		slog.Error("pair: create intervention failed", "session_id", sessionID, "error", err)
+		writeError(w, http.StatusInternalServerError, "create intervention failed")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, intervention)
+}
+
+// DaemonConsumeIssueInterventions returns all unconsumed interventions for an issue
+// and marks them as consumed. Called by the daemon before spawning a task.
+// POST /api/daemon/issues/{issueId}/interventions/consume
+func (h *Handler) DaemonConsumeIssueInterventions(w http.ResponseWriter, r *http.Request) {
+	issueID := chi.URLParam(r, "issueId")
+
+	interventions, err := h.Queries.ConsumeIssueInterventions(r.Context(), parseUUID(issueID))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "consume interventions failed")
+		return
+	}
+	if interventions == nil {
+		interventions = []db.PairIntervention{}
+	}
+	writeJSON(w, http.StatusOK, interventions)
 }
 
 // broadcastPairEvent marshals a pair event and fans it out to the workspace.

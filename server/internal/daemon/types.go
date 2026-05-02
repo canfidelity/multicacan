@@ -58,6 +58,7 @@ type Task struct {
 	AutopilotSource         string          `json:"autopilot_source,omitempty"`          // manual, schedule, webhook, or api
 	AutopilotTriggerPayload json.RawMessage `json:"autopilot_trigger_payload,omitempty"` // optional trigger payload for webhook/api runs
 	QuickCreatePrompt       string          `json:"quick_create_prompt,omitempty"`       // user's natural-language input for quick-create tasks
+	PendingInterventions    []string        `json:"pending_interventions,omitempty"`      // pair agent instructions injected before this task
 }
 
 // AgentData holds agent details returned by the claim endpoint.

@@ -1238,10 +1238,10 @@ export class ApiClient {
     }
   }
 
-  async startPairSession(issueId: string, agentId: string): Promise<import("../types/events").PairSession> {
+  async startPairSession(issueId: string, agentId: string, intervene = false): Promise<import("../types/events").PairSession> {
     return this.fetch(`/api/issues/${issueId}/pair/start`, {
       method: "POST",
-      body: JSON.stringify({ agent_id: agentId }),
+      body: JSON.stringify({ agent_id: agentId, intervene }),
     });
   }
 

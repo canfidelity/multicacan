@@ -236,6 +236,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/runtimes/{runtimeId}/pair-sessions", h.DaemonListActivePairSessions)
 		r.Post("/pair-sessions/{sessionId}/claim", h.DaemonClaimPairSession)
 		r.Post("/pair-sessions/{sessionId}/suggestions", h.DaemonPostPairSuggestion)
+		r.Post("/pair-sessions/{sessionId}/intervention", h.DaemonPostPairIntervention)
+		r.Post("/issues/{issueId}/interventions/consume", h.DaemonConsumeIssueInterventions)
 	})
 
 	// Simulator relay registration: a Mac Mini daemon opens an outbound

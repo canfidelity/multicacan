@@ -1315,6 +1315,18 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	// the same (agent, issue) pair. The work_dir path is stored in DB on
 	// task completion and passed back via PriorWorkDir on the next claim.
 
+	// Fetch and inject any pending pair interventions for this issue.
+	if task.IssueID != "" {
+		interventionCtx, interventionCancel := context.WithTimeout(ctx, 5*time.Second)
+		if interventions, err := d.client.ConsumeIssueInterventions(interventionCtx, task.IssueID); err == nil && len(interventions) > 0 {
+			for _, iv := range interventions {
+				task.PendingInterventions = append(task.PendingInterventions, iv.Content)
+			}
+			taskLog.Info("pair: injecting interventions into task", "count", len(interventions))
+		}
+		interventionCancel()
+	}
+
 	prompt := BuildPrompt(task)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI

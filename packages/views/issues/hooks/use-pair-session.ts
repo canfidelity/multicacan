@@ -16,7 +16,7 @@ interface UsePairSessionResult {
   suggestions: PairSuggestion[];
   isLoading: boolean;
   isStarting: boolean;
-  start: (agentId: string) => Promise<void>;
+  start: (agentId: string, intervene: boolean) => Promise<void>;
   stop: () => Promise<void>;
 }
 
@@ -75,10 +75,10 @@ export function usePairSession(issueId: string): UsePairSessionResult {
   });
 
   const start = useCallback(
-    async (agentId: string) => {
+    async (agentId: string, intervene: boolean) => {
       setIsStarting(true);
       try {
-        const s = await api.startPairSession(issueId, agentId);
+        const s = await api.startPairSession(issueId, agentId, intervene);
         setSession(s);
         setSuggestions([]);
       } finally {

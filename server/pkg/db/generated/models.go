@@ -330,6 +330,15 @@ type NotificationPreference struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PairIntervention struct {
+	ID        pgtype.UUID        `json:"id"`
+	SessionID pgtype.UUID        `json:"session_id"`
+	IssueID   pgtype.UUID        `json:"issue_id"`
+	Content   string             `json:"content"`
+	Consumed  bool               `json:"consumed"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type PairSession struct {
 	ID           pgtype.UUID        `json:"id"`
 	WorkspaceID  pgtype.UUID        `json:"workspace_id"`
@@ -343,6 +352,7 @@ type PairSession struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	EndedAt      pgtype.Timestamptz `json:"ended_at"`
+	Intervene    bool               `json:"intervene"`
 }
 
 type PairSuggestion struct {

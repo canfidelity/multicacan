@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, GitBranch, Loader2, Square, Zap } from "lucide-react";
+import { Bot, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
+import { Switch } from "@multica/ui/components/ui/switch";
+import { Label } from "@multica/ui/components/ui/label";
 import { Button } from "@multica/ui/components/ui/button";
 import {
   Select,
@@ -23,7 +25,7 @@ interface PairSidebarProps {
   isLoading: boolean;
   isStarting: boolean;
   agents: Agent[];
-  onStart: (agentId: string) => Promise<void>;
+  onStart: (agentId: string, intervene: boolean) => Promise<void>;
   onStop: () => Promise<void>;
   className?: string;
 }
@@ -39,6 +41,7 @@ export function PairSidebar({
   className,
 }: PairSidebarProps) {
   const [selectedAgentId, setSelectedAgentId] = useState(agents[0]?.id ?? "");
+  const [intervene, setIntervene] = useState(false);
 
   const isActive = session?.status === "active";
 
@@ -108,7 +111,7 @@ export function PairSidebar({
               size="sm"
               className="h-8 text-xs shrink-0"
               disabled={!selectedAgentId || isStarting}
-              onClick={() => onStart(selectedAgentId)}
+              onClick={() => onStart(selectedAgentId, intervene)}
             >
               {isStarting ? (
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -117,6 +120,18 @@ export function PairSidebar({
               )}
               Start
             </Button>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Switch
+              id="intervene-toggle"
+              checked={intervene}
+              onCheckedChange={setIntervene}
+              className="scale-75 origin-left"
+            />
+            <Label htmlFor="intervene-toggle" className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
+              <Swords className="h-3 w-3" />
+              Müdahale et
+            </Label>
           </div>
         )}
         {!isActive && !isLoading && (

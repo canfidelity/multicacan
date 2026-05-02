@@ -27,7 +27,22 @@ func BuildPrompt(task Task) string {
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
 	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	appendPairInterventions(&b, task)
 	return b.String()
+}
+
+// appendPairInterventions injects any pending pair agent instructions at the end of the prompt.
+func appendPairInterventions(b *strings.Builder, task Task) {
+	if len(task.PendingInterventions) == 0 {
+		return
+	}
+	b.WriteString("\n---\n")
+	b.WriteString("## Live Pair Feedback\n")
+	b.WriteString("A pair agent reviewed recent code changes and left the following instructions. Address them as part of this task:\n\n")
+	for i, intervention := range task.PendingInterventions {
+		fmt.Fprintf(b, "%d. %s\n", i+1, intervention)
+	}
+	b.WriteString("\n")
 }
 
 // buildQuickCreatePrompt constructs a prompt for quick-create tasks. The

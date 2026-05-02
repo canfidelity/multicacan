@@ -93,12 +93,17 @@ func (d *Daemon) tickPairSessions(ctx context.Context, claimed map[string]string
 			}
 
 			postCtx, postCancel := context.WithTimeout(ctx, 10*time.Second)
-			err := d.client.PostPairSuggestion(postCtx, s.ID, diff, analysis, diffHash)
-			postCancel()
-			if err != nil {
-				d.logger.Warn("pair: post suggestion failed", "session_id", s.ID, "error", err)
+			var postErr error
+			if s.Intervene {
+				postErr = d.client.PostPairIntervention(postCtx, s.ID, s.IssueID, analysis)
 			} else {
-				d.logger.Info("pair: posted suggestion", "session_id", s.ID, "diff_bytes", len(diff))
+				postErr = d.client.PostPairSuggestion(postCtx, s.ID, diff, analysis, diffHash)
+			}
+			postCancel()
+			if postErr != nil {
+				d.logger.Warn("pair: post failed", "session_id", s.ID, "intervene", s.Intervene, "error", postErr)
+			} else {
+				d.logger.Info("pair: posted", "session_id", s.ID, "intervene", s.Intervene, "diff_bytes", len(diff))
 			}
 		}
 	}

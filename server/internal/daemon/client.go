@@ -371,6 +371,15 @@ type PairSession struct {
 	Status       string  `json:"status"`
 	WorkDir      *string `json:"work_dir"`
 	LastDiffHash *string `json:"last_diff_hash"`
+	Intervene    bool    `json:"intervene"`
+}
+
+// PairIntervention is a pending instruction to be injected into the worker agent's next task.
+type PairIntervention struct {
+	ID        string `json:"id"`
+	SessionID string `json:"session_id"`
+	IssueID   string `json:"issue_id"`
+	Content   string `json:"content"`
 }
 
 // ListActivePairSessions returns active pair sessions for a runtime.
@@ -397,6 +406,25 @@ func (c *Client) PostPairSuggestion(ctx context.Context, sessionID, diffSnippet,
 			"content":      content,
 			"diff_hash":    diffHash,
 		}, nil)
+}
+
+// PostPairIntervention saves an intervention to be injected into the worker agent's next task.
+func (c *Client) PostPairIntervention(ctx context.Context, sessionID, issueID, content string) error {
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/intervention",
+		map[string]string{
+			"session_id": sessionID,
+			"issue_id":   issueID,
+			"content":    content,
+		}, nil)
+}
+
+// ConsumeIssueInterventions returns all pending interventions for an issue and marks them consumed.
+func (c *Client) ConsumeIssueInterventions(ctx context.Context, issueID string) ([]PairIntervention, error) {
+	var interventions []PairIntervention
+	if err := c.postJSON(ctx, "/api/daemon/issues/"+issueID+"/interventions/consume", nil, &interventions); err != nil {
+		return nil, err
+	}
+	return interventions, nil
 }
 
 func (c *Client) getJSON(ctx context.Context, path string, respBody any) error {

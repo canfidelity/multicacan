@@ -1,6 +1,6 @@
 -- name: CreatePairSession :one
-INSERT INTO pair_session (workspace_id, issue_id, agent_id, started_by, runtime_id, work_dir)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO pair_session (workspace_id, issue_id, agent_id, started_by, runtime_id, work_dir, intervene)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetPairSession :one
@@ -56,3 +56,15 @@ RETURNING *;
 SELECT * FROM pair_suggestion
 WHERE pair_session_id = $1
 ORDER BY created_at ASC;
+
+-- name: CreatePairIntervention :one
+INSERT INTO pair_intervention (session_id, issue_id, content)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: ConsumeIssueInterventions :many
+-- Returns all unconsumed interventions for an issue and marks them consumed.
+UPDATE pair_intervention
+SET consumed = TRUE
+WHERE issue_id = $1 AND consumed = FALSE
+RETURNING *;

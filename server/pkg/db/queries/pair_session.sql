@@ -14,7 +14,7 @@ LIMIT 1;
 
 -- name: ListActivePairSessionsByRuntime :many
 SELECT * FROM pair_session
-WHERE runtime_id = $1 AND status = 'active'
+WHERE status = 'active'
 ORDER BY created_at ASC;
 
 -- name: ClaimPairSession :one

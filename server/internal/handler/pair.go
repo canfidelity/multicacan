@@ -240,7 +240,7 @@ func (h *Handler) DaemonListActivePairSessions(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	sessions, err := h.Queries.ListActivePairSessionsByRuntime(r.Context(), parseUUID(runtimeID))
+	sessions, err := h.Queries.ListActivePairSessionsByRuntime(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list sessions failed")
 		return

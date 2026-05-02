@@ -299,12 +299,12 @@ func (q *Queries) GetPairSession(ctx context.Context, id pgtype.UUID) (PairSessi
 
 const listActivePairSessionsByRuntime = `-- name: ListActivePairSessionsByRuntime :many
 SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session
-WHERE runtime_id = $1 AND status = 'active'
+WHERE status = 'active'
 ORDER BY created_at ASC
 `
 
-func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context, runtimeID pgtype.UUID) ([]PairSession, error) {
-	rows, err := q.db.Query(ctx, listActivePairSessionsByRuntime, runtimeID)
+func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context) ([]PairSession, error) {
+	rows, err := q.db.Query(ctx, listActivePairSessionsByRuntime)
 	if err != nil {
 		return nil, err
 	}

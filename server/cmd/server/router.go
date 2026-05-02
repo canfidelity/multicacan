@@ -235,6 +235,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		// Live Pair Programming — daemon side
 		r.Get("/runtimes/{runtimeId}/pair-sessions", h.DaemonListActivePairSessions)
 		r.Post("/pair-sessions/{sessionId}/claim", h.DaemonClaimPairSession)
+		r.Get("/pair-sessions/{sessionId}/suggestions", h.ListPairSuggestions)
 		r.Post("/pair-sessions/{sessionId}/suggestions", h.DaemonPostPairSuggestion)
 		r.Post("/pair-sessions/{sessionId}/intervention", h.DaemonPostPairIntervention)
 		r.Post("/issues/{issueId}/interventions/consume", h.DaemonConsumeIssueInterventions)

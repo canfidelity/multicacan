@@ -1250,6 +1250,6 @@ export class ApiClient {
   }
 
   async listPairSuggestions(sessionId: string): Promise<import("../types/events").PairSuggestion[]> {
-    return this.fetch(`/api/pair-sessions/${sessionId}/suggestions`);
+    return this.fetch(`/api/daemon/pair-sessions/${sessionId}/suggestions`);
   }
 }

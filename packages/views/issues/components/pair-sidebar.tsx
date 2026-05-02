@@ -91,6 +91,7 @@ export function PairSidebar({
             </Button>
           </div>
         ) : (
+          <>
           <div className="flex items-center gap-2">
             <Select
               value={selectedAgentId}
@@ -133,6 +134,7 @@ export function PairSidebar({
               Müdahale et
             </Label>
           </div>
+          </>
         )}
         {!isActive && !isLoading && (
           <p className="text-xs text-muted-foreground leading-relaxed">

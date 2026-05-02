@@ -1,11 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { cn } from "@multica/ui/lib/utils";
 import { ContentEditor, type ContentEditorRef } from "../../editor";
 import { SubmitButton } from "@multica/ui/components/common/submit-button";
+import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
 import { useChatStore, DRAFT_NEW_SESSION } from "@multica/core/chat";
+import { useFileUpload } from "@multica/core/hooks/use-file-upload";
+import { api } from "@multica/core/api";
 import { createLogger } from "@multica/core/logger";
 
 const logger = createLogger("chat.ui");
@@ -42,6 +45,14 @@ export function ChatInput({
   topSlot,
 }: ChatInputProps) {
   const editorRef = useRef<ContentEditorRef>(null);
+  const { uploadWithToast } = useFileUpload(api);
+  const handleUpload = useCallback(
+    async (file: File) => {
+      const result = await uploadWithToast(file);
+      return result;
+    },
+    [uploadWithToast],
+  );
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const selectedAgentId = useChatStore((s) => s.selectedAgentId);
   // Scope the new-chat draft by agent:
@@ -134,6 +145,7 @@ export function ChatInput({
               setInputDraft(draftKey, md);
             }}
             onSubmit={handleSend}
+            onUploadFile={handleUpload}
             debounceMs={100}
             // Chat is short-form — the floating formatting toolbar is
             // more distraction than feature here.
@@ -149,6 +161,11 @@ export function ChatInput({
         )}
         <div className="absolute bottom-1 right-1.5 flex items-center gap-2">
           {rightAdornment}
+          <FileUploadButton
+            size="sm"
+            disabled={!!disabled || !!noAgent}
+            onSelect={(file) => editorRef.current?.uploadFile(file)}
+          />
           <SubmitButton
             onClick={handleSend}
             disabled={isEmpty || !!disabled || !!noAgent}

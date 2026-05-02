@@ -60,5 +60,13 @@ SELECT EXISTS (
 SELECT count(*) > 0 AS has_replied FROM comment
 WHERE parent_id = @parent_id AND author_type = 'agent' AND author_id = @agent_id;
 
+-- name: GetLastAgentCommentOnIssue :one
+-- Returns the most recent agent comment on an issue, used to find the implicit
+-- active agent when the issue has no explicit agent assignee.
+SELECT author_id FROM comment
+WHERE issue_id = $1 AND author_type = 'agent'
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: DeleteComment :exec
 DELETE FROM comment WHERE id = $1;

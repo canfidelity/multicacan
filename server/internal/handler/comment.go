@@ -309,6 +309,11 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		if _, err := h.TaskService.EnqueueTaskForIssue(r.Context(), issue, comment.ID); err != nil {
 			slog.Warn("enqueue agent task on comment failed", "issue_id", issueID, "error", err)
 		}
+	} else if authorType == "member" && !issue.AssigneeID.Valid &&
+		!h.commentMentionsOthersButNotAssignee(comment.Content, issue) {
+		// Fallback: issue has no explicit agent assignee but an agent has previously
+		// commented on it — treat that agent as the implicit assignee and trigger them.
+		h.enqueueLastActiveAgentOnComment(r.Context(), issue, comment)
 	}
 
 	// Trigger @mentioned agents: parse agent mentions and enqueue tasks for each.
@@ -351,6 +356,27 @@ func (h *Handler) commentMentionsOthersButNotAssignee(content string, issue db.I
 		}
 	}
 	return true // Others mentioned but not assignee — suppress trigger
+}
+
+// enqueueLastActiveAgentOnComment fires a task for the most recent agent that
+// commented on the issue, when the issue has no explicit agent assignee. This
+// covers the common case where an agent was @mentioned and replied but was never
+// formally assigned — subsequent member comments should still reach that agent.
+func (h *Handler) enqueueLastActiveAgentOnComment(ctx context.Context, issue db.Issue, comment db.Comment) {
+	agentID, err := h.Queries.GetLastAgentCommentOnIssue(ctx, issue.ID)
+	if err != nil || !agentID.Valid {
+		return
+	}
+	hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
+		IssueID: issue.ID,
+		AgentID: agentID,
+	})
+	if err != nil || hasPending {
+		return
+	}
+	if _, err := h.TaskService.EnqueueTaskForMention(ctx, issue, agentID, comment.ID); err != nil {
+		slog.Warn("enqueue last-active agent task on comment failed", "issue_id", uuidToString(issue.ID), "agent_id", uuidToString(agentID), "error", err)
+	}
 }
 
 // isReplyToMemberThread returns true if the comment is a reply in a thread

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bot, Loader2, Square } from "lucide-react";
+import { Bot, Loader2, Square, Smartphone } from "lucide-react";
 import { api } from "@multica/core/api";
 import { useWSEvent } from "@multica/core/realtime";
 import type { TaskMessagePayload } from "@multica/core/types/events";
@@ -12,6 +12,7 @@ import { useActorName } from "@multica/core/workspace/hooks";
 import {
   TranscriptButton,
   buildTimeline,
+  latestSimulatorAction,
   type TimelineItem,
 } from "../../common/task-transcript";
 
@@ -240,6 +241,7 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
   }, [task.id, issueId, cancelling]);
 
   const toolCount = items.filter((i) => i.type === "tool_use").length;
+  const simAction = latestSimulatorAction(items);
 
   return (
     <div className="rounded-lg border border-info/20 bg-info/5 backdrop-blur-sm">
@@ -257,6 +259,13 @@ function SingleAgentLiveCard({ task, items, issueId, agentName }: SingleAgentLiv
           <span className="text-muted-foreground tabular-nums shrink-0">{elapsed}</span>
           {toolCount > 0 && (
             <span className="text-muted-foreground shrink-0">{toolCount} tools</span>
+          )}
+          {simAction && (
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-300 shrink-0">
+              <Smartphone className="h-2.5 w-2.5" />
+              <span>{simAction.label}</span>
+              {simAction.bundleId && <span className="opacity-60 truncate max-w-[120px]">{simAction.bundleId}</span>}
+            </span>
           )}
         </div>
         <div className="ml-auto flex items-center gap-1 shrink-0">

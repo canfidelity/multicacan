@@ -64,7 +64,10 @@ export type WSEventType =
   | "invitation:created"
   | "invitation:accepted"
   | "invitation:declined"
-  | "invitation:revoked";
+  | "invitation:revoked"
+  | "pair:started"
+  | "pair:suggestion"
+  | "pair:ended";
 
 export interface WSMessage<T = unknown> {
   type: WSEventType;
@@ -310,4 +313,39 @@ export interface InvitationDeclinedPayload {
 export interface InvitationRevokedPayload {
   invitation_id: string;
   invitee_email: string;
+}
+
+// --- Live Pair Programming ---
+
+export interface PairSession {
+  id: string;
+  workspace_id: string;
+  issue_id: string;
+  agent_id: string;
+  started_by: string;
+  status: "active" | "ended";
+  work_dir: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PairSuggestion {
+  id: string;
+  session_id: string;
+  diff_snippet: string;
+  content: string;
+  created_at: string;
+}
+
+export interface PairStartedPayload {
+  session: PairSession;
+}
+
+export interface PairSuggestionPayload {
+  suggestion: PairSuggestion;
+}
+
+export interface PairEndedPayload {
+  session_id: string;
+  issue_id: string;
 }

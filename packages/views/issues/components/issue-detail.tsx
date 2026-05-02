@@ -17,6 +17,7 @@ import {
   PinOff,
   Plus,
   Users,
+  Zap,
 } from "lucide-react";
 import { PageHeader } from "../../layout/page-header";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
@@ -46,6 +47,8 @@ import { CommentCard } from "./comment-card";
 import { CommentInput } from "./comment-input";
 import { AgentLiveCard } from "./agent-live-card";
 import { ExecutionLogSection } from "./execution-log-section";
+import { PairSidebar } from "./pair-sidebar";
+import { usePairSession } from "../hooks/use-pair-session";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@multica/core/auth";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
@@ -180,6 +183,9 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
   const isMobile = useIsMobile();
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(defaultSidebarOpen);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [pairOpen, setPairOpen] = useState(false);
+
+  const { session: pairSession, suggestions: pairSuggestions, isLoading: pairLoading, isStarting: pairStarting, start: startPair, stop: stopPair } = usePairSession(id);
 
   useEffect(() => {
     if (isMobile) {
@@ -594,6 +600,21 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
                 </Button>
               }
             />
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={pairOpen ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    className={cn(pairOpen ? "" : "text-muted-foreground", pairSession?.status === "active" && "text-violet-500")}
+                    onClick={() => setPairOpen((v) => !v)}
+                  >
+                    <Zap />
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">Live Pair</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -1057,6 +1078,31 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
         </div>
       </div>
       </ResizablePanel>
+      {pairOpen && (
+        <>
+          <ResizableHandle />
+          <ResizablePanel
+            id="pair"
+            defaultSize={320}
+            minSize={260}
+            maxSize={480}
+            collapsible
+            groupResizeBehavior="preserve-pixel-size"
+            onResize={(size) => { if (size.inPixels === 0) setPairOpen(false); }}
+          >
+            <PairSidebar
+              session={pairSession}
+              suggestions={pairSuggestions}
+              isLoading={pairLoading}
+              isStarting={pairStarting}
+              agents={agents}
+              onStart={startPair}
+              onStop={stopPair}
+              className="border-l h-full"
+            />
+          </ResizablePanel>
+        </>
+      )}
     </ResizablePanelGroup>
   );
 }

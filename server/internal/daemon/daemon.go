@@ -220,6 +220,15 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.heartbeatLoop(ctx)
 	go d.gcLoop(ctx)
 	go d.serveHealth(ctx, healthLn, time.Now())
+
+	// Simulator relay: tunnel the local iOS simulator stream out to the VPS
+	// so a browser anywhere can drive it. No-op when sim-capture isn't on
+	// this machine (the vast majority of daemons), so cheap to always run.
+	go d.relaySimulatorLoop(ctx)
+
+	// Live Pair Programming: poll active pair sessions and stream agent analysis.
+	d.startPairLoop(ctx)
+
 	return d.pollLoop(ctx, taskWakeups)
 }
 
@@ -1476,17 +1485,30 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	switch result.Status {
 	case "completed":
 		if result.Output == "" {
-			// Even an empty-output completion may have established a real
-			// session — surface it through the blocked path so the next chat
-			// turn can still resume from where this one left off.
-			return TaskResult{
-				Status:    "blocked",
-				Comment:   fmt.Sprintf("%s returned empty output", provider),
-				SessionID: result.SessionID,
-				WorkDir:   env.WorkDir,
-				EnvRoot:   env.RootDir,
-				Usage:     usageEntries,
-			}, nil
+			// Empty output from a resumed session typically means the upstream
+			// CLI couldn't load that session (e.g. opencode uses ses_* prefixed
+			// IDs and silently no-ops on UUID-shaped resume IDs). Retry once
+			// with a fresh session before bubbling up the blocked status.
+			if execOpts.ResumeSessionID != "" {
+				taskLog.Warn("empty output on resumed session, retrying with fresh session",
+					"prior_session_id", execOpts.ResumeSessionID)
+				execOpts.ResumeSessionID = ""
+				retryResult, retryTools, retryErr := d.executeAndDrain(ctx, backend, prompt, execOpts, taskLog, task.ID)
+				if retryErr == nil && retryResult.Output != "" {
+					result = retryResult
+					tools = retryTools
+				}
+			}
+			if result.Output == "" {
+				return TaskResult{
+					Status:    "blocked",
+					Comment:   fmt.Sprintf("%s returned empty output", provider),
+					SessionID: result.SessionID,
+					WorkDir:   env.WorkDir,
+					EnvRoot:   env.RootDir,
+					Usage:     usageEntries,
+				}, nil
+			}
 		}
 		// Detect "poisoned" terminal output: the agent didn't reach a real
 		// conclusion but emitted a known fallback marker (iteration limit,

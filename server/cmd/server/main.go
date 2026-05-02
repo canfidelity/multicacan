@@ -316,6 +316,9 @@ func main() {
 		}
 	}()
 
+	// Ignore SIGPIPE so broken pipe from proxied streams doesn't kill the server.
+	signal.Ignore(syscall.SIGPIPE)
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

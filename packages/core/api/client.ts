@@ -1227,4 +1227,29 @@ export class ApiClient {
   async deleteAutopilotTrigger(autopilotId: string, triggerId: string): Promise<void> {
     await this.fetch(`/api/autopilots/${autopilotId}/triggers/${triggerId}`, { method: "DELETE" });
   }
+
+  // --- Live Pair Programming ---
+
+  async getActivePairSession(issueId: string): Promise<import("../types/events").PairSession | null> {
+    try {
+      return await this.fetch<import("../types/events").PairSession>(`/api/issues/${issueId}/pair`);
+    } catch {
+      return null;
+    }
+  }
+
+  async startPairSession(issueId: string, agentId: string): Promise<import("../types/events").PairSession> {
+    return this.fetch(`/api/issues/${issueId}/pair/start`, {
+      method: "POST",
+      body: JSON.stringify({ agent_id: agentId }),
+    });
+  }
+
+  async stopPairSession(issueId: string): Promise<void> {
+    await this.fetch(`/api/issues/${issueId}/pair/stop`, { method: "POST" });
+  }
+
+  async listPairSuggestions(sessionId: string): Promise<import("../types/events").PairSuggestion[]> {
+    return this.fetch(`/api/pair-sessions/${sessionId}/suggestions`);
+  }
 }

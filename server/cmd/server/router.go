@@ -231,6 +231,22 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 		r.Post("/runtimes/{runtimeId}/recover-orphans", h.RecoverOrphanedTasks)
 		r.Post("/tasks/{taskId}/session", h.PinTaskSession)
+
+		// Live Pair Programming — daemon side
+		r.Get("/runtimes/{runtimeId}/pair-sessions", h.DaemonListActivePairSessions)
+		r.Post("/pair-sessions/{sessionId}/claim", h.DaemonClaimPairSession)
+		r.Post("/pair-sessions/{sessionId}/suggestions", h.DaemonPostPairSuggestion)
+	})
+
+	// Simulator relay registration: a Mac Mini daemon opens an outbound
+	// WebSocket here so this VPS can tunnel iOS simulator frames to a
+	// browser anywhere. Authentication uses the same DaemonAuth middleware
+	// as the rest of /api/daemon — applied via the inline group below
+	// rather than the route block above so we can keep the URL flat
+	// (/api/simulator/relay) for the front-end and CLI to consume.
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.DaemonAuth(queries, patCache, daemonTokenCache))
+		r.Get("/api/simulator/relay", h.SimulatorRelayRegister)
 	})
 
 	// Protected API routes
@@ -239,6 +255,17 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Use(middleware.RefreshCloudFrontCookies(cfSigner))
 
 		// --- User-scoped routes (no workspace context required) ---
+
+		// Simulator (serve-sim proxy) — machine-level, no workspace needed
+		r.Route("/api/simulator", func(r chi.Router) {
+			r.Get("/status", h.SimulatorStatus)
+			r.Get("/stream.mjpeg", h.SimulatorStreamProxy)
+			r.Get("/ws", h.SimulatorWSProxy)
+			r.Get("/native", h.SimulatorNativeWS) // ~60Hz native capture via WebSocket
+			r.Get("/config", h.SimulatorConfigProxy)
+			r.Post("/exec", h.SimulatorExecProxy)
+		})
+
 		r.Get("/api/me", h.GetMe)
 		r.Patch("/api/me", h.UpdateMe)
 		r.Patch("/api/me/onboarding", h.PatchOnboarding)
@@ -329,6 +356,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Get("/labels", h.ListLabelsForIssue)
 					r.Post("/labels", h.AttachLabel)
 					r.Delete("/labels/{labelId}", h.DetachLabel)
+					// Live Pair Programming
+					r.Get("/pair", h.GetActivePairSession)
+					r.Post("/pair/start", h.StartPairSession)
+					r.Post("/pair/end", h.EndPairSession)
 				})
 			})
 

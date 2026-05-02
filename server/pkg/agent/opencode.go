@@ -51,7 +51,17 @@ func (b *opencodeBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 	args := []string{"run", "--format", "json"}
 	if opts.Model != "" {
-		args = append(args, "--model", opts.Model)
+		// opencode requires `provider/model` (slash). Other CLIs (hermes, kimi)
+		// advertise the same models with `provider:model` (colon), so models
+		// stored in the agent table can come in either form. Normalize the
+		// FIRST colon to slash; preserve any later colons (version separators).
+		model := opts.Model
+		if !strings.Contains(model, "/") {
+			if i := strings.Index(model, ":"); i > 0 {
+				model = model[:i] + "/" + model[i+1:]
+			}
+		}
+		args = append(args, "--model", model)
 	}
 	if opts.SystemPrompt != "" {
 		args = append(args, "--prompt", opts.SystemPrompt)

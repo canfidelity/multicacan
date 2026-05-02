@@ -104,4 +104,9 @@ const (
 	EventDaemonHeartbeatAck  = "daemon:heartbeat_ack"
 	EventDaemonRegister      = "daemon:register"
 	EventDaemonTaskAvailable = "daemon:task_available"
+
+	// Live Pair Programming events
+	EventPairStarted    = "pair:started"
+	EventPairEnded      = "pair:ended"
+	EventPairSuggestion = "pair:suggestion"
 )

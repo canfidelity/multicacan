@@ -131,3 +131,42 @@ type DaemonHeartbeatPendingLocalSkillImport struct {
 	ID       string `json:"id"`
 	SkillKey string `json:"skill_key"`
 }
+
+// PairStartedPayload is broadcast to the workspace when a pair session begins.
+type PairStartedPayload struct {
+	SessionID   string `json:"session_id"`
+	IssueID     string `json:"issue_id"`
+	AgentID     string `json:"agent_id"`
+	StartedBy   string `json:"started_by"`
+}
+
+// PairEndedPayload is broadcast when a pair session ends.
+type PairEndedPayload struct {
+	SessionID string `json:"session_id"`
+	IssueID   string `json:"issue_id"`
+}
+
+// PairSuggestionPayload is broadcast when the agent produces a suggestion.
+type PairSuggestionPayload struct {
+	SuggestionID string `json:"suggestion_id"`
+	SessionID    string `json:"session_id"`
+	IssueID      string `json:"issue_id"`
+	DiffSnippet  string `json:"diff_snippet"`
+	Content      string `json:"content"`
+	CreatedAt    string `json:"created_at"`
+}
+
+// DaemonPairClaimPayload is sent by the daemon to claim a pair session and
+// register the local work directory.
+type DaemonPairClaimPayload struct {
+	SessionID string `json:"session_id"`
+	WorkDir   string `json:"work_dir"`
+}
+
+// DaemonPairSuggestionPayload is sent by the daemon to post a new suggestion.
+type DaemonPairSuggestionPayload struct {
+	SessionID   string `json:"session_id"`
+	DiffSnippet string `json:"diff_snippet"`
+	Content     string `json:"content"`
+	DiffHash    string `json:"diff_hash"`
+}

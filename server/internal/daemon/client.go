@@ -360,6 +360,45 @@ func (c *Client) postJSON(ctx context.Context, path string, reqBody any, respBod
 	return json.NewDecoder(resp.Body).Decode(respBody)
 }
 
+// --- Live Pair Programming API ---
+
+// PairSession is the server-side representation returned by pair session endpoints.
+type PairSession struct {
+	ID           string  `json:"id"`
+	WorkspaceID  string  `json:"workspace_id"`
+	IssueID      string  `json:"issue_id"`
+	AgentID      string  `json:"agent_id"`
+	Status       string  `json:"status"`
+	WorkDir      *string `json:"work_dir"`
+	LastDiffHash *string `json:"last_diff_hash"`
+}
+
+// ListActivePairSessions returns active pair sessions for a runtime.
+func (c *Client) ListActivePairSessions(ctx context.Context, runtimeID string) ([]PairSession, error) {
+	var sessions []PairSession
+	if err := c.getJSON(ctx, "/api/daemon/runtimes/"+runtimeID+"/pair-sessions", &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+// ClaimPairSession registers the local work_dir for a session.
+func (c *Client) ClaimPairSession(ctx context.Context, sessionID, workDir string) error {
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/claim",
+		map[string]string{"session_id": sessionID, "work_dir": workDir}, nil)
+}
+
+// PostPairSuggestion submits an agent suggestion for a pair session.
+func (c *Client) PostPairSuggestion(ctx context.Context, sessionID, diffSnippet, content, diffHash string) error {
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/suggestions",
+		map[string]string{
+			"session_id":   sessionID,
+			"diff_snippet": diffSnippet,
+			"content":      content,
+			"diff_hash":    diffHash,
+		}, nil)
+}
+
 func (c *Client) getJSON(ctx context.Context, path string, respBody any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {

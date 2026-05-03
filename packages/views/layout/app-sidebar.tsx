@@ -121,14 +121,17 @@ const personalNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
 const workspaceNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "issues", label: "Issues", icon: ListTodo },
   { key: "projects", label: "Projects", icon: FolderKanban },
-  { key: "autopilots", label: "Autopilot", icon: Zap },
   { key: "agents", label: "Agents", icon: Bot },
+];
+
+const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
+  { key: "autopilots", label: "Autopilot", icon: Zap },
+  { key: "simulator", label: "Simulator", icon: Smartphone },
+  { key: "preview", label: "Web Preview", icon: Globe },
 ];
 
 const configureNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "runtimes", label: "Runtimes", icon: Monitor },
-  { key: "simulator", label: "Simulator", icon: Smartphone },
-  { key: "preview", label: "Web Preview", icon: Globe },
   { key: "skills", label: "Skills", icon: BookOpenText },
   { key: "settings", label: "Settings", icon: Settings },
 ];
@@ -649,6 +652,30 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {workspaceNav.map((item) => {
+                  const href = p[item.key]();
+                  const isActive = isNavActive(pathname, href);
+                  return (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        render={<AppLink href={href} />}
+                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Apps</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {appsNav.map((item) => {
                   const href = p[item.key]();
                   const isActive = isNavActive(pathname, href);
                   return (

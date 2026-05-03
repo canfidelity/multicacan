@@ -984,6 +984,21 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTaskQu
 	return i, err
 }
 
+const getLastIssueTaskWorkDir = `-- name: GetLastIssueTaskWorkDir :one
+SELECT work_dir FROM agent_task_queue
+WHERE issue_id = $1
+  AND work_dir IS NOT NULL
+ORDER BY COALESCE(completed_at, started_at, dispatched_at, created_at) DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLastIssueTaskWorkDir(ctx context.Context, issueID pgtype.UUID) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, getLastIssueTaskWorkDir, issueID)
+	var work_dir pgtype.Text
+	err := row.Scan(&work_dir)
+	return work_dir, err
+}
+
 const getLastTaskSession = `-- name: GetLastTaskSession :one
 SELECT session_id, work_dir FROM agent_task_queue
 WHERE agent_id = $1 AND issue_id = $2

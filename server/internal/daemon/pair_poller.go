@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -44,7 +47,7 @@ func (d *Daemon) tickPairSessions(ctx context.Context, claimed map[string]string
 		sessions, err := d.client.ListActivePairSessions(pollCtx, rtID)
 		cancel()
 		if err != nil {
-			d.logger.Debug("pair: list sessions failed", "runtime_id", rtID, "error", err)
+			d.logger.Warn("pair: list sessions failed", "runtime_id", rtID, "error", err)
 			continue
 		}
 
@@ -93,18 +96,20 @@ func (d *Daemon) tickPairSessions(ctx context.Context, claimed map[string]string
 			}
 
 			postCtx, postCancel := context.WithTimeout(ctx, 10*time.Second)
-			var postErr error
-			if s.Intervene {
-				postErr = d.client.PostPairIntervention(postCtx, s.ID, s.IssueID, analysis)
-			} else {
-				postErr = d.client.PostPairSuggestion(postCtx, s.ID, diff, analysis, diffHash)
-			}
-			postCancel()
+			// Always post suggestion so the user sees it in the sidebar.
+			postErr := d.client.PostPairSuggestion(postCtx, s.ID, diff, analysis, diffHash)
 			if postErr != nil {
-				d.logger.Warn("pair: post failed", "session_id", s.ID, "intervene", s.Intervene, "error", postErr)
+				d.logger.Warn("pair: post suggestion failed", "session_id", s.ID, "error", postErr)
 			} else {
 				d.logger.Info("pair: posted", "session_id", s.ID, "intervene", s.Intervene, "diff_bytes", len(diff))
 			}
+			// If intervene mode, also send the analysis to the running agent.
+			if s.Intervene {
+				if err := d.client.PostPairIntervention(postCtx, s.ID, s.IssueID, analysis); err != nil {
+					d.logger.Warn("pair: post intervention failed", "session_id", s.ID, "error", err)
+				}
+			}
+			postCancel()
 		}
 	}
 
@@ -123,16 +128,61 @@ func (d *Daemon) findPairWorkDir(s PairSession) string {
 	if s.WorkDir != nil && *s.WorkDir != "" {
 		return *s.WorkDir
 	}
+	if s.TaskWorkDir != "" {
+		return s.TaskWorkDir
+	}
+
+	// Check in-memory map for actively running tasks (work_dir isn't in DB until completion).
+	d.activeTaskWorkDirsMu.RLock()
+	if wd, ok := d.activeTaskWorkDirs[s.IssueID]; ok && wd != "" {
+		d.activeTaskWorkDirsMu.RUnlock()
+		return wd
+	}
+	d.activeTaskWorkDirsMu.RUnlock()
 
 	// Walk the daemon's workspaces root looking for a git repo linked to this issue.
 	if d.cfg.WorkspacesRoot == "" {
 		return ""
 	}
 
-	// Look for directories named by issueID under workspaces root.
-	candidate := d.cfg.WorkspacesRoot + "/" + s.IssueID
-	if isGitRepo(candidate) {
-		return candidate
+	d.mu.Lock()
+	wsIDs := make([]string, 0, len(d.workspaces))
+	for id := range d.workspaces {
+		wsIDs = append(wsIDs, id)
+	}
+	d.mu.Unlock()
+
+	// Walk each workspace dir and check .gc_meta.json for the matching issue ID.
+	// work_dir is only written to DB on task completion, so we must scan locally
+	// to find the workdir for an actively running task.
+	for _, wsID := range wsIDs {
+		wsPath := filepath.Join(d.cfg.WorkspacesRoot, wsID)
+		entries, err := os.ReadDir(wsPath)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			metaPath := filepath.Join(wsPath, entry.Name(), ".gc_meta.json")
+			data, err := os.ReadFile(metaPath)
+			if err != nil {
+				continue
+			}
+			var meta struct {
+				IssueID string `json:"issue_id"`
+			}
+			if err := json.Unmarshal(data, &meta); err != nil {
+				continue
+			}
+			if meta.IssueID == s.IssueID {
+				candidate := filepath.Join(wsPath, entry.Name(), "workdir")
+				if _, err := os.Stat(candidate); err == nil {
+					return candidate
+				}
+			}
+		}
 	}
 
 	return ""
@@ -145,23 +195,28 @@ func gitDiff(workDir string) string {
 		return ""
 	}
 
-	// Status first (untracked + unstaged)
-	statusOut, err := runGit(workDir, "status", "--short")
-	if err != nil || strings.TrimSpace(statusOut) == "" {
-		// No changes — also check staged
-		staged, _ := runGit(workDir, "diff", "--cached", "--stat")
-		if strings.TrimSpace(staged) == "" {
-			return ""
+	// If it's a git repo, use git diff
+	if isGitRepo(workDir) {
+		statusOut, err := runGit(workDir, "status", "--short")
+		if err != nil || strings.TrimSpace(statusOut) == "" {
+			staged, _ := runGit(workDir, "diff", "--cached", "--stat")
+			if strings.TrimSpace(staged) == "" {
+				return ""
+			}
 		}
+		diff, _ := runGit(workDir, "diff", "HEAD")
+		if strings.TrimSpace(diff) == "" {
+			diff, _ = runGit(workDir, "diff", "--cached")
+		}
+		return diff
 	}
 
-	// Full diff (unstaged + staged)
-	diff, _ := runGit(workDir, "diff", "HEAD")
-	if strings.TrimSpace(diff) == "" {
-		// Try just staged
-		diff, _ = runGit(workDir, "diff", "--cached")
+	// Fallback: find agent's active project dir by scanning open files via lsof.
+	// Agents (hermes, claude, opencode) may write to arbitrary paths outside workdir.
+	if diff := diffFromAgentFiles(workDir); diff != "" {
+		return diff
 	}
-	return diff
+	return ""
 }
 
 func runGit(workDir string, args ...string) (string, error) {
@@ -182,22 +237,135 @@ func isGitRepo(dir string) bool {
 	return err == nil
 }
 
+// diffFromAgentFiles uses lsof to find files the running agent processes have open,
+// determines the active project directory, and returns a diff/status for it.
+func diffFromAgentFiles(workDir string) string {
+	// Agent process names to check (the binaries that run agent code).
+	agentProcs := []string{"hermes", "claude", "opencode", "node", "python3"}
+
+	seenDirs := make(map[string]bool)
+	homeDir, _ := os.UserHomeDir()
+
+	for _, proc := range agentProcs {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		out, err := exec.CommandContext(ctx, "lsof", "-c", proc, "-Fn", "-a", "-d", "cwd").Output()
+		cancel()
+		if err != nil || len(out) == 0 {
+			continue
+		}
+		// lsof -Fn output: lines starting with 'n' are paths
+		for _, line := range strings.Split(string(out), "\n") {
+			if !strings.HasPrefix(line, "n") {
+				continue
+			}
+			dir := strings.TrimPrefix(line, "n")
+			// Skip daemon's own workdir, system dirs, and hidden dirs
+			if dir == workDir || strings.HasPrefix(dir, "/System") ||
+				strings.HasPrefix(dir, "/usr/") || strings.HasPrefix(dir, "/private/tmp/com.apple") ||
+				strings.Contains(dir, "multica_workspaces") || strings.Contains(dir, ".hermes") {
+				continue
+			}
+			// Only consider dirs inside home or /tmp
+			if homeDir != "" && !strings.HasPrefix(dir, homeDir) && !strings.HasPrefix(dir, "/tmp") {
+				continue
+			}
+			if !seenDirs[dir] {
+				seenDirs[dir] = true
+				if isGitRepo(dir) {
+					if diff := gitRepoStatus(dir); diff != "" {
+						return diff
+					}
+				}
+			}
+		}
+	}
+
+	// Also check recently modified files in workdir and /tmp as last resort.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	searchDirs := []string{workDir, "/tmp"}
+	var combined bytes.Buffer
+	for _, dir := range searchDirs {
+		if _, err := os.Stat(dir); err != nil {
+			continue
+		}
+		cmd := exec.CommandContext(ctx, "find", dir,
+			"-type", "f",
+			"-not", "-path", "*/.git/*",
+			"-not", "-name", "*.log",
+			"-not", "-path", "*/.*",
+			"-mmin", "-3",
+		)
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		if err := cmd.Run(); err == nil && strings.TrimSpace(out.String()) != "" {
+			combined.WriteString(out.String())
+		}
+	}
+	if combined.Len() == 0 {
+		return ""
+	}
+	lines := strings.Split(strings.TrimSpace(combined.String()), "\n")
+	var diffBuf bytes.Buffer
+	diffBuf.WriteString("Recently modified files:\n")
+	for _, path := range lines {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+		diffBuf.WriteString("  " + path + "\n")
+		data, err := os.ReadFile(path)
+		if err == nil && len(data) > 0 && len(data) < 4000 {
+			diffBuf.WriteString("```\n")
+			diffBuf.Write(data)
+			diffBuf.WriteString("\n```\n")
+		}
+	}
+	return diffBuf.String()
+}
+
+// gitRepoStatus returns git status + diff for any git repo, including untracked files.
+func gitRepoStatus(repoDir string) string {
+	statusOut, err := runGit(repoDir, "status", "--short")
+	if err != nil || strings.TrimSpace(statusOut) == "" {
+		return ""
+	}
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("Git repo: %s\n", repoDir))
+	buf.WriteString("Status:\n```\n")
+	buf.WriteString(statusOut)
+	buf.WriteString("```\n")
+	// Include diff of tracked changes
+	if diff, _ := runGit(repoDir, "diff", "HEAD"); strings.TrimSpace(diff) != "" {
+		if len(diff) > 6000 {
+			diff = diff[:6000] + "\n... (truncated)"
+		}
+		buf.WriteString("Diff:\n```diff\n")
+		buf.WriteString(diff)
+		buf.WriteString("\n```\n")
+	}
+	return buf.String()
+}
+
 func hashString(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return fmt.Sprintf("%x", h[:8])
 }
 
-// analyzeDiff invokes the first available agent binary with a pair programming
+// pairAgentPreference defines the order in which agents are preferred for pair analysis.
+var pairAgentPreference = []string{"hermes", "claude", "opencode", "openclaw", "codex", "gemini", "copilot", "kimi", "kiro", "cursor", "pi"}
+
+// analyzeDiff invokes an available agent binary with a pair programming
 // prompt and returns the text response. Falls back to empty string if no agent
 // is configured or the invocation fails.
 func (d *Daemon) analyzeDiff(ctx context.Context, s PairSession, workDir, diff string) string {
-	// Find the first configured agent binary.
-	agentPath := ""
+	// Pick agent by preference order so we use the best available CLI.
 	agentName := ""
-	for name, entry := range d.cfg.Agents {
-		if entry.Path != "" {
-			agentPath = entry.Path
+	agentPath := ""
+	for _, name := range pairAgentPreference {
+		if entry, ok := d.cfg.Agents[name]; ok && entry.Path != "" {
 			agentName = name
+			agentPath = entry.Path
 			break
 		}
 	}
@@ -206,13 +374,14 @@ func (d *Daemon) analyzeDiff(ctx context.Context, s PairSession, workDir, diff s
 	}
 
 	prompt := buildPairPrompt(diff)
+	args := pairAgentArgs(agentName, prompt)
 
 	// Use a short timeout — this is background analysis, not a blocking task.
 	analyzeCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 
 	var out bytes.Buffer
-	cmd := exec.CommandContext(analyzeCtx, agentPath, "--print", prompt)
+	cmd := exec.CommandContext(analyzeCtx, agentPath, args...)
 	cmd.Dir = workDir
 	cmd.Stdout = &out
 
@@ -226,6 +395,19 @@ func (d *Daemon) analyzeDiff(ctx context.Context, s PairSession, workDir, diff s
 		result = result[:4000]
 	}
 	return result
+}
+
+// pairAgentArgs returns the correct CLI arguments for non-interactive prompt execution per agent type.
+func pairAgentArgs(agentName, prompt string) []string {
+	switch agentName {
+	case "hermes":
+		return []string{"-z", prompt, "--yolo"}
+	case "opencode":
+		return []string{"run", prompt}
+	default:
+		// claude, openclaw, and others support --print
+		return []string{"--print", prompt}
+	}
 }
 
 func buildPairPrompt(diff string) string {

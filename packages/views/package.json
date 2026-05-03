@@ -28,6 +28,7 @@
     "./inbox": "./inbox/index.ts",
     "./runtimes": "./runtimes/index.ts",
     "./simulator": "./simulator/index.ts",
+    "./preview": "./preview/index.ts",
     "./workspace/workspace-avatar": "./workspace/workspace-avatar.tsx",
     "./workspace/create-workspace-form": "./workspace/create-workspace-form.tsx",
     "./workspace/no-access-page": "./workspace/no-access-page.tsx",

@@ -250,6 +250,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.DaemonAuth(queries, patCache, daemonTokenCache))
 		r.Get("/api/simulator/relay", h.SimulatorRelayRegister)
+		r.Get("/api/webpreview/relay", h.WebPreviewRelayRegister)
 	})
 
 	// Protected API routes
@@ -268,6 +269,11 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Get("/config", h.SimulatorConfigProxy)
 			r.Post("/exec", h.SimulatorExecProxy)
 		})
+
+		// Web Preview — proxies a daemon's local dev server through a relay WebSocket.
+		r.Get("/api/webpreview/status", h.WebPreviewStatus)
+		r.HandleFunc("/api/webpreview/{workspaceId}/{port}/*", h.WebPreviewProxy)
+		r.HandleFunc("/api/webpreview/{workspaceId}/{port}", h.WebPreviewProxy)
 
 		r.Get("/api/me", h.GetMe)
 		r.Patch("/api/me", h.UpdateMe)
@@ -320,6 +326,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Post("/", h.CreatePersonalAccessToken)
 			r.Delete("/{id}", h.RevokePersonalAccessToken)
 		})
+
+		// Pair session suggestions — accessible to authenticated users (no daemon auth needed).
+		r.Get("/api/pair-sessions/{sessionId}/suggestions", h.ListPairSuggestions)
 
 		// --- Workspace-scoped routes (all require workspace membership) ---
 		r.Group(func(r chi.Router) {

@@ -298,20 +298,45 @@ func (q *Queries) GetPairSession(ctx context.Context, id pgtype.UUID) (PairSessi
 }
 
 const listActivePairSessionsByRuntime = `-- name: ListActivePairSessionsByRuntime :many
-SELECT id, workspace_id, issue_id, agent_id, started_by, runtime_id, status, work_dir, last_diff_hash, created_at, updated_at, ended_at, intervene FROM pair_session
-WHERE status = 'active'
-ORDER BY created_at ASC
+SELECT ps.id, ps.workspace_id, ps.issue_id, ps.agent_id, ps.started_by, ps.runtime_id, ps.status, ps.work_dir, ps.last_diff_hash, ps.created_at, ps.updated_at, ps.ended_at, ps.intervene,
+       COALESCE(t.work_dir, '') AS task_work_dir
+FROM pair_session ps
+LEFT JOIN LATERAL (
+    SELECT work_dir FROM agent_task_queue
+    WHERE issue_id = ps.issue_id AND work_dir IS NOT NULL AND work_dir != ''
+    ORDER BY COALESCE(completed_at, started_at, dispatched_at, created_at) DESC
+    LIMIT 1
+) t ON true
+WHERE ps.status = 'active'
+ORDER BY ps.created_at ASC
 `
 
-func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context) ([]PairSession, error) {
+type ListActivePairSessionsByRuntimeRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	WorkspaceID  pgtype.UUID        `json:"workspace_id"`
+	IssueID      pgtype.UUID        `json:"issue_id"`
+	AgentID      pgtype.UUID        `json:"agent_id"`
+	StartedBy    pgtype.UUID        `json:"started_by"`
+	RuntimeID    pgtype.UUID        `json:"runtime_id"`
+	Status       string             `json:"status"`
+	WorkDir      pgtype.Text        `json:"work_dir"`
+	LastDiffHash pgtype.Text        `json:"last_diff_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	EndedAt      pgtype.Timestamptz `json:"ended_at"`
+	Intervene    bool               `json:"intervene"`
+	TaskWorkDir  string             `json:"task_work_dir"`
+}
+
+func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context) ([]ListActivePairSessionsByRuntimeRow, error) {
 	rows, err := q.db.Query(ctx, listActivePairSessionsByRuntime)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []PairSession{}
+	items := []ListActivePairSessionsByRuntimeRow{}
 	for rows.Next() {
-		var i PairSession
+		var i ListActivePairSessionsByRuntimeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
@@ -326,6 +351,7 @@ func (q *Queries) ListActivePairSessionsByRuntime(ctx context.Context) ([]PairSe
 			&i.UpdatedAt,
 			&i.EndedAt,
 			&i.Intervene,
+			&i.TaskWorkDir,
 		); err != nil {
 			return nil, err
 		}

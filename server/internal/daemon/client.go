@@ -370,6 +370,7 @@ type PairSession struct {
 	AgentID      string  `json:"agent_id"`
 	Status       string  `json:"status"`
 	WorkDir      *string `json:"work_dir"`
+	TaskWorkDir  string  `json:"task_work_dir"`
 	LastDiffHash *string `json:"last_diff_hash"`
 	Intervene    bool    `json:"intervene"`
 }

@@ -69,6 +69,12 @@ type Daemon struct {
 
 	activeEnvRootsMu sync.Mutex
 	activeEnvRoots   map[string]int // env root path -> reference count (handles reuse paths marked twice)
+
+	activeTaskWorkDirsMu sync.RWMutex
+	activeTaskWorkDirs   map[string]string // issueID -> workDir for currently running tasks
+
+	activeTaskPIDsMu sync.RWMutex
+	activeTaskPIDs   map[string]int // issueID -> agent process PID for currently running tasks
 }
 
 // New creates a new Daemon instance.
@@ -86,9 +92,11 @@ func New(cfg Config, logger *slog.Logger) *Daemon {
 		workspaces:    make(map[string]*workspaceState),
 		runtimeIndex:   make(map[string]Runtime),
 		runtimeSetCh:   make(chan struct{}, 1),
-		agentVersions:  make(map[string]string),
-		wsHBLastAck:    make(map[string]time.Time),
-		activeEnvRoots: make(map[string]int),
+		agentVersions:       make(map[string]string),
+		wsHBLastAck:         make(map[string]time.Time),
+		activeEnvRoots:      make(map[string]int),
+		activeTaskWorkDirs:  make(map[string]string),
+		activeTaskPIDs:      make(map[string]int),
 	}
 }
 
@@ -228,6 +236,9 @@ func (d *Daemon) Run(ctx context.Context) error {
 
 	// Live Pair Programming: poll active pair sessions and stream agent analysis.
 	d.startPairLoop(ctx)
+
+	// Web Preview: detect running local dev servers and relay them to the VPS.
+	go d.webPreviewLoop(ctx)
 
 	return d.pollLoop(ctx, taskWakeups)
 }
@@ -1204,6 +1215,11 @@ func (d *Daemon) handleTask(ctx context.Context, task Task, slot int) {
 			taskLog.Warn("write gc meta failed (non-fatal)", "error", err)
 		}
 	}
+	if task.IssueID != "" {
+		d.activeTaskWorkDirsMu.Lock()
+		delete(d.activeTaskWorkDirs, task.IssueID)
+		d.activeTaskWorkDirsMu.Unlock()
+	}
 }
 
 func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot int, taskLog *slog.Logger) (TaskResult, error) {
@@ -1311,6 +1327,12 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	if err := execenv.InjectRuntimeConfig(env.WorkDir, provider, taskCtx); err != nil {
 		d.logger.Warn("execenv: inject runtime config failed (non-fatal)", "error", err)
 	}
+	// Write a minimal gc_meta.json at task start so the pair poller can find
+	// the workdir even while the task is still running. WriteGCMeta (called
+	// on completion) will overwrite it with the real CompletedAt timestamp.
+	if env.RootDir != "" && task.IssueID != "" {
+		_ = execenv.WriteGCMetaStart(env.RootDir, task.IssueID, task.WorkspaceID)
+	}
 	// NOTE: No cleanup — workdir is preserved for reuse by future tasks on
 	// the same (agent, issue) pair. The work_dir path is stored in DB on
 	// task completion and passed back via PriorWorkDir on the next claim.
@@ -1400,6 +1422,11 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		"model", entry.Model,
 		"reused", reused,
 	)
+	if task.IssueID != "" && env.WorkDir != "" {
+		d.activeTaskWorkDirsMu.Lock()
+		d.activeTaskWorkDirs[task.IssueID] = env.WorkDir
+		d.activeTaskWorkDirsMu.Unlock()
+	}
 	if task.PriorSessionID != "" {
 		taskLog.Info("resuming session", "session_id", task.PriorSessionID)
 	}

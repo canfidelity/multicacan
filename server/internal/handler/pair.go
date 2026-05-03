@@ -62,11 +62,8 @@ func (h *Handler) StartPairSession(w http.ResponseWriter, r *http.Request) {
 	// Auto-resolve work_dir from the most recent task on this issue.
 	// The pair agent needs to watch the same directory the worker agent is using.
 	var workDir pgtype.Text
-	if lastTask, err := h.Queries.GetLastTaskSession(r.Context(), db.GetLastTaskSessionParams{
-		AgentID: parseUUID(req.AgentID),
-		IssueID: parseUUID(issueID),
-	}); err == nil {
-		workDir = lastTask.WorkDir
+	if lastTask, err := h.Queries.GetLastIssueTaskWorkDir(r.Context(), parseUUID(issueID)); err == nil {
+		workDir = pgtype.Text{String: lastTask.String, Valid: lastTask.String != ""}
 	}
 
 	session, err := h.Queries.CreatePairSession(r.Context(), db.CreatePairSessionParams{
@@ -146,6 +143,25 @@ func (h *Handler) GetActivePairSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, session)
 }
 
+// pairSuggestionResponse is the frontend-facing shape for a pair suggestion.
+type pairSuggestionResponse struct {
+	ID          string `json:"id"`
+	SessionID   string `json:"session_id"`
+	DiffSnippet string `json:"diff_snippet"`
+	Content     string `json:"content"`
+	CreatedAt   string `json:"created_at"`
+}
+
+func toSuggestionResponse(s db.PairSuggestion) pairSuggestionResponse {
+	return pairSuggestionResponse{
+		ID:          uuidToString(s.ID),
+		SessionID:   uuidToString(s.PairSessionID),
+		DiffSnippet: s.DiffSnippet,
+		Content:     s.Content,
+		CreatedAt:   s.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
 // ListPairSuggestions returns suggestions for a pair session.
 // GET /api/pair-sessions/{sessionId}/suggestions
 func (h *Handler) ListPairSuggestions(w http.ResponseWriter, r *http.Request) {
@@ -156,10 +172,11 @@ func (h *Handler) ListPairSuggestions(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "list suggestions failed")
 		return
 	}
-	if suggestions == nil {
-		suggestions = []db.PairSuggestion{}
+	resp := make([]pairSuggestionResponse, len(suggestions))
+	for i, s := range suggestions {
+		resp[i] = toSuggestionResponse(s)
 	}
-	writeJSON(w, http.StatusOK, suggestions)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // DaemonClaimPairSession is called by the daemon to register work_dir for a session.
@@ -219,13 +236,8 @@ func (h *Handler) DaemonPostPairSuggestion(w http.ResponseWriter, r *http.Reques
 	// Look up session to get workspace_id and issue_id for broadcast
 	session, err := h.Queries.GetPairSession(r.Context(), parseUUID(sessionID))
 	if err == nil {
-		h.broadcastPairEvent(uuidToString(session.WorkspaceID), protocol.EventPairSuggestion, protocol.PairSuggestionPayload{
-			SuggestionID: uuidToString(suggestion.ID),
-			SessionID:    sessionID,
-			IssueID:      uuidToString(session.IssueID),
-			DiffSnippet:  req.DiffSnippet,
-			Content:      req.Content,
-			CreatedAt:    suggestion.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00"),
+		h.broadcastPairEvent(uuidToString(session.WorkspaceID), protocol.EventPairSuggestion, map[string]any{
+			"suggestion": toSuggestionResponse(suggestion),
 		})
 	}
 
@@ -246,7 +258,7 @@ func (h *Handler) DaemonListActivePairSessions(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if sessions == nil {
-		sessions = []db.PairSession{}
+		sessions = []db.ListActivePairSessionsByRuntimeRow{}
 	}
 	writeJSON(w, http.StatusOK, sessions)
 }

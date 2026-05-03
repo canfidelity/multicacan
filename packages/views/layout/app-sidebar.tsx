@@ -32,6 +32,7 @@ import {
   X,
   Zap,
   Smartphone,
+  Globe,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
@@ -108,6 +109,7 @@ type NavKey =
   | "agents"
   | "runtimes"
   | "simulator"
+  | "preview"
   | "skills"
   | "settings";
 
@@ -126,6 +128,7 @@ const workspaceNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
 const configureNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "runtimes", label: "Runtimes", icon: Monitor },
   { key: "simulator", label: "Simulator", icon: Smartphone },
+  { key: "preview", label: "Web Preview", icon: Globe },
   { key: "skills", label: "Skills", icon: BookOpenText },
   { key: "settings", label: "Settings", icon: Settings },
 ];

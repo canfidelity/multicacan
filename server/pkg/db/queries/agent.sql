@@ -235,6 +235,13 @@ WHERE agent_id = $1 AND issue_id = $2
 ORDER BY COALESCE(completed_at, started_at, dispatched_at, created_at) DESC
 LIMIT 1;
 
+-- name: GetLastIssueTaskWorkDir :one
+SELECT work_dir FROM agent_task_queue
+WHERE issue_id = $1
+  AND work_dir IS NOT NULL
+ORDER BY COALESCE(completed_at, started_at, dispatched_at, created_at) DESC
+LIMIT 1;
+
 -- name: FailAgentTask :one
 -- Marks a task as failed. session_id and work_dir are merged via COALESCE so
 -- if the agent already established a real session before failing (e.g. it

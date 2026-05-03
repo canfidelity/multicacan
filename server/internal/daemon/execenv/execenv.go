@@ -230,6 +230,26 @@ func WriteGCMeta(envRoot, issueID, workspaceID string) error {
 	return os.WriteFile(filepath.Join(envRoot, gcMetaFile), data, 0o644)
 }
 
+// WriteGCMetaStart writes minimal GC metadata at task start so that the pair
+// poller can find the workdir for an actively running task. CompletedAt is
+// left zero; WriteGCMeta overwrites it with the real timestamp on completion.
+func WriteGCMetaStart(envRoot, issueID, workspaceID string) error {
+	if envRoot == "" {
+		return nil
+	}
+	// Don't overwrite an existing gc_meta (e.g. on reused envs) since it may
+	// already have a valid CompletedAt from a prior task on the same issue.
+	if _, err := os.Stat(filepath.Join(envRoot, gcMetaFile)); err == nil {
+		return nil
+	}
+	meta := GCMeta{IssueID: issueID, WorkspaceID: workspaceID}
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("marshal gc meta: %w", err)
+	}
+	return os.WriteFile(filepath.Join(envRoot, gcMetaFile), data, 0o644)
+}
+
 // ReadGCMeta reads GC metadata from a task directory root.
 func ReadGCMeta(envRoot string) (*GCMeta, error) {
 	data, err := os.ReadFile(filepath.Join(envRoot, gcMetaFile))

@@ -13,9 +13,17 @@ ORDER BY created_at DESC
 LIMIT 1;
 
 -- name: ListActivePairSessionsByRuntime :many
-SELECT * FROM pair_session
-WHERE status = 'active'
-ORDER BY created_at ASC;
+SELECT ps.*,
+       COALESCE(t.work_dir, '') AS task_work_dir
+FROM pair_session ps
+LEFT JOIN LATERAL (
+    SELECT work_dir FROM agent_task_queue
+    WHERE issue_id = ps.issue_id AND work_dir IS NOT NULL AND work_dir != ''
+    ORDER BY COALESCE(completed_at, started_at, dispatched_at, created_at) DESC
+    LIMIT 1
+) t ON true
+WHERE ps.status = 'active'
+ORDER BY ps.created_at ASC;
 
 -- name: ClaimPairSession :one
 UPDATE pair_session

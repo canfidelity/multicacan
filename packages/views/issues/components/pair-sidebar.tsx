@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
 import { Switch } from "@multica/ui/components/ui/switch";
 import { Label } from "@multica/ui/components/ui/label";
 import { Button } from "@multica/ui/components/ui/button";
@@ -162,7 +162,7 @@ export function PairSidebar({
             )}
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="py-1">
             {suggestions.map((s, idx) => (
               <SuggestionCard key={s.id ?? idx} suggestion={s} />
             ))}
@@ -174,34 +174,56 @@ export function PairSidebar({
 }
 
 function SuggestionCard({ suggestion }: { suggestion: PairSuggestion }) {
+  const [expanded, setExpanded] = useState(false);
   const [diffExpanded, setDiffExpanded] = useState(false);
 
+  const preview = suggestion.content.split("\n").find((l) => l.trim()) ?? suggestion.content;
+
   return (
-    <div className="px-4 py-3 space-y-2">
-      {/* Time */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{timeAgo(suggestion.created_at)}</span>
-        {suggestion.diff_snippet && (
-          <button
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setDiffExpanded((v) => !v)}
-          >
-            {diffExpanded ? "Hide diff" : "Show diff"}
-          </button>
+    <div className="mx-3 my-2 rounded-lg border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      {/* Header — always visible */}
+      <button
+        className="flex items-center gap-2 w-full text-left px-3 py-2.5 hover:bg-accent/50 transition-colors rounded-lg"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <ChevronRight
+          className={cn(
+            "h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-150",
+            expanded && "rotate-90"
+          )}
+        />
+        <div className="flex items-center justify-center h-5 w-5 rounded-full bg-violet-100 dark:bg-violet-900/40 shrink-0">
+          <Bot className="h-3 w-3 text-violet-500" />
+        </div>
+        <span className="text-xs font-medium text-foreground/80 shrink-0">Pair</span>
+        <span className="text-xs text-muted-foreground shrink-0">{timeAgo(suggestion.created_at)}</span>
+        {!expanded && (
+          <span className="text-xs text-muted-foreground truncate ml-1">
+            — {preview}
+          </span>
         )}
-      </div>
+      </button>
 
-      {/* Agent suggestion */}
-      <p className="text-xs leading-relaxed whitespace-pre-wrap">{suggestion.content}</p>
-
-      {/* Diff */}
-      {diffExpanded && suggestion.diff_snippet && (
-        <>
-          <Separator />
-          <pre className="text-[10px] font-mono leading-relaxed overflow-x-auto text-muted-foreground bg-muted/50 rounded p-2 max-h-48 overflow-y-auto">
-            {suggestion.diff_snippet}
-          </pre>
-        </>
+      {/* Expanded body */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-border/50">
+          <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/85 pl-7">{suggestion.content}</p>
+          {suggestion.diff_snippet && (
+            <div className="pl-7 mt-2 space-y-1.5">
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={(e) => { e.stopPropagation(); setDiffExpanded((v) => !v); }}
+              >
+                {diffExpanded ? "Hide diff" : "Show diff"}
+              </button>
+              {diffExpanded && (
+                <pre className="text-[10px] font-mono leading-relaxed overflow-x-auto text-muted-foreground bg-muted/60 rounded-md p-2 max-h-48 overflow-y-auto border border-border/50">
+                  {suggestion.diff_snippet}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

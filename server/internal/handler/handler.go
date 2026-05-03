@@ -69,6 +69,7 @@ type Handler struct {
 	PATCache              *auth.PATCache
 	DaemonTokenCache      *auth.DaemonTokenCache
 	SimulatorRelays       *SimulatorRelayHub
+	WebPreviewRelays      *WebPreviewRelayHub
 	cfg                   Config
 }
 
@@ -106,6 +107,7 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 		CFSigner:              cfSigner,
 		Analytics:             analyticsClient,
 		SimulatorRelays:       NewSimulatorRelayHub(),
+		WebPreviewRelays:      NewWebPreviewRelayHub(),
 		cfg:                   cfg,
 	}
 }

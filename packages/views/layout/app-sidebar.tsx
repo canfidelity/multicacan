@@ -75,7 +75,8 @@ import { useMyRuntimesNeedUpdate } from "@multica/core/runtimes/hooks";
 import { pinListOptions } from "@multica/core/pins/queries";
 import { useDeletePin, useReorderPins } from "@multica/core/pins/mutations";
 import { issueDetailOptions } from "@multica/core/issues/queries";
-import { projectDetailOptions } from "@multica/core/projects/queries";
+import { projectDetailOptions, projectListOptions } from "@multica/core/projects/queries";
+import type { Project } from "@multica/core/types";
 import type { PinnedItem } from "@multica/core/types";
 import { useLogout } from "../auth";
 import { ProjectIcon } from "../projects/components/project-icon";
@@ -97,6 +98,7 @@ const EMPTY_PINS: PinnedItem[] = [];
 const EMPTY_WORKSPACES: Awaited<ReturnType<typeof api.listWorkspaces>> = [];
 const EMPTY_INVITATIONS: Awaited<ReturnType<typeof api.listMyInvitations>> = [];
 const EMPTY_INBOX: Awaited<ReturnType<typeof api.listInbox>> = [];
+const EMPTY_PROJECTS: Project[] = [];
 
 // Nav items reference WorkspacePaths method names so they can be resolved
 // against the current workspace slug at render time (see AppSidebar body).
@@ -339,6 +341,10 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
     select: (data) => data.issues,
     enabled: !!wsId,
     refetchInterval: 10_000,
+  });
+  const { data: projects = EMPTY_PROJECTS } = useQuery({
+    ...projectListOptions(wsId ?? ""),
+    enabled: !!wsId,
   });
   const unreadCount = React.useMemo(
     () => deduplicateInboxItems(inboxItems).filter((i) => !i.read).length,
@@ -729,47 +735,51 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             </Collapsible>
           )}
 
-          <Collapsible defaultOpen>
-            <SidebarGroup>
-              <SidebarGroupLabel
-                render={<CollapsibleTrigger />}
-                className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
-              >
-                <span>Artifacts</span>
-                <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu className="gap-0.5">
-                    {workspaces.map((ws) => (
-                      <SidebarMenuItem key={ws.id}>
-                        <SidebarMenuButton
-                          size="sm"
-                          isActive={ws.id === workspace?.id}
-                          render={<AppLink href={paths.workspace(ws.slug).issues()} />}
-                          className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-                        >
-                          <WorkspaceAvatar name={ws.name} size="sm" />
-                          <span
-                            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
-                            style={{
-                              maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                              WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                            }}
-                          >
-                            {ws.name}
-                          </span>
-                          {ws.id === workspace?.id && (
-                            <Check className="ml-auto size-3 shrink-0 text-primary" />
-                          )}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
+          {projects.length > 0 && (
+            <Collapsible defaultOpen>
+              <SidebarGroup>
+                <SidebarGroupLabel
+                  render={<CollapsibleTrigger />}
+                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                >
+                  <span>Artifacts</span>
+                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
+                  <span className="ml-auto text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/pinned:opacity-100">{projects.length}</span>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu className="gap-0.5">
+                      {projects.map((project) => {
+                        const href = p.projectDetail(project.id);
+                        const isActive = isNavActive(pathname, href);
+                        return (
+                          <SidebarMenuItem key={project.id}>
+                            <SidebarMenuButton
+                              size="sm"
+                              isActive={isActive}
+                              render={<AppLink href={href} />}
+                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                            >
+                              <ProjectIcon project={project} size="sm" />
+                              <span
+                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+                                style={{
+                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                }}
+                              >
+                                {project.title}
+                              </span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )}
 
           <SidebarGroup>
             <SidebarGroupLabel>Apps</SidebarGroupLabel>

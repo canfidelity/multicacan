@@ -192,10 +192,12 @@ jobs:
       - name: Build daemon binaries
         run: |
           cd server
-          GOOS=linux  GOARCH=amd64 go build -o ../dist/multicacan-linux-amd64   ./cmd/multica
-          GOOS=linux  GOARCH=arm64 go build -o ../dist/multicacan-linux-arm64   ./cmd/multica
-          GOOS=darwin GOARCH=amd64 go build -o ../dist/multicacan-darwin-amd64  ./cmd/multica
-          GOOS=darwin GOARCH=arm64 go build -o ../dist/multicacan-darwin-arm64  ./cmd/multica
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "latest")
+          LDFLAGS="-X main.version=${VERSION} -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          GOOS=linux  GOARCH=amd64 go build -ldflags "$LDFLAGS" -o ../dist/multicacan-linux-amd64   ./cmd/multica
+          GOOS=linux  GOARCH=arm64 go build -ldflags "$LDFLAGS" -o ../dist/multicacan-linux-arm64   ./cmd/multica
+          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o ../dist/multicacan-darwin-amd64  ./cmd/multica
+          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o ../dist/multicacan-darwin-arm64  ./cmd/multica
 
       - name: Upload daemon binaries to release
         uses: softprops/action-gh-release@v2

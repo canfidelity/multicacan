@@ -47,14 +47,9 @@ func normalizeReleaseTag(targetVersion string) string {
 }
 
 func releaseAssetCandidates(targetVersion, goos, goarch string) []string {
-	tag := normalizeReleaseTag(targetVersion)
-	version := strings.TrimPrefix(tag, "v")
-	ext := releaseArchiveExtension(goos)
-	// Prefer the versioned name (current scheme); fall back to the legacy
-	// `multica_{os}_{arch}` name for releases that still ship it.
+	// Multicacan releases ship raw binaries named multicacan-{os}-{arch}.
 	return []string{
-		fmt.Sprintf("multica-cli-%s-%s-%s.%s", version, goos, goarch, ext),
-		fmt.Sprintf("multica_%s_%s.%s", goos, goarch, ext),
+		fmt.Sprintf("multicacan-%s-%s", goos, goarch),
 	}
 }
 
@@ -96,10 +91,10 @@ func fetchReleaseByTag(tag string) (*GitHubRelease, error) {
 	return &release, nil
 }
 
-// FetchLatestRelease fetches the latest release tag from the multica GitHub repo.
+// FetchLatestRelease fetches the latest release from the multicacan GitHub repo.
 func FetchLatestRelease() (*GitHubRelease, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/canfidelity/multicacan/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/canfidelity/multicacan/releases/tags/latest", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -215,24 +210,15 @@ func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Dur
 		return "", fmt.Errorf("download failed: HTTP %d from %s", resp.StatusCode, downloadURL)
 	}
 
-	// Extract the binary from the archive.
-	binaryName := "multica"
-	if runtime.GOOS == "windows" {
-		binaryName = "multica.exe"
-	}
-	var binaryData []byte
-	if runtime.GOOS == "windows" {
-		binaryData, err = extractBinaryFromZip(resp.Body, binaryName)
-	} else {
-		binaryData, err = extractBinaryFromTarGz(resp.Body, binaryName)
-	}
+	// Binaries are raw (not archived) — read directly.
+	binaryData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("extract binary: %w", err)
+		return "", fmt.Errorf("read binary: %w", err)
 	}
 
 	// Atomic replace: write to temp file, then rename over the original.
 	dir := filepath.Dir(exePath)
-	tmpFile, err := os.CreateTemp(dir, "multica-update-*")
+	tmpFile, err := os.CreateTemp(dir, "multicacan-update-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

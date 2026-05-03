@@ -26,6 +26,8 @@ describe("paths.workspace() shape", () => {
         "runtimes",
         "skills",
         "settings",
+        "simulator",
+        "preview",
       ]),
     );
   });
@@ -44,6 +46,8 @@ describe("paths.workspace() shape", () => {
       ["runtimes", "runtimes"],
       ["skills", "skills"],
       ["settings", "settings"],
+      ["simulator", "simulator"],
+      ["preview", "preview"],
     ];
     const wsAsAny = ws as unknown as Record<string, () => string>;
     for (const [method, segment] of expectedSegments) {

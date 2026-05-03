@@ -25,7 +25,7 @@ authenticates via browser and starts the agent daemon.
 If a configuration already exists, you will be prompted before overwriting.
 
 Use --profile to create an isolated configuration for a separate environment:
-  multica setup self-host --profile staging --server-url https://api-staging.co`,
+  multicacan setup self-host --profile staging --server-url https://api-staging.co`,
 	RunE: runSetupSelfHost,
 }
 
@@ -87,9 +87,9 @@ If you run this command from a different machine than the server, also pass
 the OAuth login flow can return the token to the CLI.
 
 Examples:
-  multica setup self-host
-  multica setup self-host --server-url https://api.internal.co --app-url https://app.internal.co
-  multica setup self-host --port 9090 --frontend-port 4000`,
+  multicacan setup self-host
+  multicacan setup self-host --server-url https://api.internal.co --app-url https://app.internal.co
+  multicacan setup self-host --port 9090 --frontend-port 4000`,
 	RunE: runSetupSelfHost,
 }
 
@@ -202,7 +202,7 @@ func runSetupSelfHost(cmd *cobra.Command, args []string) error {
 	// Check if the server is reachable.
 	if !probeServer(serverURL) {
 		fmt.Fprintf(os.Stderr, "\n⚠ Server at %s is not reachable.\n", serverURL)
-		fmt.Fprintln(os.Stderr, "  Make sure the server is running, then run 'multica login'.")
+		fmt.Fprintln(os.Stderr, "  Make sure the server is running, then run 'multicacan login'.")
 		return nil
 	}
 

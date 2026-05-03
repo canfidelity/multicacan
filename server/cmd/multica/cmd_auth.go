@@ -22,7 +22,7 @@ import (
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
-	Short: "Authenticate multica with Multica",
+	Short: "Authenticate multicacan with Multica",
 }
 
 var authStatusCmd = &cobra.Command{

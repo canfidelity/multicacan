@@ -16,14 +16,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/multica-ai/multica/server/internal/analytics"
-	"github.com/multica-ai/multica/server/internal/daemonws"
-	"github.com/multica-ai/multica/server/internal/middleware"
-	"github.com/multica-ai/multica/server/internal/service"
-	"github.com/multica-ai/multica/server/internal/util"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
-	"github.com/multica-ai/multica/server/pkg/protocol"
-	"github.com/multica-ai/multica/server/pkg/redact"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/daemonws"
+	"github.com/canfidelity/multicacan/server/internal/middleware"
+	"github.com/canfidelity/multicacan/server/internal/service"
+	"github.com/canfidelity/multicacan/server/internal/util"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/pkg/protocol"
+	"github.com/canfidelity/multicacan/server/pkg/redact"
 )
 
 // ---------------------------------------------------------------------------

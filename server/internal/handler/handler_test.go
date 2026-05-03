@@ -14,12 +14,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/multica-ai/multica/server/internal/analytics"
-	"github.com/multica-ai/multica/server/internal/events"
-	"github.com/multica-ai/multica/server/internal/realtime"
-	"github.com/multica-ai/multica/server/internal/service"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
-	"github.com/multica-ai/multica/server/pkg/protocol"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/events"
+	"github.com/canfidelity/multicacan/server/internal/realtime"
+	"github.com/canfidelity/multicacan/server/internal/service"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/pkg/protocol"
 )
 
 var testHandler *Handler

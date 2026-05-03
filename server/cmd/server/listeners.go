@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/multica-ai/multica/server/internal/events"
-	"github.com/multica-ai/multica/server/internal/handler"
-	"github.com/multica-ai/multica/server/internal/realtime"
-	"github.com/multica-ai/multica/server/pkg/protocol"
+	"github.com/canfidelity/multicacan/server/internal/events"
+	"github.com/canfidelity/multicacan/server/internal/handler"
+	"github.com/canfidelity/multicacan/server/internal/realtime"
+	"github.com/canfidelity/multicacan/server/pkg/protocol"
 )
 
 // registerListeners wires up event bus listeners for WS broadcasting.

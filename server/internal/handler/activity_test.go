@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 func TestListTimeline_MergedAndSorted(t *testing.T) {

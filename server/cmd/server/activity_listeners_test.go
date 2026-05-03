@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/multica-ai/multica/server/internal/events"
-	"github.com/multica-ai/multica/server/internal/handler"
-	"github.com/multica-ai/multica/server/internal/util"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
-	"github.com/multica-ai/multica/server/pkg/protocol"
+	"github.com/canfidelity/multicacan/server/internal/events"
+	"github.com/canfidelity/multicacan/server/internal/handler"
+	"github.com/canfidelity/multicacan/server/internal/util"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/pkg/protocol"
 )
 
 // listActivitiesForIssue is a test helper that fetches all activity_log records for an issue.

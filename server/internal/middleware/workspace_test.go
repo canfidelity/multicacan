@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 const testResolverSlug = "middleware-resolver-test"

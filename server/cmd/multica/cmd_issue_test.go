@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/multica-ai/multica/server/internal/cli"
+	"github.com/canfidelity/multicacan/server/internal/cli"
 )
 
 // pipeStdin replaces os.Stdin with a pipe seeded by the given body for the

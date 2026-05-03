@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/multica-ai/multica/server/internal/middleware"
+	"github.com/canfidelity/multicacan/server/internal/middleware"
 )
 
 // slowProbeLocalSkillListStore wraps a LocalSkillListStore but blocks inside

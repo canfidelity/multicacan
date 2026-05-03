@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/multica-ai/multica/server/internal/cli"
-	"github.com/multica-ai/multica/server/internal/util"
+	"github.com/canfidelity/multicacan/server/internal/cli"
+	"github.com/canfidelity/multicacan/server/internal/util"
 )
 
 // resolveTextFlag picks between a `--<name>` flag value and a paired

@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/multica-ai/multica/server/internal/analytics"
-	"github.com/multica-ai/multica/server/internal/daemonws"
-	"github.com/multica-ai/multica/server/internal/events"
-	"github.com/multica-ai/multica/server/internal/logger"
-	obsmetrics "github.com/multica-ai/multica/server/internal/metrics"
-	"github.com/multica-ai/multica/server/internal/realtime"
-	"github.com/multica-ai/multica/server/internal/service"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/daemonws"
+	"github.com/canfidelity/multicacan/server/internal/events"
+	"github.com/canfidelity/multicacan/server/internal/logger"
+	obsmetrics "github.com/canfidelity/multicacan/server/internal/metrics"
+	"github.com/canfidelity/multicacan/server/internal/realtime"
+	"github.com/canfidelity/multicacan/server/internal/service"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 	"github.com/redis/go-redis/v9"
 )
 

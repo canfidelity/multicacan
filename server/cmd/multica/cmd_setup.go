@@ -26,7 +26,7 @@ If a configuration already exists, you will be prompted before overwriting.
 
 Use --profile to create an isolated configuration for a separate environment:
   multicacan setup self-host --profile staging --server-url https://api-staging.co`,
-	RunE: runSetupSelfHost,
+	RunE: runSetupCloud,
 }
 
 var setupCloudCmd = &cobra.Command{

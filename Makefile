@@ -64,15 +64,15 @@ selfhost: ## Create .env if needed, then pull and start the official self-hosted
 		fi; \
 		echo "==> Generated random JWT_SECRET"; \
 	fi
-	@echo "==> Pulling official Multica images..."
+	@echo "==> Pulling Multicacan images..."
 	@if ! docker compose -f docker-compose.selfhost.yml pull; then \
 		echo ""; \
-		echo "Official images for tag '$${MULTICA_IMAGE_TAG:-latest}' are not published yet."; \
-		echo "If this is before the first GHCR release, build from the current checkout:"; \
+		echo "Images for tag '$${MULTICA_IMAGE_TAG:-latest}' are not available yet."; \
+		echo "Build from the current checkout instead:"; \
 		echo "  make selfhost-build"; \
 		exit 1; \
 	fi
-	@echo "==> Starting Multica via Docker Compose..."
+	@echo "==> Starting Multicacan via Docker Compose..."
 	docker compose -f docker-compose.selfhost.yml up -d
 	@echo "==> Waiting for backend to be ready..."
 	@for i in $$(seq 1 30); do \
@@ -83,18 +83,19 @@ selfhost: ## Create .env if needed, then pull and start the official self-hosted
 	done
 	@if curl -sf http://localhost:$${PORT:-8080}/health > /dev/null 2>&1; then \
 		echo ""; \
-		echo "✓ Multica is running!"; \
+		echo "✓ Multicacan is running!"; \
 		echo "  Frontend: http://localhost:$${FRONTEND_PORT:-3000}"; \
 		echo "  Backend:  http://localhost:$${PORT:-8080}"; \
 		echo ""; \
-		echo "Images: $${MULTICA_BACKEND_IMAGE:-ghcr.io/multica-ai/multica-backend}:$${MULTICA_IMAGE_TAG:-latest}"; \
-		echo "        $${MULTICA_WEB_IMAGE:-ghcr.io/multica-ai/multica-web}:$${MULTICA_IMAGE_TAG:-latest}"; \
+		echo "Images: $${MULTICA_BACKEND_IMAGE:-ghcr.io/canfidelity/multicacan-backend}:$${MULTICA_IMAGE_TAG:-latest}"; \
+		echo "        $${MULTICA_WEB_IMAGE:-ghcr.io/canfidelity/multicacan-web}:$${MULTICA_IMAGE_TAG:-latest}"; \
 		echo ""; \
 		echo "Log in: configure RESEND_API_KEY in .env for email codes,"; \
 		echo "        or read the generated code from backend logs when Resend is unset."; \
 		echo ""; \
-		echo "Next — install the CLI and connect your machine:"; \
-		echo "  brew install multica-ai/tap/multica"; \
+		echo "Next — install the daemon and connect your machine:"; \
+		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica"; \
+		echo "  chmod +x /usr/local/bin/multica && codesign -s - /usr/local/bin/multica"; \
 		echo "  multica setup self-host"; \
 	else \
 		echo ""; \
@@ -114,7 +115,7 @@ selfhost-build: ## Build backend/web from the current checkout and start the sel
 		fi; \
 		echo "==> Generated random JWT_SECRET"; \
 	fi
-	@echo "==> Building Multica from the current checkout..."
+	@echo "==> Building Multicacan from the current checkout..."
 	docker compose -f docker-compose.selfhost.yml -f docker-compose.selfhost.build.yml up -d --build
 	@echo "==> Waiting for backend to be ready..."
 	@for i in $$(seq 1 30); do \
@@ -125,7 +126,7 @@ selfhost-build: ## Build backend/web from the current checkout and start the sel
 	done
 	@if curl -sf http://localhost:$${PORT:-8080}/health > /dev/null 2>&1; then \
 		echo ""; \
-		echo "✓ Multica is running!"; \
+		echo "✓ Multicacan is running!"; \
 		echo "  Frontend: http://localhost:$${FRONTEND_PORT:-3000}"; \
 		echo "  Backend:  http://localhost:$${PORT:-8080}"; \
 		echo ""; \
@@ -133,10 +134,10 @@ selfhost-build: ## Build backend/web from the current checkout and start the sel
 		echo "        or read the generated code from backend logs when Resend is unset."; \
 		echo ""; \
 		echo "Built images locally via docker-compose.selfhost.build.yml."; \
-		echo "Local tags: multica-backend:dev and multica-web:dev."; \
 		echo ""; \
-		echo "Next — install the CLI and connect your machine:"; \
-		echo "  brew install multica-ai/tap/multica"; \
+		echo "Next — install the daemon and connect your machine:"; \
+		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica"; \
+		echo "  chmod +x /usr/local/bin/multica && codesign -s - /usr/local/bin/multica"; \
 		echo "  multica setup self-host"; \
 	else \
 		echo ""; \

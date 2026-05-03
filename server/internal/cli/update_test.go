@@ -19,8 +19,7 @@ func TestReleaseAssetCandidates(t *testing.T) {
 			goos:          "darwin",
 			goarch:        "arm64",
 			wantAssets: []string{
-				"multica-cli-1.2.3-darwin-arm64.tar.gz",
-				"multica_darwin_arm64.tar.gz",
+				"multicacan-darwin-arm64",
 			},
 		},
 		{
@@ -29,8 +28,7 @@ func TestReleaseAssetCandidates(t *testing.T) {
 			goos:          "linux",
 			goarch:        "amd64",
 			wantAssets: []string{
-				"multica-cli-1.2.3-linux-amd64.tar.gz",
-				"multica_linux_amd64.tar.gz",
+				"multicacan-linux-amd64",
 			},
 		},
 		{
@@ -39,8 +37,7 @@ func TestReleaseAssetCandidates(t *testing.T) {
 			goos:          "windows",
 			goarch:        "amd64",
 			wantAssets: []string{
-				"multica-cli-1.2.3-windows-amd64.zip",
-				"multica_windows_amd64.zip",
+				"multicacan-windows-amd64",
 			},
 		},
 	}
@@ -63,29 +60,28 @@ func TestReleaseAssetCandidates(t *testing.T) {
 func TestFindReleaseAsset(t *testing.T) {
 	t.Run("prefers versioned asset when both names exist", func(t *testing.T) {
 		assets := []GitHubReleaseAsset{
-			{Name: "multica_darwin_amd64.tar.gz", BrowserDownloadURL: "old"},
-			{Name: "multica-cli-1.2.3-darwin-amd64.tar.gz", BrowserDownloadURL: "new"},
+			{Name: "multicacan-darwin-amd64", BrowserDownloadURL: "new"},
 		}
 
 		got, err := findReleaseAsset(assets, "v1.2.3", "darwin", "amd64")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got.Name != "multica-cli-1.2.3-darwin-amd64.tar.gz" {
+		if got.Name != "multicacan-darwin-amd64" {
 			t.Fatalf("asset mismatch: got %q", got.Name)
 		}
 	})
 
 	t.Run("falls back to legacy asset when versioned is absent", func(t *testing.T) {
 		assets := []GitHubReleaseAsset{
-			{Name: "multica_linux_amd64.tar.gz", BrowserDownloadURL: "old"},
+			{Name: "multicacan-linux-amd64", BrowserDownloadURL: "new"},
 		}
 
 		got, err := findReleaseAsset(assets, "1.2.3", "linux", "amd64")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got.Name != "multica_linux_amd64.tar.gz" {
+		if got.Name != "multicacan-linux-amd64" {
 			t.Fatalf("asset mismatch: got %q", got.Name)
 		}
 	})

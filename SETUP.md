@@ -1,147 +1,161 @@
-# Kurulum Rehberi
+# Self-Hosting Guide
 
-Bu repo, [multica-ai/multica](https://github.com/multica-ai/multica) upstream'inin fork'udur.
-Web Preview, iOS Simulator entegrasyonu ve Pair Programming gibi ek özellikler içerir.
+Deploy Multicacan on your own infrastructure in minutes.
 
-## Mimari
+## Architecture
 
-| Bileşen | Açıklama | Teknoloji |
-|---------|----------|-----------|
-| **Backend** | REST API + WebSocket server | Go (tek binary) |
-| **Frontend** | Web uygulaması | Next.js |
-| **Database** | Ana veri deposu | PostgreSQL 17 + pgvector |
-| **Daemon** | Lokal agent yöneticisi | Go binary (`multicacan` CLI) |
+| Component | Description | Technology |
+|-----------|-------------|------------|
+| **Backend** | REST API + WebSocket server | Go (single binary) |
+| **Frontend** | Web application | Next.js 16 |
+| **Database** | Primary data store | PostgreSQL 17 with pgvector |
 
-Backend + Frontend + Database **VPS'te Docker** içinde çalışır.
-Daemon **her geliştiricinin kendi makinesinde** (macOS/Linux) çalışır.
+Each user who runs AI agents locally also installs the **`multica` CLI** and runs the **agent daemon** on their own machine.
 
 ---
 
-## 1. Server Kurulumu (VPS)
+## Step-by-Step Setup
 
-**Gereksinimler:** Docker, Docker Compose, Git
+### Step 1 — Start the Server
+
+**Prerequisites:** Docker and Docker Compose.
 
 ```bash
 git clone https://github.com/canfidelity/multicacan.git
 cd multicacan
-cp .env.example .env
-```
-
-`.env` dosyasını düzenle — minimum değişiklikler:
-
-```bash
-JWT_SECRET=$(openssl rand -hex 32)
-RESEND_API_KEY=re_xxxxx          # Email gönderimi için (opsiyonel)
-FRONTEND_ORIGIN=https://app.siteadresi.com
-MULTICA_APP_URL=https://app.siteadresi.com
-```
-
-GHCR'daki hazır image'ları çekip başlat:
-
-```bash
 make selfhost
 ```
+
+`make selfhost` automatically creates `.env` from the example, generates a random `JWT_SECRET`, and starts all services via Docker Compose.
+
+Once ready:
 
 - **Frontend:** http://localhost:3000
-- **Backend:** http://localhost:8080
+- **Backend API:** http://localhost:8080
 
-### Güncelleme
+### Step 2 — Log In
 
-```bash
-git pull origin main
-make selfhost
-```
+Open http://localhost:3000 in your browser. The Docker self-host stack defaults to `APP_ENV=production`, and there is no fixed verification code by default. Pick one of the following to log in:
 
-### Durdur
-
-```bash
-make selfhost-stop
-```
-
----
-
-## 2. Giriş
-
-Tarayıcıdan `http://localhost:3000` aç.
-
-- **Email varsa:** `.env`'de `RESEND_API_KEY` set edilmişse gerçek kod maile gelir.
-- **Email yoksa:** Backend container loglarından kodu al:
+- **Recommended (production):** configure `RESEND_API_KEY` in `.env`, then restart the backend. Real verification codes will be sent to the email address you enter.
+- **Without email configured:** the verification code is generated server-side and printed to the backend container logs:
   ```bash
   docker compose -f docker-compose.selfhost.yml logs backend | grep "Verification code"
   ```
-- **Geliştirme ortamı için:** `.env`'e ekle:
-  ```
-  APP_ENV=development
-  MULTICA_DEV_VERIFICATION_CODE=888888
-  ```
+- **Deterministic local/private testing:** set `APP_ENV=development` and `MULTICA_DEV_VERIFICATION_CODE=888888` in `.env`, then restart the backend.
 
----
+> **Warning:** do **not** set `MULTICA_DEV_VERIFICATION_CODE` on a publicly reachable instance.
 
-## 3. Daemon Kurulumu (Geliştirici Makinesi)
+### Step 3 — Install CLI & Start Daemon
 
-Daemon lokal makinede çalışır, VPS'teki sunucuya bağlanır ve agent task'larını çalıştırır.
+The daemon runs on your local machine (not inside Docker). It detects installed AI agent CLIs, registers them with the server, and executes tasks when agents are assigned work.
 
-### a) Daemon CLI'ı kur
+#### a) Install the CLI
+
+Download the daemon binary for your platform from [GitHub Releases](https://github.com/canfidelity/multicacan/releases/tag/latest):
 
 ```bash
 # macOS (Apple Silicon)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multicacan
-chmod +x /usr/local/bin/multicacan
-codesign -s - /usr/local/bin/multicacan
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica
+chmod +x /usr/local/bin/multica
+codesign -s - /usr/local/bin/multica
 
 # macOS (Intel)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-amd64 -o /usr/local/bin/multicacan
-chmod +x /usr/local/bin/multicacan
-codesign -s - /usr/local/bin/multicacan
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-amd64 -o /usr/local/bin/multica
+chmod +x /usr/local/bin/multica
+codesign -s - /usr/local/bin/multica
 
 # Linux (amd64)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-linux-amd64 -o /usr/local/bin/multicacan
-chmod +x /usr/local/bin/multicacan
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-linux-amd64 -o /usr/local/bin/multica
+chmod +x /usr/local/bin/multica
 ```
 
-### b) Agent CLI kur
+#### b) Install an AI agent
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-### c) Daemon'u yapılandır ve başlat
+#### c) One-command setup
 
 ```bash
-multicacan config set server_url https://api.siteadresi.com
-multicacan config set app_url https://app.siteadresi.com
-multicacan login
-multicacan daemon start
+multica setup self-host
 ```
 
-Lokal kurulum için (server ve daemon aynı makinede):
+This automatically:
+1. Configures the CLI to connect to `localhost` (ports 8080/3000)
+2. Opens your browser for authentication
+3. Discovers your workspaces
+4. Starts the daemon in the background
+
+For on-premise deployments with custom domains:
 
 ```bash
-multicacan setup self-host
+multica setup self-host --server-url https://api.example.com --app-url https://app.example.com
 ```
 
-### d) Durumu kontrol et
+To verify the daemon is running:
 
 ```bash
-multicacan daemon status
+multica daemon status
+```
+
+### Step 4 — Verify & Start Using
+
+1. Open your workspace in the web app at http://localhost:3000
+2. Navigate to **Settings → Runtimes** — you should see your machine listed
+3. Go to **Settings → Agents** and create a new agent
+4. Create an issue and assign it to your agent — it will pick up the task automatically
+
+---
+
+## Stopping Services
+
+```bash
+# Stop the Docker Compose services (backend, frontend, database)
+make selfhost-stop
+
+# Stop the local daemon
+multica daemon stop
+```
+
+## Upgrading
+
+```bash
+git pull origin main
+docker compose -f docker-compose.selfhost.yml pull
+docker compose -f docker-compose.selfhost.yml up -d
 ```
 
 ---
 
-## 4. İlk Kullanım
+## Manual CLI Configuration
 
-1. Tarayıcıdan workspace aç
-2. **Settings → Runtimes** — makinenin listelendiğini doğrula
-3. **Settings → Agents** — yeni agent oluştur, runtime olarak makineyi seç
-4. Issue oluştur, agent'a assign et → agent çalışmaya başlar
+If you prefer configuring the CLI step by step instead of `multica setup`:
+
+```bash
+multica config set server_url http://localhost:8080
+multica config set app_url http://localhost:3000
+multica login
+multica daemon start
+```
+
+For production deployments with TLS:
+
+```bash
+multica config set server_url https://api.example.com
+multica config set app_url https://app.example.com
+multica login
+multica daemon start
+```
 
 ---
 
-## Ek Özellikler
+## Extra Features (This Fork)
 
 ### Web Preview
 
-Agent'lar local port'larda çalıştırdığı uygulamaları daemon otomatik tespit eder. Sidebar'dan **Web Preview** ile tarayıcıda görüntülenir.
+The daemon automatically detects local ports where agents run dev servers. Accessible from the sidebar via **Web Preview**.
 
 ### iOS Simulator
 
@@ -149,24 +163,4 @@ Agent'lar local port'larda çalıştırdığı uygulamaları daemon otomatik tes
 bunx serve-sim --detach
 ```
 
-Sidebar'dan **Simulator** ile erişilir.
-
----
-
-## Sorun Giderme
-
-**Backend başlamıyor:**
-```bash
-docker compose -f docker-compose.selfhost.yml logs backend
-```
-
-**Daemon bağlanamıyor:**
-```bash
-multicacan daemon stop
-multicacan daemon start --debug
-```
-
-**macOS'ta binary çalışmıyor (exit 137):**
-```bash
-codesign -s - /usr/local/bin/multicacan
-```
+Accessible from the sidebar via **Simulator**.

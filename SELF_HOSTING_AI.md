@@ -12,13 +12,13 @@ This document is designed for AI agents to execute. Follow these steps exactly t
 
 ```bash
 # Install CLI + provision self-host server
-curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server
+curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash -s -- --with-server
 
 # Configure CLI for localhost, authenticate, and start daemon
-multica setup self-host
+multicacan setup self-host
 ```
 
-Wait for the server output `✓ Multica server is running and CLI is ready!` before running `multica setup self-host`.
+Wait for the server output `✓ Multica server is running and CLI is ready!` before running `multicacan setup self-host`.
 
 **Expected result:**
 - Frontend at http://localhost:3000
@@ -28,14 +28,14 @@ Wait for the server output `✓ Multica server is running and CLI is ready!` bef
 ## Alternative: Manual Setup
 
 ```bash
-git clone https://github.com/multica-ai/multica.git
+git clone https://github.com/canfidelity/multicacan.git
 cd multica
 make selfhost
-brew install multica-ai/tap/multica
-multica setup self-host
+brew install multicacan
+multicacan setup self-host
 ```
 
-The `multica setup self-host` command will:
+The `multicacan setup self-host` command will:
 1. Configure CLI to connect to localhost:8080 / localhost:3000
 2. Open a browser for login — use the emailed code, or the generated code printed in backend logs when Resend is unset
 3. Discover workspaces automatically
@@ -44,7 +44,7 @@ The `multica setup self-host` command will:
 ## Verification
 
 ```bash
-multica daemon status
+multicacan daemon status
 ```
 
 Should show `running` with detected agents.
@@ -53,7 +53,7 @@ Should show `running` with detected agents.
 
 ```bash
 # Stop the daemon
-multica daemon stop
+multicacan daemon stop
 
 # Stop all Docker services
 cd multica
@@ -66,11 +66,11 @@ If the default ports (8080/3000) are in use:
 
 1. Edit `.env` and change `PORT` and `FRONTEND_PORT`
 2. Run `make selfhost`
-3. Run `multica setup self-host --port <PORT> --frontend-port <FRONTEND_PORT>`
+3. Run `multicacan setup self-host --port <PORT> --frontend-port <FRONTEND_PORT>`
 
 ## Troubleshooting
 
 - **Backend not ready:** `docker compose -f docker-compose.selfhost.yml logs backend`
 - **Frontend not ready:** `docker compose -f docker-compose.selfhost.yml logs frontend`
-- **Daemon issues:** `multica daemon logs`
+- **Daemon issues:** `multicacan daemon logs`
 - **Health checks:** `curl http://localhost:8080/health` for liveness, `curl http://localhost:8080/readyz` for dependency-aware readiness

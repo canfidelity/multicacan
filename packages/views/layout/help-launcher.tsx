@@ -9,8 +9,8 @@ import {
 } from "@multica/ui/components/ui/dropdown-menu";
 import { useModalStore } from "@multica/core/modals";
 
-const DOCS_URL = "https://multica.ai/docs";
-const CHANGELOG_URL = "https://multica.ai/changelog";
+const DOCS_URL = "https://github.com/canfidelity/multicacan";
+const CHANGELOG_URL = "https://github.com/canfidelity/multicacan/releases";
 
 export function HelpLauncher() {
   return (

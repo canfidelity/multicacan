@@ -42,7 +42,7 @@ export function buildWelcomeIssueText(
     ``,
     `This is your workspace's first issue. Below, your agent will reply in a moment — that's how work happens here: you write what you want, your agent (or a teammate) picks it up and replies in the comments.`,
     ``,
-    `[Learn how Multica works →](https://multica.ai/docs/how-multica-works)`,
+    `[Learn how Multica works →](https://github.com/canfidelity/multicacan/how-multica-works)`,
     ``,
     `---`,
     ``,
@@ -142,7 +142,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**You'll know it worked when**: the Live card shows your agent thinking, and the Status flips to **In Progress** automatically.`,
         ``,
-        `[Learn about assigning issues →](https://multica.ai/docs/assigning-issues)`,
+        `[Learn about assigning issues →](https://github.com/canfidelity/multicacan/assigning-issues)`,
       ].join("\n"),
     },
     {
@@ -165,7 +165,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**You'll know it worked when**: the agent replies in the chat panel (or comment thread) within a few seconds.`,
         ``,
-        `[Learn about chat →](https://multica.ai/docs/chat)`,
+        `[Learn about chat →](https://github.com/canfidelity/multicacan/chat)`,
       ].join("\n"),
     },
     {
@@ -194,7 +194,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**You'll know it worked when**: the next task you assign to an agent picks up details from this context without you explaining again.`,
         ``,
-        `[Learn about workspaces →](https://multica.ai/docs/workspaces)`,
+        `[Learn about workspaces →](https://github.com/canfidelity/multicacan/workspaces)`,
       ].join("\n"),
     },
   ];
@@ -220,7 +220,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `They'll receive an email with a join link. Pending invites show in the collapsible "Pending Invitations" section below the member list — you can revoke from there.`,
         ``,
-        `[Learn about members and roles →](https://multica.ai/docs/members-roles)`,
+        `[Learn about members and roles →](https://github.com/canfidelity/multicacan/members-roles)`,
       ].join("\n"),
     });
   }
@@ -270,7 +270,7 @@ export function buildAgentGuidedSubIssues(
       ``,
       `**You'll know it worked when**: the new agent appears in the Assignee dropdown on any issue, and shows up in the left list on the Agents page.`,
       ``,
-      `[Learn about creating agents →](https://multica.ai/docs/agents-create)`,
+      `[Learn about creating agents →](https://github.com/canfidelity/multicacan/agents-create)`,
     ].join("\n"),
   });
 
@@ -318,7 +318,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**Try it next time you assign an agent**: keep the issue open and watch the Live card appear below the description.`,
         ``,
-        `[Learn about tasks →](https://multica.ai/docs/tasks)`,
+        `[Learn about tasks →](https://github.com/canfidelity/multicacan/tasks)`,
       ].join("\n"),
     },
     {
@@ -339,7 +339,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**Tip**: "Archive completed" is the fastest way to clear the noise from issues already finished.`,
         ``,
-        `[Learn about the inbox →](https://multica.ai/docs/inbox)`,
+        `[Learn about the inbox →](https://github.com/canfidelity/multicacan/inbox)`,
       ].join("\n"),
     },
     {
@@ -359,7 +359,7 @@ export function buildAgentGuidedSubIssues(
         ``,
         `**Good first autopilots**: daily digest of GitHub activity, weekly "what's blocked" check, or a Monday-morning triage of any issues still in Backlog.`,
         ``,
-        `[Learn about autopilots →](https://multica.ai/docs/autopilots)`,
+        `[Learn about autopilots →](https://github.com/canfidelity/multicacan/autopilots)`,
       ].join("\n"),
     },
   ];
@@ -385,14 +385,14 @@ export function buildSelfServeSubIssues(
         `A **runtime** is a small background process that runs on your machine. It connects your workspace to AI coding tools (Claude Code, Codex, …) and executes the tasks your agents pick up.`,
         ``,
         `**Option A — Desktop app (macOS, recommended if you're on a Mac)**:`,
-        `1. Go to [github.com/multica-ai/multica/releases/latest](https://github.com/multica-ai/multica/releases/latest) and download the \`.dmg\` for macOS`,
+        `1. Go to [github.com/canfidelity/multicacan/releases/latest](https://github.com/canfidelity/multicacan/releases/latest) and download the \`.dmg\` for macOS`,
         `2. Install and open the app`,
         `3. Sign in with the same account — the runtime is built in, you're done`,
         ``,
         `**Option B — CLI (macOS, Linux, or Windows via WSL)**:`,
         `1. In a terminal, install the CLI:`,
         `   \`\`\``,
-        `   curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash`,
+        `   curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash`,
         `   \`\`\``,
         `2. Then run setup (signs you in and starts a background daemon):`,
         `   \`\`\``,
@@ -402,7 +402,7 @@ export function buildSelfServeSubIssues(
         ``,
         `**Verify**: sidebar → bottom **Configure** section → **Runtimes** → you should see at least one connected runtime.`,
         ``,
-        `[Learn about runtimes →](https://multica.ai/docs/daemon-runtimes)`,
+        `[Learn about runtimes →](https://github.com/canfidelity/multicacan/daemon-runtimes)`,
       ].join("\n"),
     },
     {
@@ -427,7 +427,7 @@ export function buildSelfServeSubIssues(
         ``,
         `**You'll know it worked when**: the new agent appears in the Assignee dropdown on any issue.`,
         ``,
-        `[Learn about creating agents →](https://multica.ai/docs/agents-create)`,
+        `[Learn about creating agents →](https://github.com/canfidelity/multicacan/agents-create)`,
       ].join("\n"),
     },
   ];
@@ -456,7 +456,7 @@ export function buildSelfServeSubIssues(
         ``,
         `**⚠️ Gotcha**: new issues default to **Backlog**. You must flip to **Todo** to trigger the agent.`,
         ``,
-        `[Learn about assigning issues →](https://multica.ai/docs/assigning-issues)`,
+        `[Learn about assigning issues →](https://github.com/canfidelity/multicacan/assigning-issues)`,
       ].join("\n"),
     },
     {
@@ -482,7 +482,7 @@ export function buildSelfServeSubIssues(
         ``,
         `**You'll know it worked when**: the next task you assign to an agent picks up details from this context without you explaining again.`,
         ``,
-        `[Learn about workspaces →](https://multica.ai/docs/workspaces)`,
+        `[Learn about workspaces →](https://github.com/canfidelity/multicacan/workspaces)`,
       ].join("\n"),
     },
   ];
@@ -508,7 +508,7 @@ export function buildSelfServeSubIssues(
         ``,
         `**Bonus**: inside any issue's comment box, type \`@\` to mention an agent or member.`,
         ``,
-        `[Learn about chat →](https://multica.ai/docs/chat)`,
+        `[Learn about chat →](https://github.com/canfidelity/multicacan/chat)`,
       ].join("\n"),
     },
   ];
@@ -546,7 +546,7 @@ export function buildSelfServeSubIssues(
         `2. Left tab list → **Members** (people icon)`,
         `3. Click **Add member** → enter email → pick role → **Send invite**`,
         ``,
-        `[Learn about members and roles →](https://multica.ai/docs/members-roles)`,
+        `[Learn about members and roles →](https://github.com/canfidelity/multicacan/members-roles)`,
       ].join("\n"),
     });
   }
@@ -583,7 +583,7 @@ export function buildSelfServeSubIssues(
         ``,
         `It shows in real time which tool the agent is calling, streaming thoughts, and current status. After the run finishes, the **Task Run History** below the card lists every past run — click **View transcript** to open the full timeline.`,
         ``,
-        `[Learn about tasks →](https://multica.ai/docs/tasks)`,
+        `[Learn about tasks →](https://github.com/canfidelity/multicacan/tasks)`,
       ].join("\n"),
     },
     {
@@ -601,7 +601,7 @@ export function buildSelfServeSubIssues(
         `2. Pick one of 6 templates, or click **+ New autopilot** top-right`,
         `3. Fill: **Name** / **Prompt** / **Agent** / **Schedule** (frequency + time + timezone) → **Create**`,
         ``,
-        `[Learn about autopilots →](https://multica.ai/docs/autopilots)`,
+        `[Learn about autopilots →](https://github.com/canfidelity/multicacan/autopilots)`,
       ].join("\n"),
     },
   );

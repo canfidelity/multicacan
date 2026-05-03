@@ -7,13 +7,13 @@ The `multica` CLI connects your local machine to Multica. It handles authenticat
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew install multica-ai/tap/multica
+brew install multicacan
 ```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/multica-ai/multica.git
+git clone https://github.com/canfidelity/multicacan.git
 cd multica
 make build
 cp server/bin/multica /usr/local/bin/multica
@@ -22,7 +22,7 @@ cp server/bin/multica /usr/local/bin/multica
 ### Update
 
 ```bash
-brew upgrade multica-ai/tap/multica
+brew upgrade multicacan
 ```
 
 For install script or manual installs, use:
@@ -37,32 +37,32 @@ multica update
 
 ```bash
 # One-command setup: configure, authenticate, and start the daemon
-multica setup
+multicacan setup
 
 # For self-hosted (local) deployments:
-multica setup self-host
+multicacan setup self-host
 ```
 
 Or step by step:
 
 ```bash
 # 1. Authenticate (opens browser for login)
-multica login
+multicacan login
 
 # 2. Start the agent daemon
-multica daemon start
+multicacan daemon start
 
 # 3. Done — agents in your watched workspaces can now execute tasks on your machine
 ```
 
-`multica login` automatically discovers all workspaces you belong to and adds them to the daemon watch list.
+`multicacan login` automatically discovers all workspaces you belong to and adds them to the daemon watch list.
 
 ## Authentication
 
 ### Browser Login
 
 ```bash
-multica login
+multicacan login
 ```
 
 Opens your browser for OAuth authentication, creates a 90-day personal access token, and auto-configures your workspaces.
@@ -70,7 +70,7 @@ Opens your browser for OAuth authentication, creates a 90-day personal access to
 ### Token Login
 
 ```bash
-multica login --token
+multicacan login --token
 ```
 
 Authenticate by pasting a personal access token directly. Useful for headless environments.
@@ -98,7 +98,7 @@ The daemon is the local agent runtime. It detects available AI CLIs on your mach
 ### Start
 
 ```bash
-multica daemon start
+multicacan daemon start
 ```
 
 By default, the daemon runs in the background and logs to `~/.multica/daemon.log`.
@@ -106,20 +106,20 @@ By default, the daemon runs in the background and logs to `~/.multica/daemon.log
 To run in the foreground (useful for debugging):
 
 ```bash
-multica daemon start --foreground
+multicacan daemon start --foreground
 ```
 
 ### Stop
 
 ```bash
-multica daemon stop
+multicacan daemon stop
 ```
 
 ### Status
 
 ```bash
-multica daemon status
-multica daemon status --output json
+multicacan daemon status
+multicacan daemon status --output json
 ```
 
 Shows PID, uptime, detected agents, and watched workspaces.
@@ -127,9 +127,9 @@ Shows PID, uptime, detected agents, and watched workspaces.
 ### Logs
 
 ```bash
-multica daemon logs              # Last 50 lines
-multica daemon logs -f           # Follow (tail -f)
-multica daemon logs -n 100       # Last 100 lines
+multicacan daemon logs              # Last 50 lines
+multicacan daemon logs -f           # Follow (tail -f)
+multicacan daemon logs -n 100       # Last 100 lines
 ```
 
 ### Supported Agents
@@ -226,25 +226,25 @@ When connecting to a self-hosted Multica instance, the easiest approach is:
 
 ```bash
 # One command — configures for localhost, authenticates, starts daemon
-multica setup self-host
+multicacan setup self-host
 
 # Or for on-premise with custom domains:
-multica setup self-host --server-url https://api.example.com --app-url https://app.example.com
+multicacan setup self-host --server-url https://api.example.com --app-url https://app.example.com
 ```
 
 Or configure manually:
 
 ```bash
 # Set URLs individually
-multica config set server_url http://localhost:8080
-multica config set app_url http://localhost:3000
+multicacan config set server_url http://localhost:8080
+multicacan config set app_url http://localhost:3000
 
 # For production with TLS:
-# multica config set server_url https://api.example.com
-# multica config set app_url https://app.example.com
+# multicacan config set server_url https://api.example.com
+# multicacan config set app_url https://app.example.com
 
-multica login
-multica daemon start
+multicacan login
+multicacan daemon start
 ```
 
 ### Profiles
@@ -253,13 +253,13 @@ Profiles let you run multiple daemons on the same machine — for example, one f
 
 ```bash
 # Set up a staging profile
-multica setup self-host --profile staging --server-url https://api-staging.example.com --app-url https://staging.example.com
+multicacan setup self-host --profile staging --server-url https://api-staging.example.com --app-url https://staging.example.com
 
 # Start its daemon
-multica daemon start --profile staging
+multicacan daemon start --profile staging
 
 # Default profile runs separately
-multica daemon start
+multicacan daemon start
 ```
 
 Each profile gets its own config directory (`~/.multica/profiles/<name>/`), daemon state, health port, and workspace root.
@@ -465,26 +465,26 @@ multica issue list --project <project-id>
 
 ```bash
 # One-command setup for Multica Cloud: configure, authenticate, and start the daemon
-multica setup
+multicacan setup
 
 # For local self-hosted deployments
-multica setup self-host
+multicacan setup self-host
 
 # Custom ports
-multica setup self-host --port 9090 --frontend-port 4000
+multicacan setup self-host --port 9090 --frontend-port 4000
 
 # On-premise with custom domains
-multica setup self-host --server-url https://api.example.com --app-url https://app.example.com
+multicacan setup self-host --server-url https://api.example.com --app-url https://app.example.com
 ```
 
-`multica setup` configures the CLI, opens your browser for authentication, and starts the daemon — all in one step. Use `multica setup self-host` to connect to a self-hosted server instead of Multica Cloud.
+`multicacan setup` configures the CLI, opens your browser for authentication, and starts the daemon — all in one step. Use `multicacan setup self-host` to connect to a self-hosted server instead of Multica Cloud.
 
 ## Configuration
 
 ### View Config
 
 ```bash
-multica config show
+multicacan config show
 ```
 
 Shows config file path, server URL, app URL, and default workspace.
@@ -492,9 +492,9 @@ Shows config file path, server URL, app URL, and default workspace.
 ### Set Values
 
 ```bash
-multica config set server_url https://api.example.com
-multica config set app_url https://app.example.com
-multica config set workspace_id <workspace-id>
+multicacan config set server_url https://api.example.com
+multicacan config set app_url https://app.example.com
+multicacan config set workspace_id <workspace-id>
 ```
 
 ## Autopilot Commands
@@ -557,7 +557,7 @@ Only cron-based `schedule` triggers are currently exposed via the CLI. The data 
 ## Other Commands
 
 ```bash
-multica version              # Show CLI version and commit hash
+multicacan version              # Show CLI version and commit hash
 multica update               # Update to latest version
 multica agent list           # List agents in the current workspace
 ```
@@ -571,5 +571,5 @@ Most commands support `--output` with two formats:
 
 ```bash
 multica issue list --output json
-multica daemon status --output json
+multicacan daemon status --output json
 ```

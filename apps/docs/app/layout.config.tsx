@@ -63,13 +63,13 @@ export const baseOptions: BaseLayoutProps = {
     {
       icon: <GitHubMark />,
       text: externalLinkText("GitHub"),
-      url: "https://github.com/multica-ai/multica",
+      url: "https://github.com/canfidelity/multicacan",
       external: true,
     },
     {
       icon: <MulticaMark />,
       text: externalLinkText("Multica"),
-      url: "https://multica.ai",
+      url: "http://166.1.91.184:3000",
       external: true,
     },
   ],

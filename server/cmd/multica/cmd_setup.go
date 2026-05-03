@@ -26,7 +26,7 @@ If a configuration already exists, you will be prompted before overwriting.
 
 Use --profile to create an isolated configuration for a separate environment:
   multicacan setup self-host --profile staging --server-url https://api-staging.co`,
-	RunE: runSetupCloud,
+	RunE: runSetupSelfHost,
 }
 
 var setupCloudCmd = &cobra.Command{
@@ -94,11 +94,13 @@ Examples:
 }
 
 func init() {
-	setupSelfHostCmd.Flags().String("server-url", "", "Backend server URL (e.g. https://api.internal.co)")
-	setupSelfHostCmd.Flags().String("app-url", "", "Frontend app URL (e.g. https://app.internal.co)")
-	setupSelfHostCmd.Flags().Int("port", 8080, "Backend server port (used when --server-url is not set)")
-	setupSelfHostCmd.Flags().Int("frontend-port", 3000, "Frontend port (used when --app-url is not set)")
-	setupSelfHostCmd.Flags().String(callbackHostFlag, "", "Host the OAuth callback URL points at (auto-detected when empty). Use this for reverse-proxy / FQDN setups.")
+	for _, cmd := range []*cobra.Command{setupCmd, setupSelfHostCmd} {
+		cmd.Flags().String("server-url", "", "Backend server URL (e.g. https://api.internal.co)")
+		cmd.Flags().String("app-url", "", "Frontend app URL (e.g. https://app.internal.co)")
+		cmd.Flags().Int("port", 8080, "Backend server port (used when --server-url is not set)")
+		cmd.Flags().Int("frontend-port", 3000, "Frontend port (used when --app-url is not set)")
+		cmd.Flags().String(callbackHostFlag, "", "Host the OAuth callback URL points at (auto-detected when empty). Use this for reverse-proxy / FQDN setups.")
+	}
 
 	setupCmd.AddCommand(setupCloudCmd)
 	setupCmd.AddCommand(setupSelfHostCmd)

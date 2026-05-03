@@ -145,8 +145,18 @@ selfhost-build: ## Build backend/web from the current checkout and start the sel
 		echo "  docker compose -f docker-compose.selfhost.yml logs"; \
 	fi
 
+selfhost-update: ## Pull latest Multicacan images and restart the stack
+	@echo "==> Pulling latest Multicacan images..."
+	docker compose -f docker-compose.selfhost.yml pull
+	@echo "==> Restarting services..."
+	docker compose -f docker-compose.selfhost.yml up -d
+	@echo "✓ Multicacan updated and running."
+	@echo ""
+	@echo "To update the daemon CLI as well:"
+	@echo "  multicacan update"
+
 selfhost-stop: ## Stop the self-hosted Docker Compose stack
-	@echo "==> Stopping Multica services..."
+	@echo "==> Stopping Multicacan services..."
 	docker compose -f docker-compose.selfhost.yml down
 	@echo "✓ All services stopped."
 

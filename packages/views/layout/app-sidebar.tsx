@@ -124,7 +124,6 @@ const personalNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
 const workspaceNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "issues", label: "Issues", icon: ListTodo },
   { key: "projects", label: "Projects", icon: FolderKanban },
-  { key: "agents", label: "Agents", icon: Bot },
 ];
 
 const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
@@ -134,6 +133,7 @@ const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
 ];
 
 const configureNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
+  { key: "agents", label: "Agents", icon: Bot },
   { key: "runtimes", label: "Runtimes", icon: Monitor },
   { key: "skills", label: "Skills", icon: BookOpenText },
   { key: "settings", label: "Settings", icon: Settings },
@@ -735,16 +735,29 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             </Collapsible>
           )}
 
-          {projects.length > 0 && (
+          {wsId && (
             <Collapsible defaultOpen>
-              <SidebarGroup>
+              <SidebarGroup className="group/projects">
                 <SidebarGroupLabel
                   render={<CollapsibleTrigger />}
                   className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
                 >
-                  <span>Artifacts</span>
+                  <span>Projects</span>
                   <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
-                  <span className="ml-auto text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/pinned:opacity-100">{projects.length}</span>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span role="button" />}
+                      className="ml-auto flex size-4 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity group-hover/projects:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        useModalStore.getState().open("create-project");
+                      }}
+                    >
+                      <Plus className="size-3" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={4}>New project</TooltipContent>
+                  </Tooltip>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
                   <SidebarGroupContent>

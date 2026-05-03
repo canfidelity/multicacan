@@ -33,6 +33,7 @@ import {
   Zap,
   Smartphone,
   Globe,
+  Loader2,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
@@ -331,6 +332,13 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
     queryKey: wsId ? inboxKeys.list(wsId) : ["inbox", "disabled"],
     queryFn: () => api.listInbox(),
     enabled: !!wsId,
+  });
+  const { data: inProgressIssues = [] } = useQuery({
+    queryKey: wsId ? ["issues", wsId, "sidebar-progress"] : ["issues", "disabled"],
+    queryFn: () => api.listIssues({ status: "in_progress", limit: 10 }),
+    select: (data) => data.issues,
+    enabled: !!wsId,
+    refetchInterval: 10_000,
   });
   const unreadCount = React.useMemo(
     () => deduplicateInboxItems(inboxItems).filter((i) => !i.read).length,
@@ -670,6 +678,98 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {wsId && inProgressIssues.length > 0 && (
+            <Collapsible defaultOpen>
+              <SidebarGroup>
+                <SidebarGroupLabel
+                  render={<CollapsibleTrigger />}
+                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                >
+                  <span>Progress</span>
+                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
+                  <span className="ml-auto text-[10px] text-muted-foreground">{inProgressIssues.length}</span>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu className="gap-0.5">
+                      {inProgressIssues.map((issue) => {
+                        const href = p.issueDetail(issue.id);
+                        const isActive = pathname === href;
+                        return (
+                          <SidebarMenuItem key={issue.id}>
+                            <SidebarMenuButton
+                              size="sm"
+                              isActive={isActive}
+                              render={<AppLink href={href} />}
+                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                            >
+                              {issue.assignee_type === "agent" ? (
+                                <Loader2 className="!size-3.5 shrink-0 animate-spin text-primary" />
+                              ) : (
+                                <span className="size-3.5 shrink-0 rounded-full border-2 border-muted-foreground/50" />
+                              )}
+                              <span
+                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+                                style={{
+                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                }}
+                              >
+                                {issue.identifier ? `${issue.identifier} ${issue.title}` : issue.title}
+                              </span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )}
+
+          <Collapsible defaultOpen>
+            <SidebarGroup>
+              <SidebarGroupLabel
+                render={<CollapsibleTrigger />}
+                className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+              >
+                <span>Artifacts</span>
+                <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu className="gap-0.5">
+                    {workspaces.map((ws) => (
+                      <SidebarMenuItem key={ws.id}>
+                        <SidebarMenuButton
+                          size="sm"
+                          isActive={ws.id === workspace?.id}
+                          render={<AppLink href={paths.workspace(ws.slug).issues()} />}
+                          className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                        >
+                          <WorkspaceAvatar name={ws.name} size="sm" />
+                          <span
+                            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+                            style={{
+                              maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                              WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                            }}
+                          >
+                            {ws.name}
+                          </span>
+                          {ws.id === workspace?.id && (
+                            <Check className="ml-auto size-3 shrink-0 text-primary" />
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
 
           <SidebarGroup>
             <SidebarGroupLabel>Apps</SidebarGroupLabel>

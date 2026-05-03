@@ -67,7 +67,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.166.1.91.184:3000"),
+  metadataBase: new URL("http://localhost:3000"),
   title: {
     default: "Multica — Project Management for Human + Agent Teams",
     template: "%s | Multica",
@@ -85,8 +85,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@multica_hq",
-    creator: "@multica_hq",
+    site: "@multicacan",
+    creator: "@multicacan",
   },
   alternates: {
     canonical: "/",

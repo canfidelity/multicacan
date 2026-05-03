@@ -19,25 +19,59 @@ import (
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Configure the CLI, authenticate, and start the daemon",
-	Long: `Configures the CLI to connect to Multica Cloud (multica.ai), then
+	Long: `Configures the CLI to connect to a self-hosted Multicacan server,
 authenticates via browser and starts the agent daemon.
 
 If a configuration already exists, you will be prompted before overwriting.
 
-Use 'multica setup self-host' to connect to a self-hosted server instead.
-
 Use --profile to create an isolated configuration for a separate environment:
   multica setup self-host --profile staging --server-url https://api-staging.co`,
-	RunE: runSetupCloud,
+	RunE: runSetupSelfHost,
 }
 
 var setupCloudCmd = &cobra.Command{
 	Use:   "cloud",
-	Short: "Configure the CLI for Multica Cloud (multica.ai)",
-	Long: `Explicitly configures the CLI to connect to Multica Cloud (multica.ai).
+	Short: "Configure the CLI for a self-hosted Multicacan server",
+	Long:  `Configures the CLI to connect to a self-hosted Multicacan server.`,
+	RunE:  runSetupCloud,
+}
 
-This is equivalent to running 'multica setup' without a subcommand.`,
-	RunE: runSetupCloud,
+func runSetupCloud(cmd *cobra.Command, args []string) error {
+	profile := resolveProfile(cmd)
+
+	ok, err := confirmOverwrite(profile)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
+	cfg := cli.CLIConfig{
+		ServerURL: "http://166.1.91.184:8080",
+		AppURL:    "http://166.1.91.184:3000",
+	}
+	if err := cli.SaveCLIConfigForProfile(cfg, profile); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+
+	fmt.Fprintln(os.Stderr, "Configured for Multicacan (http://166.1.91.184:3000).")
+	fmt.Fprintf(os.Stderr, "  server_url: %s\n", cfg.ServerURL)
+	fmt.Fprintf(os.Stderr, "  app_url:    %s\n", cfg.AppURL)
+	printConfigLocation(profile)
+
+	fmt.Fprintln(os.Stderr, "")
+	if err := runLogin(cmd, args); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr, "\nStarting daemon...")
+	if err := runDaemonBackground(cmd); err != nil {
+		return fmt.Errorf("start daemon: %w", err)
+	}
+	fmt.Fprintln(os.Stderr, "\n✓ Setup complete! Your machine is now connected to Multicacan.")
+
+	return nil
 }
 
 var setupSelfHostCmd = &cobra.Command{
@@ -112,44 +146,6 @@ func confirmOverwrite(profile string) (bool, error) {
 	return true, nil
 }
 
-func runSetupCloud(cmd *cobra.Command, args []string) error {
-	profile := resolveProfile(cmd)
-
-	ok, err := confirmOverwrite(profile)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return nil
-	}
-
-	cfg := cli.CLIConfig{
-		ServerURL: "https://api.multica.ai",
-		AppURL:    "https://multica.ai",
-	}
-	if err := cli.SaveCLIConfigForProfile(cfg, profile); err != nil {
-		return fmt.Errorf("save config: %w", err)
-	}
-
-	fmt.Fprintln(os.Stderr, "Configured for Multica Cloud (https://multica.ai).")
-	fmt.Fprintf(os.Stderr, "  server_url: %s\n", cfg.ServerURL)
-	fmt.Fprintf(os.Stderr, "  app_url:    %s\n", cfg.AppURL)
-	printConfigLocation(profile)
-
-	// Authenticate.
-	fmt.Fprintln(os.Stderr, "")
-	if err := runLogin(cmd, args); err != nil {
-		return err
-	}
-
-	fmt.Fprintln(os.Stderr, "\nStarting daemon...")
-	if err := runDaemonBackground(cmd); err != nil {
-		return fmt.Errorf("start daemon: %w", err)
-	}
-	fmt.Fprintln(os.Stderr, "\n✓ Setup complete! Your machine is now connected to Multica.")
-
-	return nil
-}
 
 func runSetupSelfHost(cmd *cobra.Command, args []string) error {
 	profile := resolveProfile(cmd)
@@ -220,7 +216,7 @@ func runSetupSelfHost(cmd *cobra.Command, args []string) error {
 	if err := runDaemonBackground(cmd); err != nil {
 		return fmt.Errorf("start daemon: %w", err)
 	}
-	fmt.Fprintln(os.Stderr, "\n✓ Setup complete! Your machine is now connected to Multica.")
+	fmt.Fprintln(os.Stderr, "\n✓ Setup complete! Your machine is now connected to Multicacan.")
 
 	return nil
 }

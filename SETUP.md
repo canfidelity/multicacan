@@ -56,18 +56,18 @@ Download the daemon binary for your platform from [GitHub Releases](https://gith
 
 ```bash
 # macOS (Apple Silicon)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica
-chmod +x /usr/local/bin/multica
-codesign -s - /usr/local/bin/multica
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multicacan
+chmod +x /usr/local/bin/multicacan
+codesign -s - /usr/local/bin/multicacan
 
 # macOS (Intel)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-amd64 -o /usr/local/bin/multica
-chmod +x /usr/local/bin/multica
-codesign -s - /usr/local/bin/multica
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-amd64 -o /usr/local/bin/multicacan
+chmod +x /usr/local/bin/multicacan
+codesign -s - /usr/local/bin/multicacan
 
 # Linux (amd64)
-curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-linux-amd64 -o /usr/local/bin/multica
-chmod +x /usr/local/bin/multica
+curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-linux-amd64 -o /usr/local/bin/multicacan
+chmod +x /usr/local/bin/multicacan
 ```
 
 #### b) Install an AI agent
@@ -79,7 +79,7 @@ npm install -g @anthropic-ai/claude-code
 #### c) One-command setup
 
 ```bash
-multica setup self-host
+multicacan setup self-host
 ```
 
 This automatically:
@@ -91,13 +91,13 @@ This automatically:
 For on-premise deployments with custom domains:
 
 ```bash
-multica setup self-host --server-url https://api.example.com --app-url https://app.example.com
+multicacan setup self-host --server-url https://api.example.com --app-url https://app.example.com
 ```
 
 To verify the daemon is running:
 
 ```bash
-multica daemon status
+multicacan daemon status
 ```
 
 ### Step 4 — Verify & Start Using
@@ -116,7 +116,7 @@ multica daemon status
 make selfhost-stop
 
 # Stop the local daemon
-multica daemon stop
+multicacan daemon stop
 ```
 
 ## Upgrading
@@ -131,22 +131,22 @@ docker compose -f docker-compose.selfhost.yml up -d
 
 ## Manual CLI Configuration
 
-If you prefer configuring the CLI step by step instead of `multica setup`:
+If you prefer configuring the CLI step by step instead of `multicacan setup`:
 
 ```bash
-multica config set server_url http://localhost:8080
-multica config set app_url http://localhost:3000
-multica login
-multica daemon start
+multicacan config set server_url http://localhost:8080
+multicacan config set app_url http://localhost:3000
+multicacan login
+multicacan daemon start
 ```
 
 For production deployments with TLS:
 
 ```bash
-multica config set server_url https://api.example.com
-multica config set app_url https://app.example.com
-multica login
-multica daemon start
+multicacan config set server_url https://api.example.com
+multicacan config set app_url https://app.example.com
+multicacan login
+multicacan daemon start
 ```
 
 ---

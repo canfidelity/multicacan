@@ -94,9 +94,9 @@ selfhost: ## Create .env if needed, then pull and start the official self-hosted
 		echo "        or read the generated code from backend logs when Resend is unset."; \
 		echo ""; \
 		echo "Next — install the daemon and connect your machine:"; \
-		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica"; \
-		echo "  chmod +x /usr/local/bin/multica && codesign -s - /usr/local/bin/multica"; \
-		echo "  multica setup self-host"; \
+		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multicacan"; \
+		echo "  chmod +x /usr/local/bin/multicacan && codesign -s - /usr/local/bin/multicacan"; \
+		echo "  multicacan setup"; \
 	else \
 		echo ""; \
 		echo "Services are still starting. Check logs:"; \
@@ -136,9 +136,9 @@ selfhost-build: ## Build backend/web from the current checkout and start the sel
 		echo "Built images locally via docker-compose.selfhost.build.yml."; \
 		echo ""; \
 		echo "Next — install the daemon and connect your machine:"; \
-		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multica"; \
-		echo "  chmod +x /usr/local/bin/multica && codesign -s - /usr/local/bin/multica"; \
-		echo "  multica setup self-host"; \
+		echo "  curl -L https://github.com/canfidelity/multicacan/releases/download/latest/multicacan-darwin-arm64 -o /usr/local/bin/multicacan"; \
+		echo "  chmod +x /usr/local/bin/multicacan && codesign -s - /usr/local/bin/multicacan"; \
+		echo "  multicacan setup"; \
 	else \
 		echo ""; \
 		echo "Services are still starting. Check logs:"; \

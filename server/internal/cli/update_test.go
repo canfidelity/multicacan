@@ -14,43 +14,31 @@ func TestReleaseAssetCandidates(t *testing.T) {
 		wantAssets []string
 	}{
 		{
-			name:    "latest tag yields only raw binary",
-			tagName: "latest",
-			goos:    "darwin",
-			goarch:  "arm64",
-			wantAssets: []string{
-				"multicacan-darwin-arm64",
-			},
-		},
-		{
-			name:    "semver tag yields raw binary then archives",
+			name:    "darwin arm64 versioned then legacy",
 			tagName: "v0.2.30",
 			goos:    "darwin",
 			goarch:  "arm64",
 			wantAssets: []string{
-				"multicacan-darwin-arm64",
 				"multicacan-cli-0.2.30-darwin-arm64.tar.gz",
 				"multicacan_darwin_arm64.tar.gz",
 			},
 		},
 		{
-			name:    "linux semver tag",
+			name:    "linux amd64 with v prefix stripped",
 			tagName: "v1.2.3",
 			goos:    "linux",
 			goarch:  "amd64",
 			wantAssets: []string{
-				"multicacan-linux-amd64",
 				"multicacan-cli-1.2.3-linux-amd64.tar.gz",
 				"multicacan_linux_amd64.tar.gz",
 			},
 		},
 		{
-			name:    "windows uses zip and .exe",
+			name:    "windows uses zip",
 			tagName: "v1.0.0",
 			goos:    "windows",
 			goarch:  "amd64",
 			wantAssets: []string{
-				"multicacan-windows-amd64.exe",
 				"multicacan-cli-1.0.0-windows-amd64.zip",
 				"multicacan_windows_amd64.zip",
 			},
@@ -73,30 +61,17 @@ func TestReleaseAssetCandidates(t *testing.T) {
 }
 
 func TestFindReleaseAsset(t *testing.T) {
-	t.Run("prefers raw binary over archive", func(t *testing.T) {
+	t.Run("prefers versioned archive", func(t *testing.T) {
 		assets := []GitHubReleaseAsset{
-			{Name: "multicacan-darwin-arm64", BrowserDownloadURL: "raw"},
-			{Name: "multicacan-cli-0.2.30-darwin-arm64.tar.gz", BrowserDownloadURL: "archive"},
+			{Name: "multicacan-cli-0.2.30-darwin-arm64.tar.gz", BrowserDownloadURL: "versioned"},
+			{Name: "multicacan_darwin_arm64.tar.gz", BrowserDownloadURL: "legacy"},
 		}
 		got, err := findReleaseAsset(assets, "v0.2.30", "darwin", "arm64")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got.BrowserDownloadURL != "raw" {
-			t.Fatalf("expected raw binary, got %q", got.Name)
-		}
-	})
-
-	t.Run("falls back to versioned archive when no raw binary", func(t *testing.T) {
-		assets := []GitHubReleaseAsset{
-			{Name: "multicacan-cli-0.2.30-linux-amd64.tar.gz", BrowserDownloadURL: "archive"},
-		}
-		got, err := findReleaseAsset(assets, "v0.2.30", "linux", "amd64")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got.Name != "multicacan-cli-0.2.30-linux-amd64.tar.gz" {
-			t.Fatalf("asset mismatch: got %q", got.Name)
+		if got.BrowserDownloadURL != "versioned" {
+			t.Fatalf("expected versioned asset, got %q", got.Name)
 		}
 	})
 
@@ -127,21 +102,9 @@ func TestUpdateDownloadTimeoutOrDefault(t *testing.T) {
 		timeout time.Duration
 		want    time.Duration
 	}{
-		{
-			name:    "uses default for zero",
-			timeout: 0,
-			want:    DefaultUpdateDownloadTimeout,
-		},
-		{
-			name:    "uses default for negative",
-			timeout: -1 * time.Second,
-			want:    DefaultUpdateDownloadTimeout,
-		},
-		{
-			name:    "keeps explicit timeout",
-			timeout: 10 * time.Minute,
-			want:    10 * time.Minute,
-		},
+		{"uses default for zero", 0, DefaultUpdateDownloadTimeout},
+		{"uses default for negative", -1 * time.Second, DefaultUpdateDownloadTimeout},
+		{"keeps explicit timeout", 10 * time.Minute, 10 * time.Minute},
 	}
 
 	for _, tt := range tests {

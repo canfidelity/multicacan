@@ -46,29 +46,16 @@ func normalizeReleaseTag(targetVersion string) string {
 	return tag
 }
 
-// releaseAssetCandidates returns asset filename candidates ordered by preference.
-// publish.yml creates raw binaries (multicacan-{os}-{arch}); goreleaser creates
-// versioned archives (multicacan-cli-{ver}-{os}-{arch}.tar.gz) and a legacy
-// archive (multicacan_{os}_{arch}.tar.gz). tagName is the release tag (e.g.
-// "v0.2.30" or "latest"); a "latest" tag only has raw binaries.
+// releaseAssetCandidates returns goreleaser archive filename candidates for the
+// given release tag, OS, and arch. Versioned name is tried first, then the
+// legacy name that omits the version.
 func releaseAssetCandidates(tagName, goos, goarch string) []string {
 	ext := releaseArchiveExtension(goos)
-
-	rawName := fmt.Sprintf("multicacan-%s-%s", goos, goarch)
-	if goos == "windows" {
-		rawName = fmt.Sprintf("multicacan-%s-%s.exe", goos, goarch)
+	ver := strings.TrimPrefix(normalizeReleaseTag(tagName), "v")
+	return []string{
+		fmt.Sprintf("multicacan-cli-%s-%s-%s.%s", ver, goos, goarch, ext),
+		fmt.Sprintf("multicacan_%s_%s.%s", goos, goarch, ext),
 	}
-	candidates := []string{rawName}
-
-	// Goreleaser versioned archives are only present for semver tags.
-	if tagName != "" && tagName != "latest" {
-		ver := strings.TrimPrefix(tagName, "v")
-		candidates = append(candidates,
-			fmt.Sprintf("multicacan-cli-%s-%s-%s.%s", ver, goos, goarch, ext),
-			fmt.Sprintf("multicacan_%s_%s.%s", goos, goarch, ext),
-		)
-	}
-	return candidates
 }
 
 func findReleaseAsset(assets []GitHubReleaseAsset, tagName, goos, goarch string) (*GitHubReleaseAsset, error) {
@@ -109,10 +96,10 @@ func fetchReleaseByTag(tag string) (*GitHubRelease, error) {
 	return &release, nil
 }
 
-// FetchLatestRelease fetches the latest release from the multicacan GitHub repo.
+// FetchLatestRelease fetches the latest published release from the multicacan GitHub repo.
 func FetchLatestRelease() (*GitHubRelease, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/canfidelity/multicacan/releases/tags/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/canfidelity/multicacan/releases/latest", nil)
 	if err != nil {
 		return nil, err
 	}

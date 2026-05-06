@@ -452,7 +452,7 @@ func (d *Daemon) workspaceCoAuthoredByEnabled(workspaceID string) bool {
 //
 // It's safe to call with the workspace's own repos — duplicates are
 // idempotent. Called from runTask before the agent spawns so
-// `multica repo checkout` accepts project-only URLs without an extra round
+// `multicacan repo checkout` accepts project-only URLs without an extra round
 // trip back to GetWorkspaceRepos (which doesn't carry project resources).
 func (d *Daemon) registerTaskRepos(workspaceID string, repos []RepoData) {
 	if len(repos) == 0 {
@@ -984,7 +984,7 @@ func (d *Daemon) handleUpdate(ctx context.Context, runtimeID string, update *Pen
 }
 
 // triggerRestart initiates a graceful daemon restart after a successful CLI update.
-// For brew installs, it keeps the symlink path (e.g. /opt/homebrew/bin/multica)
+// For brew installs, it keeps the symlink path (e.g. /opt/homebrew/bin/multicacan)
 // so the restarted daemon picks up the new Cellar version automatically.
 // For non-brew installs, it resolves to the absolute path of the replaced binary.
 // The caller (cmd_daemon.go) checks RestartBinary() and launches the new process.
@@ -1254,7 +1254,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	// claimed task belongs to a project with github_repo resources the server
 	// has already narrowed it to project repos only. Make sure those URLs are
 	// in the per-workspace allowlist and the local cache, otherwise
-	// `multica repo checkout` would reject project-only URLs that aren't also
+	// `multicacan repo checkout` would reject project-only URLs that aren't also
 	// bound at the workspace level.
 	d.registerTaskRepos(task.WorkspaceID, task.Repos)
 
@@ -1370,7 +1370,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	prompt := BuildPrompt(task)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI
-	// can call the Multica API and the local daemon (e.g. `multica repo checkout`).
+	// can call the Multica API and the local daemon (e.g. `multicacan repo checkout`).
 	// MULTICA_TASK_SLOT is allocated from the daemon-wide concurrency pool, not
 	// per-agent. When one daemon hosts multiple agents, slots index shared
 	// daemon-level resources such as GPUs.

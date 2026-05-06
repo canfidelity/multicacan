@@ -46,15 +46,33 @@ func normalizeReleaseTag(targetVersion string) string {
 	return tag
 }
 
-func releaseAssetCandidates(targetVersion, goos, goarch string) []string {
-	// Multicacan releases ship raw binaries named multicacan-{os}-{arch}.
-	return []string{
-		fmt.Sprintf("multicacan-%s-%s", goos, goarch),
+// releaseAssetCandidates returns asset filename candidates ordered by preference.
+// publish.yml creates raw binaries (multicacan-{os}-{arch}); goreleaser creates
+// versioned archives (multicacan-cli-{ver}-{os}-{arch}.tar.gz) and a legacy
+// archive (multicacan_{os}_{arch}.tar.gz). tagName is the release tag (e.g.
+// "v0.2.30" or "latest"); a "latest" tag only has raw binaries.
+func releaseAssetCandidates(tagName, goos, goarch string) []string {
+	ext := releaseArchiveExtension(goos)
+
+	rawName := fmt.Sprintf("multicacan-%s-%s", goos, goarch)
+	if goos == "windows" {
+		rawName = fmt.Sprintf("multicacan-%s-%s.exe", goos, goarch)
 	}
+	candidates := []string{rawName}
+
+	// Goreleaser versioned archives are only present for semver tags.
+	if tagName != "" && tagName != "latest" {
+		ver := strings.TrimPrefix(tagName, "v")
+		candidates = append(candidates,
+			fmt.Sprintf("multicacan-cli-%s-%s-%s.%s", ver, goos, goarch, ext),
+			fmt.Sprintf("multicacan_%s_%s.%s", goos, goarch, ext),
+		)
+	}
+	return candidates
 }
 
-func findReleaseAsset(assets []GitHubReleaseAsset, targetVersion, goos, goarch string) (*GitHubReleaseAsset, error) {
-	for _, candidate := range releaseAssetCandidates(targetVersion, goos, goarch) {
+func findReleaseAsset(assets []GitHubReleaseAsset, tagName, goos, goarch string) (*GitHubReleaseAsset, error) {
+	for _, candidate := range releaseAssetCandidates(tagName, goos, goarch) {
 		for i := range assets {
 			if assets[i].Name == candidate {
 				return &assets[i], nil
@@ -62,7 +80,7 @@ func findReleaseAsset(assets []GitHubReleaseAsset, targetVersion, goos, goarch s
 		}
 	}
 
-	candidates := strings.Join(releaseAssetCandidates(targetVersion, goos, goarch), ", ")
+	candidates := strings.Join(releaseAssetCandidates(tagName, goos, goarch), ", ")
 	return nil, fmt.Errorf("no matching release asset for %s/%s (tried: %s)", goos, goarch, candidates)
 }
 
@@ -150,10 +168,10 @@ func GetBrewPrefix() string {
 	return strings.TrimSpace(string(out))
 }
 
-// UpdateViaBrew runs `brew upgrade multica`.
+// UpdateViaBrew runs `brew upgrade multicacan`.
 // Returns the combined output and any error.
 func UpdateViaBrew() (string, error) {
-	cmd := exec.Command("brew", "upgrade", "multica")
+	cmd := exec.Command("brew", "upgrade", "multicacan")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("brew upgrade failed: %w", err)
@@ -174,8 +192,19 @@ func UpdateViaDownload(targetVersion string) (string, error) {
 	return UpdateViaDownloadWithTimeout(targetVersion, DefaultUpdateDownloadTimeout)
 }
 
-// UpdateViaDownloadWithTimeout downloads the latest release binary with a caller-selected timeout.
+// UpdateViaDownloadWithTimeout downloads a specific release binary with a caller-selected timeout.
 func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Duration) (string, error) {
+	tag := normalizeReleaseTag(targetVersion)
+	release, err := fetchReleaseByTag(tag)
+	if err != nil {
+		return "", fmt.Errorf("fetch release metadata: %w", err)
+	}
+	return UpdateViaDownloadRelease(release, downloadTimeout)
+}
+
+// UpdateViaDownloadRelease downloads the binary from a pre-fetched GitHub release
+// and replaces the current executable in-place.
+func UpdateViaDownloadRelease(release *GitHubRelease, downloadTimeout time.Duration) (string, error) {
 	// Determine current binary path.
 	exePath, err := os.Executable()
 	if err != nil {
@@ -186,34 +215,39 @@ func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Dur
 		return "", fmt.Errorf("resolve symlink: %w", err)
 	}
 
-	tag := normalizeReleaseTag(targetVersion)
-	release, err := fetchReleaseByTag(tag)
-	if err != nil {
-		return "", fmt.Errorf("fetch release metadata: %w", err)
-	}
-	asset, err := findReleaseAsset(release.Assets, tag, runtime.GOOS, runtime.GOARCH)
+	asset, err := findReleaseAsset(release.Assets, release.TagName, runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		return "", err
 	}
-	downloadURL := asset.BrowserDownloadURL
-	assetName := asset.Name
 
-	// Download the archive.
+	// Download asset.
 	client := &http.Client{Timeout: updateDownloadTimeoutOrDefault(downloadTimeout)}
-	resp, err := client.Get(downloadURL)
+	resp, err := client.Get(asset.BrowserDownloadURL)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download failed: HTTP %d from %s", resp.StatusCode, downloadURL)
+		return "", fmt.Errorf("download failed: HTTP %d from %s", resp.StatusCode, asset.BrowserDownloadURL)
 	}
 
-	// Binaries are raw (not archived) — read directly.
-	binaryData, err := io.ReadAll(resp.Body)
+	// Extract binary from archive, or read directly for raw binaries.
+	binaryName := "multicacan"
+	if runtime.GOOS == "windows" {
+		binaryName = "multicacan.exe"
+	}
+	var binaryData []byte
+	switch {
+	case strings.HasSuffix(asset.Name, ".tar.gz"):
+		binaryData, err = extractBinaryFromTarGz(resp.Body, binaryName)
+	case strings.HasSuffix(asset.Name, ".zip"):
+		binaryData, err = extractBinaryFromZip(resp.Body, binaryName)
+	default:
+		binaryData, err = io.ReadAll(resp.Body)
+	}
 	if err != nil {
-		return "", fmt.Errorf("read binary: %w", err)
+		return "", fmt.Errorf("read binary from %s: %w", asset.Name, err)
 	}
 
 	// Atomic replace: write to temp file, then rename over the original.
@@ -249,7 +283,7 @@ func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Dur
 		return "", fmt.Errorf("replace binary: %w", err)
 	}
 
-	return fmt.Sprintf("Downloaded %s and replaced %s", assetName, exePath), nil
+	return fmt.Sprintf("Downloaded %s and replaced %s", asset.Name, exePath), nil
 }
 
 // extractBinaryFromTarGz reads a .tar.gz stream and returns the contents of the

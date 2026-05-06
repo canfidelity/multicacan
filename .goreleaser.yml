@@ -1,12 +1,12 @@
 version: 2
 
-project_name: multica
+project_name: multicacan
 
 builds:
-  - id: multica
-    main: ./cmd/multica
+  - id: multicacan
+    main: ./cmd/multicacan
     dir: server
-    binary: multica
+    binary: multicacan
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -23,9 +23,8 @@ builds:
       - arm64
 
 archives:
-  # Legacy archive name kept so already-released CLIs (whose `multica update`
-  # looks for `multica_{os}_{arch}.{ext}`) can keep self-updating. Remove
-  # once those versions are no longer in use.
+  # Legacy archive name kept so already-released CLIs can keep self-updating.
+  # Remove once those versions are no longer in use.
   - id: legacy
     formats:
       - tar.gz
@@ -57,7 +56,7 @@ changelog:
       - "^chore:"
 
 brews:
-  - name: multica
+  - name: multicacan
     ids:
       - versioned
     skip_upload: true
@@ -68,9 +67,9 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/canfidelity/multicacan"
-    description: "Multica CLI — local agent runtime and management tool for the Multica platform"
+    description: "Multicacan CLI — local agent runtime and management tool for the Multica platform"
     license: "Apache-2.0"
     install: |
-      bin.install "multica"
+      bin.install "multicacan"
     test: |
-      system "#{bin}/multica", "version"
+      system "#{bin}/multicacan", "version"

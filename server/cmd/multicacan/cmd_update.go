@@ -20,7 +20,7 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.Flags().DurationVar(&updateDownloadTimeout, "download-timeout", cli.DefaultUpdateDownloadTimeout, "Maximum time to wait for the release archive download")
+	updateCmd.Flags().DurationVar(&updateDownloadTimeout, "download-timeout", cli.DefaultUpdateDownloadTimeout, "Maximum time to wait for the binary download")
 }
 
 func runUpdate(_ *cobra.Command, _ []string) error {
@@ -50,7 +50,7 @@ func runUpdate(_ *cobra.Command, _ []string) error {
 		output, err := cli.UpdateViaBrew()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", output)
-			return fmt.Errorf("brew upgrade failed: %w\nYou can try manually: brew upgrade multica", err)
+			return fmt.Errorf("brew upgrade failed: %w\nYou can try manually: brew upgrade multicacan", err)
 		}
 		fmt.Fprintln(os.Stderr, "Update complete.")
 		return nil
@@ -60,9 +60,8 @@ func runUpdate(_ *cobra.Command, _ []string) error {
 	if latest == nil {
 		return fmt.Errorf("could not determine latest version; check https://github.com/canfidelity/multicacan/releases/latest")
 	}
-	targetVersion := latest.TagName
-	fmt.Fprintf(os.Stderr, "Downloading %s from GitHub Releases...\n", targetVersion)
-	output, err := cli.UpdateViaDownloadWithTimeout(targetVersion, updateDownloadTimeout)
+	fmt.Fprintf(os.Stderr, "Downloading %s from GitHub Releases...\n", latest.TagName)
+	output, err := cli.UpdateViaDownloadRelease(latest, updateDownloadTimeout)
 	if err != nil {
 		return fmt.Errorf("update failed: %w", err)
 	}

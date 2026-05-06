@@ -536,7 +536,7 @@ type IDEChatMessage struct {
 	Content string `json:"content"`
 }
 
-// NativeIDERuntimes returns online (non-hermes) runtimes available for IDE chat.
+// NativeIDERuntimes returns all online runtimes available for IDE chat.
 // GET /api/native-ide/{workspaceId}/runtimes
 func (h *Handler) NativeIDERuntimes(w http.ResponseWriter, r *http.Request) {
 	wsID := chi.URLParam(r, "workspaceId")
@@ -554,13 +554,8 @@ func (h *Handler) NativeIDERuntimes(w http.ResponseWriter, r *http.Request) {
 		Provider string `json:"provider"`
 	}
 	result := []runtimeInfo{}
-	// Preferred providers for IDE inline chat (no Multica task creation).
-	allowed := map[string]bool{"claude": true, "opencode": true, "codex": true}
 	for _, rt := range runtimes {
 		if rt.Status != "online" {
-			continue
-		}
-		if !allowed[rt.Provider] {
 			continue
 		}
 		result = append(result, runtimeInfo{
@@ -606,7 +601,7 @@ func (h *Handler) NativeIDEChatStream(w http.ResponseWriter, r *http.Request) {
 	const instructions = "You are an expert code assistant integrated into a developer's IDE. Help with writing, reviewing, and debugging code. Be concise and precise."
 	var customEnv map[string]string
 	var customArgs []string
-	var mcpConfig json.RawMessage
+	mcpConfig := json.RawMessage(`{"mcpServers":{}}`)
 	model := ""
 
 	// SSE headers

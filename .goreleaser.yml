@@ -60,6 +60,7 @@ brews:
   - name: multica
     ids:
       - versioned
+    skip_upload: true
     repository:
       owner: canfidelity
       name: homebrew-tap

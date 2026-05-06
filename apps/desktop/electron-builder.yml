@@ -52,7 +52,7 @@ win:
 publish:
   provider: github
   owner: canfidelity
-  repo: multica
+  repo: multicacan
   # Align with our CLI release flow which pre-creates a *published* GitHub
   # Release via `gh release create`. The electron-builder default of
   # `releaseType: draft` conflicts with `existingType=release` and causes

@@ -32,6 +32,7 @@ function workspaceScoped(slug: string) {
     runtimeDetail: (id: string) => `${ws}/runtimes/${encode(id)}`,
     simulator: () => `${ws}/simulator`,
     preview: () => `${ws}/preview`,
+    ide: () => `${ws}/ide`,
     skills: () => `${ws}/skills`,
     skillDetail: (id: string) => `${ws}/skills/${encode(id)}`,
     settings: () => `${ws}/settings`,

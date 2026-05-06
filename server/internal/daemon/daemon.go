@@ -240,6 +240,13 @@ func (d *Daemon) Run(ctx context.Context) error {
 	// Web Preview: detect running local dev servers and relay them to the VPS.
 	go d.webPreviewLoop(ctx)
 
+	// Native IDE: relay file system and PTY sessions to the VPS.
+	go d.nativeIDELoop(ctx)
+
+	// SSH Tunnel: maintain a reverse SSH tunnel so the VPS can mount this
+	// daemon's filesystem via SSHFS for openvscode-server IDE access.
+	go d.sshTunnelLoop(ctx)
+
 	return d.pollLoop(ctx, taskWakeups)
 }
 

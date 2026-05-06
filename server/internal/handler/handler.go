@@ -70,6 +70,7 @@ type Handler struct {
 	DaemonTokenCache      *auth.DaemonTokenCache
 	SimulatorRelays       *SimulatorRelayHub
 	WebPreviewRelays      *WebPreviewRelayHub
+	NativeIDERelays       *NativeIDERelayHub
 	cfg                   Config
 }
 
@@ -108,6 +109,7 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 		Analytics:             analyticsClient,
 		SimulatorRelays:       NewSimulatorRelayHub(),
 		WebPreviewRelays:      NewWebPreviewRelayHub(),
+		NativeIDERelays:       NewNativeIDERelayHub(),
 		cfg:                   cfg,
 	}
 }

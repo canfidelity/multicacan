@@ -251,6 +251,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Use(middleware.DaemonAuth(queries, patCache, daemonTokenCache))
 		r.Get("/api/simulator/relay", h.SimulatorRelayRegister)
 		r.Get("/api/webpreview/relay", h.WebPreviewRelayRegister)
+		r.Get("/api/native-ide/relay", h.NativeIDERelayRegister)
 	})
 
 	// Protected API routes
@@ -274,6 +275,22 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/api/webpreview/status", h.WebPreviewStatus)
 		r.HandleFunc("/api/webpreview/{workspaceId}/{port}/*", h.WebPreviewProxy)
 		r.HandleFunc("/api/webpreview/{workspaceId}/{port}", h.WebPreviewProxy)
+
+		// IDE — proxies openvscode-server running on VPS (filesystem mounted via SSHFS).
+		r.Get("/api/ide/status", h.IDEStatus)
+		r.HandleFunc("/api/ide/{workspaceId}/*", h.IDEProxy)
+		r.HandleFunc("/api/ide/{workspaceId}", h.IDEProxy)
+
+		// Native IDE — file system and PTY relay via daemon.
+		r.Get("/api/native-ide/status", h.NativeIDEStatus)
+		r.Get("/api/native-ide/{workspaceId}/files", h.NativeIDEFiles)
+		r.Get("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Put("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Delete("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Post("/api/native-ide/{workspaceId}/rename", h.NativeIDERename)
+		r.Get("/api/native-ide/{workspaceId}/terminal", h.NativeIDETerminal)
+		r.Get("/api/native-ide/{workspaceId}/runtimes", h.NativeIDERuntimes)
+		r.Post("/api/native-ide/{workspaceId}/chat/stream", h.NativeIDEChatStream)
 
 		r.Get("/api/me", h.GetMe)
 		r.Patch("/api/me", h.UpdateMe)

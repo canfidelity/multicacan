@@ -23,6 +23,7 @@ import { InboxPage } from "@multica/views/inbox";
 import { SettingsPage } from "@multica/views/settings";
 import { SimulatorPage } from "@multica/views/simulator";
 import { WebPreviewPage } from "@multica/views/preview";
+import { NativeIDEPage } from "@multica/views/ide";
 import { Download, Server } from "lucide-react";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
@@ -141,6 +142,7 @@ export const appRoutes: RouteObject[] = [
           { path: "inbox", element: <InboxPage />, handle: { title: "Inbox" } },
           { path: "simulator", element: <SimulatorPage />, handle: { title: "Simulator" } },
           { path: "preview", element: <WebPreviewPage />, handle: { title: "Web Preview" } },
+          { path: "ide", element: <NativeIDEPage />, handle: { title: "Code Editor" } },
           {
             path: "settings",
             element: (

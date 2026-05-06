@@ -34,6 +34,7 @@ import {
   Smartphone,
   Globe,
   Loader2,
+  Code2,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
@@ -113,6 +114,7 @@ type NavKey =
   | "runtimes"
   | "simulator"
   | "preview"
+  | "ide"
   | "skills"
   | "settings";
 
@@ -130,6 +132,7 @@ const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "autopilots", label: "Autopilot", icon: Zap },
   { key: "simulator", label: "Simulator", icon: Smartphone },
   { key: "preview", label: "Web Preview", icon: Globe },
+  { key: "ide", label: "Code Editor", icon: Code2 },
 ];
 
 const configureNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [

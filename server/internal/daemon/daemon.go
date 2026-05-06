@@ -303,6 +303,17 @@ func (d *Daemon) allRuntimeIDs() []string {
 	return ids
 }
 
+// allWorkspaceIDs returns a snapshot of currently-watched workspace IDs.
+func (d *Daemon) allWorkspaceIDs() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	ids := make([]string, 0, len(d.workspaces))
+	for id := range d.workspaces {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 // findRuntime looks up a Runtime by its ID.
 func (d *Daemon) findRuntime(id string) *Runtime {
 	d.mu.Lock()

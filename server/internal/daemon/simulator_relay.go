@@ -98,16 +98,6 @@ func (d *Daemon) relaySimulatorLoop(ctx context.Context) {
 	}
 }
 
-// allWorkspaceIDs returns a snapshot of currently-watched workspace IDs.
-func (d *Daemon) allWorkspaceIDs() []string {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	ids := make([]string, 0, len(d.workspaces))
-	for id := range d.workspaces {
-		ids = append(ids, id)
-	}
-	return ids
-}
 
 // runSimulatorRelay maintains a single relay connection for one workspace,
 // reconnecting with exponential backoff on failure. Returns when ctx is

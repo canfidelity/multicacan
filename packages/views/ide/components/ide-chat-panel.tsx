@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, ChevronDown, Plus, Send, Square } from "lucide-react";
 import { useWorkspaceId } from "@multica/core/hooks";

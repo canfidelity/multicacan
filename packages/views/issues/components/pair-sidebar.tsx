@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, ChevronDown, ChevronRight, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
+import { Bot, ChevronRight, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
 import { Switch } from "@multica/ui/components/ui/switch";
 import { Label } from "@multica/ui/components/ui/label";
 import { Button } from "@multica/ui/components/ui/button";
@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@multica/ui/components/ui/select";
 import { ScrollArea } from "@multica/ui/components/ui/scroll-area";
-import { Separator } from "@multica/ui/components/ui/separator";
 import { cn } from "@multica/ui/lib/utils";
 import { timeAgo } from "@multica/core/utils";
 import type { Agent } from "@multica/core/types";

@@ -1,13 +1,8 @@
 import { createRoot } from "react-dom/client";
 import { useEffect, useState, useCallback, useRef, type CSSProperties, type DragEvent, type ReactNode } from "react";
-import {
-  SimulatorView,
-  screenBorderRadius,
-  DEVICE_FRAMES,
-  SimulatorToolbar,
-  getDeviceType,
-  type DeviceType,
-} from "serve-sim-client/simulator";
+import { SimulatorView } from "./serve-sim/SimulatorView";
+import { screenBorderRadius, DEVICE_FRAMES, getDeviceType, type DeviceType } from "./serve-sim/deviceFrames";
+import { SimulatorToolbar } from "./serve-sim/SimulatorToolbar";
 
 /**
  * Fetches an MJPEG stream and parses out individual JPEG frames as blob URLs.
@@ -391,7 +386,7 @@ function dropKindFor(file: File): DropKind | null {
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
   return btoa(binary);
 }
 
@@ -1226,7 +1221,7 @@ function App() {
       if (!c) {
         let h = 0;
         for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-        c = palette[Math.abs(h) % palette.length];
+        c = palette[Math.abs(h) % palette.length]!;
         procColors.set(name, c);
       }
       return c;

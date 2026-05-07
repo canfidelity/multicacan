@@ -40,7 +40,7 @@ export default function WebPreviewPage() {
       setPorts(Array.isArray(data) ? data : []);
       setSelectedPort((prev) => {
         if (prev && data.some((p) => p.port === prev)) return prev;
-        return data.length > 0 ? data[0].port : null;
+        return data[0]?.port ?? null;
       });
     } catch {
       setPorts([]);

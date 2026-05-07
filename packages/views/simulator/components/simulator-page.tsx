@@ -14,7 +14,6 @@ import type { AgentTask } from "@multica/core/types/agent";
 import {
   buildTimeline,
   latestSimulatorAction,
-  type TimelineItem,
 } from "../../common/task-transcript";
 
 // ─── Types ───
@@ -534,7 +533,7 @@ function SimulatorViewport({ state, onStateChange, switchingRef }: { state: Simu
       }
       localStorage.setItem("multica_sim_device", d.udid);
       // Update state — useNativeSimulator hook will reconnect with new UDID in query param
-      onStateChange({ device: d.udid, name: d.name } as SimulatorState);
+      onStateChange({ ...state, device: d.udid });
       switchingRef.current = false;
       setSwitching(false);
       fetchDevices();
@@ -609,7 +608,7 @@ function SimulatorViewport({ state, onStateChange, switchingRef }: { state: Simu
   const rotateOrder = ["portrait", "landscape_left", "portrait_upside_down", "landscape_right"];
   const handleRotate = useCallback(() => {
     const idx = rotateOrder.indexOf(orientation);
-    const next = rotateOrder[(idx + 1) % rotateOrder.length];
+    const next = rotateOrder[(idx + 1) % rotateOrder.length] ?? "portrait";
     setOrientation(next);
     execOnHost(`serve-sim rotate ${next}`, workspaceId);
   }, [orientation, workspaceId]);

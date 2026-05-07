@@ -66,7 +66,7 @@ export function SimulatorView({
   onStreamMultiTouch,
   onStreamButton,
   subscribeFrame,
-  streamFrame,
+  streamFrame: _streamFrame,
   streamConfig,
   hideControls,
   onStreamingChange,
@@ -757,6 +757,7 @@ export function SimulatorView({
               hideTouchIndicator();
               const t1 = e.touches[0];
               const t2 = e.touches[1];
+              if (!t1 || !t2) return;
               const fingers = {
                 x1: (t1.clientX - rect.left) / rect.width,
                 y1: (t1.clientY - rect.top) / rect.height,
@@ -797,6 +798,7 @@ export function SimulatorView({
             if (realMultiTouchRef.current && e.touches.length >= 2) {
               const t1 = e.touches[0];
               const t2 = e.touches[1];
+              if (!t1 || !t2) return;
               const fingers = {
                 x1: (t1.clientX - rect.left) / rect.width,
                 y1: (t1.clientY - rect.top) / rect.height,

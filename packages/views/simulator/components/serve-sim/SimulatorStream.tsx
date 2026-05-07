@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef, type CSSProperties } from "react";
-import type { StreamAPI } from "../react.js";
 import { SimulatorView } from "./SimulatorView";
+
+export interface StreamAPI {
+  start: (opts?: { maxFps?: number }) => void;
+  stop: () => void;
+  sendButton: (button: string) => void;
+  sendTouch: (data: { type: "begin" | "move" | "end"; x: number; y: number; edge?: number }) => void;
+  sendMultiTouch: (data: { type: "begin" | "move" | "end"; x1: number; y1: number; x2: number; y2: number }) => void;
+  subscribeFrame: (cb: (blobUrl: string) => void) => () => void;
+  frame?: string | null;
+  config?: { width: number; height: number } | null;
+  connectionQuality?: "good" | "degraded" | "poor" | null;
+}
 import { useSimStream } from "./useSimStream";
 
 export interface SimulatorStreamProps {

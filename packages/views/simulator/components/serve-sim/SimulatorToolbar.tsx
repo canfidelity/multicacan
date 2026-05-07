@@ -96,7 +96,7 @@ function SimulatorToolbarRoot({
 
 export interface TitleProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Override the rendered name. Defaults to the device name from context. */
-  name?: ReactNode;
+  name?: string;
   /** Override the rendered subtitle. Defaults to the device runtime from context. */
   subtitle?: ReactNode;
   /** Hide the chevron hint (e.g. when not interactive). */

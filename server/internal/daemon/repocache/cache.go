@@ -121,6 +121,10 @@ func (c *Cache) Sync(workspaceID string, repos []RepoInfo) error {
 					firstErr = err
 				}
 			}
+			// Backfill sentinel for repos cloned before this marker was introduced.
+			if !isCacheReady(barePath) {
+				_ = os.WriteFile(filepath.Join(barePath, cacheReadyMarker), nil, 0o644)
+			}
 		} else {
 			// Not cached — bare clone.
 			c.logger.Info("repo cache: cloning", "url", repo.URL, "path", barePath)
@@ -137,10 +141,10 @@ func (c *Cache) Sync(workspaceID string, repos []RepoInfo) error {
 }
 
 // Lookup returns the local bare clone path for a repo URL within a workspace.
-// Returns "" if not cached.
+// Returns "" if not cached or if the clone is still in progress.
 func (c *Cache) Lookup(workspaceID, url string) string {
 	barePath := filepath.Join(c.root, workspaceID, bareDirName(url))
-	if isBareRepo(barePath) {
+	if isCacheReady(barePath) {
 		return barePath
 	}
 	return ""
@@ -224,10 +228,22 @@ func splitHostAndPath(rawURL string) (host, path string) {
 	return "", s
 }
 
+// cacheReadyMarker is written by gitCloneBare after full initialization
+// (clone + ensureRemoteTrackingLayout) completes. Lookup checks for this
+// marker so it never returns a path mid-clone.
+const cacheReadyMarker = ".cache-ready"
+
 // isBareRepo checks if a path looks like a bare git repository.
+// Used internally by Sync to decide clone vs fetch — does not require the
+// cache-ready marker because Sync holds the per-repo lock.
 func isBareRepo(path string) bool {
-	// A bare repo has a HEAD file at the root.
 	_, err := os.Stat(filepath.Join(path, "HEAD"))
+	return err == nil
+}
+
+// isCacheReady checks if a bare repo has been fully initialized by gitCloneBare.
+func isCacheReady(path string) bool {
+	_, err := os.Stat(filepath.Join(path, cacheReadyMarker))
 	return err == nil
 }
 
@@ -254,6 +270,9 @@ func gitCloneBare(url, dest string) error {
 		os.RemoveAll(dest)
 		return fmt.Errorf("configure fetch refspec: %w", err)
 	}
+	// Write sentinel after full initialization so Lookup never returns a
+	// path that is still mid-clone.
+	_ = os.WriteFile(filepath.Join(dest, cacheReadyMarker), nil, 0o644)
 	return nil
 }
 

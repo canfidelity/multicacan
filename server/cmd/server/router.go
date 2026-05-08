@@ -452,6 +452,13 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Get("/api/attachments/{id}", h.GetAttachmentByID)
 			r.Delete("/api/attachments/{id}", h.DeleteAttachment)
 
+			// Workspace assets
+			r.Post("/api/assets", h.UploadAsset)
+			r.Get("/api/assets", h.ListAssets)
+			r.Get("/api/assets/{id}", h.GetAsset)
+			r.Patch("/api/assets/{id}", h.UpdateAsset)
+			r.Delete("/api/assets/{id}", h.DeleteAsset)
+
 			// Comments
 			r.Route("/api/comments/{commentId}", func(r chi.Router) {
 				r.Put("/", h.UpdateComment)

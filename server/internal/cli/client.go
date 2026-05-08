@@ -106,6 +106,9 @@ func (c *APIClient) setHeaders(req *http.Request) {
 	}
 }
 
+// SetHeaders applies the standard auth/platform headers to an externally-built request.
+func (c *APIClient) SetHeaders(req *http.Request) { c.setHeaders(req) }
+
 // GetJSON performs a GET request and decodes the JSON response.
 func (c *APIClient) GetJSON(ctx context.Context, path string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)

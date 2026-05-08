@@ -24,6 +24,7 @@ import { SettingsPage } from "@multicacan/views/settings";
 import { SimulatorPage } from "@multicacan/views/simulator";
 import { WebPreviewPage } from "@multicacan/views/preview";
 import { NativeIDEPage } from "@multicacan/views/ide";
+import { AssetsPage } from "@multicacan/views/assets";
 import { Download, Server } from "lucide-react";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
@@ -143,6 +144,7 @@ export const appRoutes: RouteObject[] = [
           { path: "simulator", element: <SimulatorPage />, handle: { title: "Simulator" } },
           { path: "preview", element: <WebPreviewPage />, handle: { title: "Web Preview" } },
           { path: "ide", element: <NativeIDEPage />, handle: { title: "Code Editor" } },
+          { path: "assets", element: <AssetsPage />, handle: { title: "Assets" } },
           {
             path: "settings",
             element: (

@@ -10,6 +10,7 @@ export const workspaceKeys = {
   myInvitations: () => ["invitations", "mine"] as const,
   agents: (wsId: string) => ["workspaces", wsId, "agents"] as const,
   skills: (wsId: string) => ["workspaces", wsId, "skills"] as const,
+  assets: (wsId: string) => ["workspaces", wsId, "assets"] as const,
   assigneeFrequency: (wsId: string) => ["workspaces", wsId, "assignee-frequency"] as const,
 };
 
@@ -97,6 +98,14 @@ export function myInvitationListOptions() {
   return queryOptions({
     queryKey: workspaceKeys.myInvitations(),
     queryFn: () => api.listMyInvitations(),
+  });
+}
+
+export function assetListOptions(wsId: string, tag?: string) {
+  return queryOptions({
+    queryKey: tag ? [...workspaceKeys.assets(wsId), tag] as const : workspaceKeys.assets(wsId),
+    queryFn: () => api.listAssets(tag ? { tag } : undefined),
+    enabled: !!wsId,
   });
 }
 

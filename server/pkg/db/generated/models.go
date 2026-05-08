@@ -508,6 +508,20 @@ type Workspace struct {
 	IssueCounter int32              `json:"issue_counter"`
 }
 
+type WorkspaceAsset struct {
+	ID             pgtype.UUID        `json:"id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	Name           string             `json:"name"`
+	Description    string             `json:"description"`
+	Tags           []string           `json:"tags"`
+	Url            string             `json:"url"`
+	ContentType    string             `json:"content_type"`
+	SizeBytes      int64              `json:"size_bytes"`
+	UploadedByType string             `json:"uploaded_by_type"`
+	UploadedByID   pgtype.UUID        `json:"uploaded_by_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type WorkspaceInvitation struct {
 	ID            pgtype.UUID        `json:"id"`
 	WorkspaceID   pgtype.UUID        `json:"workspace_id"`

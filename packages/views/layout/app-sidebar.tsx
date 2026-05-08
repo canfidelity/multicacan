@@ -35,6 +35,7 @@ import {
   Globe,
   Loader2,
   Code2,
+  Images,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multicacan/ui/components/common/actor-avatar";
@@ -116,6 +117,7 @@ type NavKey =
   | "preview"
   | "ide"
   | "skills"
+  | "assets"
   | "settings";
 
 const personalNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
@@ -126,6 +128,7 @@ const personalNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
 const workspaceNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
   { key: "issues", label: "Issues", icon: ListTodo },
   { key: "projects", label: "Projects", icon: FolderKanban },
+  { key: "assets", label: "Assets", icon: Images },
 ];
 
 const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [

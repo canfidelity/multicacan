@@ -193,6 +193,7 @@ const mockApiObj = vi.hoisted(() => ({
   removeCommentReaction: vi.fn(),
   listMembers: vi.fn().mockResolvedValue([{ user_id: "user-1", name: "Test User", email: "test@test.com", role: "admin" }]),
   listAgents: vi.fn().mockResolvedValue([]),
+  getActivePairSession: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@multica/core/api", () => ({

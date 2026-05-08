@@ -11,7 +11,7 @@ import type {
   RuntimeDevice,
   MemberWithUser,
   CreateAgentRequest,
-} from "@multica/core/types";
+} from "@multicacan/core/types";
 import {
   Dialog,
   DialogContent,
@@ -19,21 +19,21 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@multica/ui/components/ui/dialog";
+} from "@multicacan/ui/components/ui/dialog";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@multica/ui/components/ui/popover";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
+} from "@multicacan/ui/components/ui/popover";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Label } from "@multicacan/ui/components/ui/label";
 import { toast } from "sonner";
 import {
   AGENT_DESCRIPTION_MAX_LENGTH,
   VISIBILITY_DESCRIPTION,
   VISIBILITY_LABEL,
-} from "@multica/core/agents";
+} from "@multicacan/core/agents";
 import { CharCounter } from "./char-counter";
 
 type RuntimeFilter = "mine" | "all";

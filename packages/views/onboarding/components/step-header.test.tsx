@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { ONBOARDING_STEP_ORDER } from "@multica/core/onboarding";
+import { ONBOARDING_STEP_ORDER } from "@multicacan/core/onboarding";
 import { StepHeader } from "./step-header";
 
 describe("StepHeader", () => {

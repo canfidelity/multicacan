@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import { useTabHistory } from "@/hooks/use-tab-history";
 import { useActiveTitleSync } from "@/hooks/use-tab-sync";
 import { useTabStore, resolveRouteIcon } from "@/stores/tab-store";
@@ -8,15 +8,15 @@ import {
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
-} from "@multica/ui/components/ui/sidebar";
-import { ModalRegistry } from "@multica/views/modals/registry";
-import { AppSidebar } from "@multica/views/layout";
-import { SearchCommand, SearchTrigger } from "@multica/views/search";
-import { ChatFab, ChatWindow } from "@multica/views/chat";
-import { StarterContentPrompt } from "@multica/views/onboarding";
-import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multica/core/paths";
-import { getCurrentSlug, subscribeToCurrentSlug } from "@multica/core/platform";
-import { useDesktopUnreadBadge } from "@multica/views/platform";
+} from "@multicacan/ui/components/ui/sidebar";
+import { ModalRegistry } from "@multicacan/views/modals/registry";
+import { AppSidebar } from "@multicacan/views/layout";
+import { SearchCommand, SearchTrigger } from "@multicacan/views/search";
+import { ChatFab, ChatWindow } from "@multicacan/views/chat";
+import { StarterContentPrompt } from "@multicacan/views/onboarding";
+import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multicacan/core/paths";
+import { getCurrentSlug, subscribeToCurrentSlug } from "@multicacan/core/platform";
+import { useDesktopUnreadBadge } from "@multicacan/views/platform";
 import { DesktopNavigationProvider } from "@/platform/navigation";
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
@@ -93,8 +93,8 @@ function useInternalLinkHandler() {
       const tabId = store.openTab(path, path, icon);
       store.setActiveTab(tabId);
     };
-    window.addEventListener("multica:navigate", handler);
-    return () => window.removeEventListener("multica:navigate", handler);
+    window.addEventListener("multicacan:navigate", handler);
+    return () => window.removeEventListener("multicacan:navigate", handler);
   }, []);
 }
 
@@ -122,7 +122,7 @@ function DesktopInboxBridge() {
       if (!slug) return;
       const inboxPath = `${paths.workspace(slug).inbox()}?issue=${encodeURIComponent(issueKey)}`;
       window.dispatchEvent(
-        new CustomEvent("multica:navigate", { detail: { path: inboxPath } }),
+        new CustomEvent("multicacan:navigate", { detail: { path: inboxPath } }),
       );
     });
   }, []);

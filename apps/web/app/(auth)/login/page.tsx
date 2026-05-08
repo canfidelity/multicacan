@@ -3,29 +3,29 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { sanitizeNextUrl, useAuthStore } from "@multica/core/auth";
-import { useConfigStore } from "@multica/core/config";
-import { workspaceKeys } from "@multica/core/workspace/queries";
+import { sanitizeNextUrl, useAuthStore } from "@multicacan/core/auth";
+import { useConfigStore } from "@multicacan/core/config";
+import { workspaceKeys } from "@multicacan/core/workspace/queries";
 import {
   paths,
   resolvePostAuthDestination,
   useHasOnboarded,
-} from "@multica/core/paths";
-import { api } from "@multica/core/api";
-import type { Workspace } from "@multica/core/types";
+} from "@multicacan/core/paths";
+import { api } from "@multicacan/core/api";
+import type { Workspace } from "@multicacan/core/types";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@multica/ui/components/ui/card";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/card";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { captureDownloadIntent } from "@multica/core/analytics";
+import { captureDownloadIntent } from "@multicacan/core/analytics";
 import { setLoggedInCookie } from "@/features/auth/auth-cookie";
 import Link from "next/link";
-import { LoginPage, validateCliCallback } from "@multica/views/auth";
+import { LoginPage, validateCliCallback } from "@multicacan/views/auth";
 
 /**
  * Pick where a logged-in user with no explicit `?next=` should land.
@@ -89,7 +89,7 @@ function LoginPageContent() {
         .issueCliToken()
         .then(({ token }) => {
           setDesktopToken(token);
-          window.location.href = `multica://auth/callback?token=${encodeURIComponent(token)}`;
+          window.location.href = `multicacan://auth/callback?token=${encodeURIComponent(token)}`;
         })
         .catch((err) => {
           setDesktopError(
@@ -151,10 +151,10 @@ function LoginPageContent() {
       <div className="flex min-h-screen items-center justify-center">
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Opening Multica</CardTitle>
+            <CardTitle className="text-2xl">Opening Multicacan</CardTitle>
             <CardDescription>
               {desktopToken
-                ? "You should see a prompt to open the Multica desktop app. If nothing happens, click the button below."
+                ? "You should see a prompt to open the Multicacan desktop app. If nothing happens, click the button below."
                 : "Preparing Desktop sign-in..."}
             </CardDescription>
           </CardHeader>
@@ -163,10 +163,10 @@ function LoginPageContent() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  window.location.href = `multica://auth/callback?token=${encodeURIComponent(desktopToken)}`;
+                  window.location.href = `multicacan://auth/callback?token=${encodeURIComponent(desktopToken)}`;
                 }}
               >
-                Open Multica Desktop
+                Open Multicacan Desktop
               </Button>
             ) : (
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

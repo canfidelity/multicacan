@@ -1,7 +1,7 @@
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 
 export const githubUrl = "https://github.com/canfidelity/multicacan";
-export const twitterUrl = "https://x.com/MulticaAI";
+export const twitterUrl = "https://x.com/MulticacanAI";
 
 export function GitHubMark({ className }: { className?: string }) {
   return (

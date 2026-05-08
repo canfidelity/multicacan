@@ -4,19 +4,19 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@multica/core/api";
-import { useAuthStore } from "@multica/core/auth";
-import { useNavigation } from "@multica/views/navigation";
-import { useCurrentWorkspace, paths } from "@multica/core/paths";
-import type { QuestionnaireAnswers } from "@multica/core/onboarding";
-import { pinKeys } from "@multica/core/pins";
-import { projectKeys } from "@multica/core/projects";
-import { issueKeys } from "@multica/core/issues/queries";
+import { api } from "@multicacan/core/api";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useNavigation } from "@multicacan/views/navigation";
+import { useCurrentWorkspace, paths } from "@multicacan/core/paths";
+import type { QuestionnaireAnswers } from "@multicacan/core/onboarding";
+import { pinKeys } from "@multicacan/core/pins";
+import { projectKeys } from "@multicacan/core/projects";
+import { issueKeys } from "@multicacan/core/issues/queries";
 import {
   memberListOptions,
   workspaceKeys,
-} from "@multica/core/workspace/queries";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/workspace/queries";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
+} from "@multicacan/ui/components/ui/dialog";
 import { buildImportPayload } from "../utils/starter-content-templates";
 
 /**
@@ -171,7 +171,7 @@ export function StarterContentPrompt() {
               Getting Started
             </span>{" "}
             project with short tasks that walk through how agents, issues,
-            and context work in Multica.
+            and context work in Multicacan.
           </DialogDescription>
         </DialogHeader>
 

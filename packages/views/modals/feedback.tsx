@@ -8,19 +8,19 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/dialog";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   ContentEditor,
   type ContentEditorRef,
   useFileDropZone,
   FileDropOverlay,
 } from "../editor";
-import { useCreateFeedback, useFeedbackDraftStore } from "@multica/core/feedback";
-import { useCurrentWorkspace } from "@multica/core/paths";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
-import { captureFeedbackOpened } from "@multica/core/analytics";
+import { useCreateFeedback, useFeedbackDraftStore } from "@multicacan/core/feedback";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
+import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
+import { api } from "@multicacan/core/api";
+import { captureFeedbackOpened } from "@multicacan/core/analytics";
 
 const MAX_MESSAGE_LEN = 10000;
 

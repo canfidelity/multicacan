@@ -485,14 +485,14 @@ func runIssueCreate(cmd *cobra.Command, _ []string) error {
 		body["assignee_id"] = aID
 	}
 
-	// Quick-create stamp: when the daemon sets MULTICA_QUICK_CREATE_TASK_ID
+	// Quick-create stamp: when the daemon sets MULTICACAN_QUICK_CREATE_TASK_ID
 	// before invoking the agent, the agent's `multicacan issue create` call
 	// inherits the env var and tags the new issue with origin_type=
 	// quick_create + origin_id=<task_id>. The completion handler then
 	// locates the issue deterministically by origin instead of "most
 	// recent issue by this agent", which is racy when max_concurrent_tasks
 	// > 1 and the agent is creating other issues in parallel.
-	if taskID := os.Getenv("MULTICA_QUICK_CREATE_TASK_ID"); taskID != "" {
+	if taskID := os.Getenv("MULTICACAN_QUICK_CREATE_TASK_ID"); taskID != "" {
 		body["origin_type"] = "quick_create"
 		body["origin_id"] = taskID
 	}
@@ -1189,7 +1189,7 @@ type assigneeMatch struct {
 
 func resolveAssignee(ctx context.Context, client *cli.APIClient, name string) (string, string, error) {
 	if client.WorkspaceID == "" {
-		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set MULTICA_WORKSPACE_ID")
+		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set MULTICACAN_WORKSPACE_ID")
 	}
 
 	input := strings.TrimSpace(name)

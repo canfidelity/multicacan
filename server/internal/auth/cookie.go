@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	AuthCookieName   = "multica_auth"
-	CSRFCookieName   = "multica_csrf"
+	AuthCookieName   = "multicacan_auth"
+	CSRFCookieName   = "multicacan_csrf"
 	authCookieMaxAge = 30 * 24 * 60 * 60 // 30 days in seconds
 )
 

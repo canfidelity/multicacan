@@ -2,14 +2,14 @@
 
 import { useCallback, useState } from "react";
 import { Loader2, ScrollText } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
-import { api } from "@multica/core/api";
-import type { AgentTask } from "@multica/core/types/agent";
+} from "@multicacan/ui/components/ui/tooltip";
+import { api } from "@multicacan/core/api";
+import type { AgentTask } from "@multicacan/core/types/agent";
 import { AgentTranscriptDialog } from "./agent-transcript-dialog";
 import { buildTimeline, type TimelineItem } from "./build-timeline";
 

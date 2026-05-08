@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
-import type { Agent } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+import type { Agent } from "@multicacan/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { ContentEditor } from "../../../editor/content-editor";
 
 const INSTRUCTIONS_PLACEHOLDER = `Define this agent's role, expertise, and working style.

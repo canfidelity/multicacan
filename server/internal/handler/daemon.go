@@ -124,7 +124,7 @@ type DaemonRegisterRequest struct {
 	// and tasks keep working without manual intervention.
 	LegacyDaemonIDs []string `json:"legacy_daemon_ids"`
 	DeviceName      string   `json:"device_name"`
-	CLIVersion      string   `json:"cli_version"` // multica CLI version
+	CLIVersion      string   `json:"cli_version"` // multicacan CLI version
 	LaunchedBy      string   `json:"launched_by"` // "desktop" when spawned by the Electron app
 	Runtimes        []struct {
 		Name    string `json:"name"`
@@ -904,7 +904,7 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 							Label:        label,
 						})
 						// Lift github_repo resources into the daemon's repo list
-						// so `multica repo checkout` and the meta-skill render
+						// so `multicacan repo checkout` and the meta-skill render
 						// them as the issue's repos.
 						if row.ResourceType == "github_repo" {
 							var payload struct {
@@ -1072,7 +1072,7 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Workspace isolation check: the daemon uses this response's workspace_id
-	// as the only authority for MULTICA_WORKSPACE_ID in the agent env. An
+	// as the only authority for MULTICACAN_WORKSPACE_ID in the agent env. An
 	// empty value would make the CLI silently fall back to the user-global
 	// config and talk to whatever workspace the user happened to last
 	// configure; a value that doesn't match the runtime's workspace means

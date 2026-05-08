@@ -1,6 +1,6 @@
 # Self-Hosting — Advanced Configuration
 
-This document covers advanced configuration for self-hosted Multica deployments. For the quick start guide, see [SELF_HOSTING.md](SELF_HOSTING.md).
+This document covers advanced configuration for self-hosted Multicacan deployments. For the quick start guide, see [SELF_HOSTING.md](SELF_HOSTING.md).
 
 ## Configuration
 
@@ -10,7 +10,7 @@ All configuration is done via environment variables. Copy `.env.example` as a st
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://multica:multica@localhost:5432/multica?sslmode=disable` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://multicacan:multicacan@localhost:5432/multicacan?sslmode=disable` |
 | `JWT_SECRET` | **Must change from default.** Secret key for signing JWT tokens. Use a long random string. | `openssl rand -hex 32` |
 | `FRONTEND_ORIGIN` | URL where the frontend is served (used for CORS) | `https://app.example.com` |
 
@@ -25,14 +25,14 @@ These have sensible defaults and only need to be set when tuning a large or cons
 
 ### Email (Required for Authentication)
 
-Multica uses email-based magic link authentication via [Resend](https://resend.com).
+Multicacan uses email-based magic link authentication via [Resend](https://resend.com).
 
 | Variable | Description |
 |----------|-------------|
 | `RESEND_API_KEY` | Your Resend API key |
 | `RESEND_FROM_EMAIL` | Sender email address (default: `noreply@multicacan.io`) |
 
-> **Note:** If Resend is not configured, generated verification codes are printed to backend logs. A fixed local testing code is disabled by default; to opt in on a private test instance, set `APP_ENV=development` and `MULTICA_DEV_VERIFICATION_CODE` to a 6-digit value. It is ignored when `APP_ENV=production`.
+> **Note:** If Resend is not configured, generated verification codes are printed to backend logs. A fixed local testing code is disabled by default; to opt in on a private test instance, set `APP_ENV=development` and `MULTICACAN_DEV_VERIFICATION_CODE` to a 6-digit value. It is ignored when `APP_ENV=production`.
 
 ### Google OAuth (Optional)
 
@@ -90,35 +90,35 @@ These are configured on each user's machine, not on the server:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MULTICA_SERVER_URL` | `ws://localhost:8080/ws` | WebSocket URL for daemon → server connection |
-| `MULTICA_APP_URL` | `http://localhost:3000` | Frontend URL for CLI login flow |
-| `MULTICA_DAEMON_POLL_INTERVAL` | `3s` | How often the daemon polls for tasks |
-| `MULTICA_DAEMON_HEARTBEAT_INTERVAL` | `15s` | Heartbeat frequency |
+| `MULTICACAN_SERVER_URL` | `ws://localhost:8080/ws` | WebSocket URL for daemon → server connection |
+| `MULTICACAN_APP_URL` | `http://localhost:3000` | Frontend URL for CLI login flow |
+| `MULTICACAN_DAEMON_POLL_INTERVAL` | `3s` | How often the daemon polls for tasks |
+| `MULTICACAN_DAEMON_HEARTBEAT_INTERVAL` | `15s` | Heartbeat frequency |
 
 Agent-specific overrides:
 
 | Variable | Description |
 |----------|-------------|
-| `MULTICA_CLAUDE_PATH` | Custom path to the `claude` binary |
-| `MULTICA_CLAUDE_MODEL` | Override the Claude model used |
-| `MULTICA_CODEX_PATH` | Custom path to the `codex` binary |
-| `MULTICA_CODEX_MODEL` | Override the Codex model used |
-| `MULTICA_OPENCODE_PATH` | Custom path to the `opencode` binary |
-| `MULTICA_OPENCODE_MODEL` | Override the OpenCode model used |
-| `MULTICA_OPENCLAW_PATH` | Custom path to the `openclaw` binary |
-| `MULTICA_OPENCLAW_MODEL` | Override the OpenClaw model used |
-| `MULTICA_HERMES_PATH` | Custom path to the `hermes` binary |
-| `MULTICA_HERMES_MODEL` | Override the Hermes model used |
-| `MULTICA_GEMINI_PATH` | Custom path to the `gemini` binary |
-| `MULTICA_GEMINI_MODEL` | Override the Gemini model used |
-| `MULTICA_PI_PATH` | Custom path to the `pi` binary |
-| `MULTICA_PI_MODEL` | Override the Pi model used |
-| `MULTICA_CURSOR_PATH` | Custom path to the `cursor-agent` binary |
-| `MULTICA_CURSOR_MODEL` | Override the Cursor Agent model used |
+| `MULTICACAN_CLAUDE_PATH` | Custom path to the `claude` binary |
+| `MULTICACAN_CLAUDE_MODEL` | Override the Claude model used |
+| `MULTICACAN_CODEX_PATH` | Custom path to the `codex` binary |
+| `MULTICACAN_CODEX_MODEL` | Override the Codex model used |
+| `MULTICACAN_OPENCODE_PATH` | Custom path to the `opencode` binary |
+| `MULTICACAN_OPENCODE_MODEL` | Override the OpenCode model used |
+| `MULTICACAN_OPENCLAW_PATH` | Custom path to the `openclaw` binary |
+| `MULTICACAN_OPENCLAW_MODEL` | Override the OpenClaw model used |
+| `MULTICACAN_HERMES_PATH` | Custom path to the `hermes` binary |
+| `MULTICACAN_HERMES_MODEL` | Override the Hermes model used |
+| `MULTICACAN_GEMINI_PATH` | Custom path to the `gemini` binary |
+| `MULTICACAN_GEMINI_MODEL` | Override the Gemini model used |
+| `MULTICACAN_PI_PATH` | Custom path to the `pi` binary |
+| `MULTICACAN_PI_MODEL` | Override the Pi model used |
+| `MULTICACAN_CURSOR_PATH` | Custom path to the `cursor-agent` binary |
+| `MULTICACAN_CURSOR_MODEL` | Override the Cursor Agent model used |
 
 ## Database Setup
 
-Multica requires PostgreSQL 17 with the pgvector extension.
+Multicacan requires PostgreSQL 17 with the pgvector extension.
 
 ### Using Docker Compose (Recommended)
 
@@ -255,7 +255,7 @@ NEXT_PUBLIC_WS_URL=wss://api.example.com/ws
 
 ## LAN / Non-localhost Access
 
-By default, Multica works on `localhost`. If you access it from another machine on the LAN (e.g. `http://192.168.1.100:3000`), you need to tell the backend to accept that origin:
+By default, Multicacan works on `localhost`. If you access it from another machine on the LAN (e.g. `http://192.168.1.100:3000`), you need to tell the backend to accept that origin:
 
 ```bash
 # .env — replace with your server's LAN IP
@@ -338,5 +338,5 @@ docker compose -f docker-compose.selfhost.yml pull
 docker compose -f docker-compose.selfhost.yml up -d
 ```
 
-Pin `MULTICA_IMAGE_TAG` in `.env` to an exact release like `v0.2.4` if you want to stay on a specific version. Migrations run automatically on backend startup. They are idempotent — running them multiple times has no effect.
+Pin `MULTICACAN_IMAGE_TAG` in `.env` to an exact release like `v0.2.4` if you want to stay on a specific version. Migrations run automatically on backend startup. They are idempotent — running them multiple times has no effect.
 If the selected GHCR tag has not been published yet, fall back to `docker compose -f docker-compose.selfhost.yml -f docker-compose.selfhost.build.yml up -d --build`.

@@ -24,9 +24,9 @@ func BuildPrompt(task Task) string {
 		return buildQuickCreatePrompt(task)
 	}
 	var b strings.Builder
-	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
+	b.WriteString("You are running as a local coding agent for a Multicacan workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	fmt.Fprintf(&b, "Start by running `multicacan issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
 	appendPairInterventions(&b, task)
 	return b.String()
 }
@@ -47,15 +47,15 @@ func appendPairInterventions(b *strings.Builder, task Task) {
 
 // buildQuickCreatePrompt constructs a prompt for quick-create tasks. The
 // user typed a single natural-language sentence in the create-issue modal;
-// the agent's job is to translate it into one `multica issue create` CLI
+// the agent's job is to translate it into one `multicacan issue create` CLI
 // invocation, using its judgment to decide whether fetching referenced URLs
 // would produce a better issue. No issue exists yet, so the agent must NOT
-// call `multica issue get` or attempt to comment — there's nothing to read
+// call `multicacan issue get` or attempt to comment — there's nothing to read
 // or reply to.
 func buildQuickCreatePrompt(task Task) string {
 	var b strings.Builder
-	b.WriteString("You are running as a quick-create assistant for a Multica workspace.\n\n")
-	b.WriteString("A user captured the following input via the quick-create modal. There is NO existing issue. Your job is to create a well-formed issue from this input with a single `multica issue create` command.\n\n")
+	b.WriteString("You are running as a quick-create assistant for a Multicacan workspace.\n\n")
+	b.WriteString("A user captured the following input via the quick-create modal. There is NO existing issue. Your job is to create a well-formed issue from this input with a single `multicacan issue create` command.\n\n")
 	fmt.Fprintf(&b, "User input:\n> %s\n\n", task.QuickCreatePrompt)
 
 	b.WriteString("Field rules:\n\n")
@@ -80,7 +80,7 @@ func buildQuickCreatePrompt(task Task) string {
 
 	// assignee
 	b.WriteString("- **assignee**:\n")
-	b.WriteString("    - When the user names someone (\"assign to X\" / \"@X\"), call `multica workspace members --output json` and find the matching member by display name (case-insensitive substring match is fine). On a clean match, pass `--assignee <name>`. On no match or ambiguous match, do NOT pass `--assignee` — instead append a final line to the description: `Unrecognized assignee: X`.\n")
+	b.WriteString("    - When the user names someone (\"assign to X\" / \"@X\"), call `multicacan workspace members --output json` and find the matching member by display name (case-insensitive substring match is fine). On a clean match, pass `--assignee <name>`. On no match or ambiguous match, do NOT pass `--assignee` — instead append a final line to the description: `Unrecognized assignee: X`.\n")
 	agentName := ""
 	if task.Agent != nil {
 		agentName = task.Agent.Name
@@ -98,9 +98,9 @@ func buildQuickCreatePrompt(task Task) string {
 
 	// output format
 	b.WriteString("Output format:\n")
-	b.WriteString("- Run exactly one `multica issue create` invocation. Do not retry for any reason — even on non-zero exit. The issue may already exist; another attempt would create a duplicate.\n")
+	b.WriteString("- Run exactly one `multicacan issue create` invocation. Do not retry for any reason — even on non-zero exit. The issue may already exist; another attempt would create a duplicate.\n")
 	b.WriteString("- After success, print exactly one line: `Created MUL-<n>: <title>` and exit. No commentary, no follow-up tool calls.\n")
-	b.WriteString("- Do NOT call `multica issue get` or `multica issue comment add` — there is no issue to query or comment on.\n")
+	b.WriteString("- Do NOT call `multicacan issue get` or `multicacan issue comment add` — there is no issue to query or comment on.\n")
 	b.WriteString("- On CLI error, exit with the error as the only output. The platform writes a failure notification automatically.\n")
 	return b.String()
 }
@@ -113,7 +113,7 @@ func buildQuickCreatePrompt(task Task) string {
 // previous turn's --parent UUID.
 func buildCommentPrompt(task Task) string {
 	var b strings.Builder
-	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
+	b.WriteString("You are running as a local coding agent for a Multicacan workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
 	if task.TriggerCommentContent != "" {
 		authorLabel := "A user"
@@ -130,7 +130,7 @@ func buildCommentPrompt(task Task) string {
 			b.WriteString("⚠️ The triggering comment was posted by another agent. Decide whether a reply is warranted. If you produced actual work this turn (investigated, fixed something, answered a real question), post the result as a normal reply — that is NOT a noise comment, and the standard rule that final results must be delivered via comment still applies. If the triggering comment was a pure acknowledgment, thanks, or sign-off AND you produced no work this turn, do NOT reply — and do NOT post a comment saying 'No reply needed' or similar. Simply exit with no output. Silence is the preferred way to end agent-to-agent threads. If you do reply, do not @mention the other agent as a sign-off (that re-triggers them and starts a loop).\n\n")
 		}
 	}
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
+	fmt.Fprintf(&b, "Start by running `multicacan issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
 	b.WriteString(execenv.BuildCommentReplyInstructions(task.IssueID, task.TriggerCommentID))
 	return b.String()
 }
@@ -138,7 +138,7 @@ func buildCommentPrompt(task Task) string {
 // buildChatPrompt constructs a prompt for interactive chat tasks.
 func buildChatPrompt(task Task) string {
 	var b strings.Builder
-	b.WriteString("You are running as a chat assistant for a Multica workspace.\n")
+	b.WriteString("You are running as a chat assistant for a Multicacan workspace.\n")
 	b.WriteString("A user is chatting with you directly. Respond to their message.\n\n")
 	fmt.Fprintf(&b, "User message:\n%s\n", task.ChatMessage)
 	return b.String()
@@ -147,8 +147,8 @@ func buildChatPrompt(task Task) string {
 // buildAutopilotPrompt constructs a prompt for run_only autopilot tasks.
 func buildAutopilotPrompt(task Task) string {
 	var b strings.Builder
-	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
-	b.WriteString("This task was triggered by an Autopilot in run-only mode. There is no assigned Multica issue for this run.\n\n")
+	b.WriteString("You are running as a local coding agent for a Multicacan workspace.\n\n")
+	b.WriteString("This task was triggered by an Autopilot in run-only mode. There is no assigned Multicacan issue for this run.\n\n")
 	fmt.Fprintf(&b, "Autopilot run ID: %s\n", task.AutopilotRunID)
 	if task.AutopilotID != "" {
 		fmt.Fprintf(&b, "Autopilot ID: %s\n", task.AutopilotID)
@@ -172,10 +172,10 @@ func buildAutopilotPrompt(task Task) string {
 		b.WriteString("No additional autopilot instructions were provided. Inspect the autopilot configuration before proceeding.\n\n")
 	}
 	if task.AutopilotID != "" {
-		fmt.Fprintf(&b, "Start by running `multica autopilot get %s --output json` if you need the full autopilot configuration, then complete the instructions above.\n", task.AutopilotID)
+		fmt.Fprintf(&b, "Start by running `multicacan autopilot get %s --output json` if you need the full autopilot configuration, then complete the instructions above.\n", task.AutopilotID)
 	} else {
 		b.WriteString("Complete the instructions above.\n")
 	}
-	b.WriteString("Do not run `multica issue get`; this run does not have an issue ID.\n")
+	b.WriteString("Do not run `multicacan issue get`; this run does not have an issue ID.\n")
 	return b.String()
 }

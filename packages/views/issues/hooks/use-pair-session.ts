@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useWSEvent } from "@multica/core/realtime";
-import { api } from "@multica/core/api";
+import { useWSEvent } from "@multicacan/core/realtime";
+import { api } from "@multicacan/core/api";
 import type {
   PairSession,
   PairSuggestion,
   PairStartedPayload,
   PairSuggestionPayload,
   PairEndedPayload,
-} from "@multica/core/types/events";
+} from "@multicacan/core/types/events";
 
 interface UsePairSessionResult {
   session: PairSession | null;

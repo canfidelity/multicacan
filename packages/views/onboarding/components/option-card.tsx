@@ -1,7 +1,7 @@
 "use client";
 
-import { Input } from "@multica/ui/components/ui/input";
-import { cn } from "@multica/ui/lib/utils";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { cn } from "@multicacan/ui/lib/utils";
 
 const OTHER_INPUT_MAX_LENGTH = 80;
 

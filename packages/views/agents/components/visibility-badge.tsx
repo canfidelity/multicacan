@@ -4,9 +4,9 @@ import { Globe, Lock } from "lucide-react";
 import {
   VISIBILITY_LABEL,
   VISIBILITY_TOOLTIP,
-} from "@multica/core/agents";
-import type { AgentVisibility } from "@multica/core/types";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/core/agents";
+import type { AgentVisibility } from "@multicacan/core/types";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
 
 /**
  * Read-only visibility badge — used wherever a user should *see* an agent's

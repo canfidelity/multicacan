@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, WifiOff } from "lucide-react";
-import type { AgentAvailability } from "@multica/core/agents";
+import type { AgentAvailability } from "@multicacan/core/agents";
 
 interface Props {
   /** Display name shown in the banner copy. */

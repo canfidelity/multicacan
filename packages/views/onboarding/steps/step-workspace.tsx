@@ -16,14 +16,14 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { useScrollFade } from "@multica/ui/hooks/use-scroll-fade";
-import { cn } from "@multica/ui/lib/utils";
-import { useCreateWorkspace } from "@multica/core/workspace/mutations";
-import type { Workspace } from "@multica/core/types";
-import { DragStrip } from "@multica/views/platform";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { useScrollFade } from "@multicacan/ui/hooks/use-scroll-fade";
+import { cn } from "@multicacan/ui/lib/utils";
+import { useCreateWorkspace } from "@multicacan/core/workspace/mutations";
+import type { Workspace } from "@multicacan/core/types";
+import { DragStrip } from "@multicacan/views/platform";
 import { StepHeader } from "../components/step-header";
 import { RadioMark } from "../components/option-card";
 import { WorkspaceAvatar } from "../../workspace/workspace-avatar";

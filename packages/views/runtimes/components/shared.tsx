@@ -1,6 +1,6 @@
 import { Cloud, Monitor, Wifi, WifiHigh, WifiOff } from "lucide-react";
-import { Badge } from "@multica/ui/components/ui/badge";
-import type { RuntimeHealth } from "@multica/core/runtimes";
+import { Badge } from "@multicacan/ui/components/ui/badge";
+import type { RuntimeHealth } from "@multicacan/core/runtimes";
 import { ProviderLogo } from "./provider-logo";
 
 export function RuntimeModeIcon({ mode }: { mode: string }) {

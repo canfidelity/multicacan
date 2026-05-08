@@ -2,9 +2,9 @@
 
 import { Server } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { runtimeListOptions } from "@multica/core/runtimes/queries";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { runtimeListOptions } from "@multicacan/core/runtimes/queries";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { RuntimeDetail } from "./runtime-detail";
 
 /**

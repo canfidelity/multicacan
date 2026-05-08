@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { GitCommitHorizontal } from "lucide-react";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { Label } from "@multica/ui/components/ui/label";
+import { Card, CardContent } from "@multicacan/ui/components/ui/card";
+import { Switch } from "@multicacan/ui/components/ui/switch";
+import { Label } from "@multicacan/ui/components/ui/label";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCurrentWorkspace } from "@multica/core/paths";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
-import type { Workspace } from "@multica/core/types";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
+import { workspaceKeys } from "@multicacan/core/workspace/queries";
+import { api } from "@multicacan/core/api";
+import type { Workspace } from "@multicacan/core/types";
 
 export function LabsTab() {
   const workspace = useCurrentWorkspace();
@@ -66,7 +66,7 @@ export function LabsTab() {
                   <p className="text-sm text-muted-foreground">
                     Automatically add{" "}
                     <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                      Co-authored-by: multica-agent &lt;github@166.1.91.184:3000&gt;
+                      Co-authored-by: multicacan-agent &lt;github@166.1.91.184:3000&gt;
                     </code>{" "}
                     to commits made by agents.
                   </p>

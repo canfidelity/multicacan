@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchLatestRelease } from "./github-release";
 
 const SAMPLE_LATEST_ASSET = {
-  name: "multica-desktop-0.2.14-mac-arm64.dmg",
+  name: "multicacan-desktop-0.2.14-mac-arm64.dmg",
   browser_download_url:
-    "https://github.com/canfidelity/multicacan/releases/download/v0.2.14/multica-desktop-0.2.14-mac-arm64.dmg",
+    "https://github.com/canfidelity/multicacan/releases/download/v0.2.14/multicacan-desktop-0.2.14-mac-arm64.dmg",
 };
 
 const SAMPLE_PREV_ASSET = {
-  name: "multica-desktop-0.2.13-mac-arm64.dmg",
+  name: "multicacan-desktop-0.2.13-mac-arm64.dmg",
   browser_download_url:
-    "https://github.com/canfidelity/multicacan/releases/download/v0.2.13/multica-desktop-0.2.13-mac-arm64.dmg",
+    "https://github.com/canfidelity/multicacan/releases/download/v0.2.13/multicacan-desktop-0.2.13-mac-arm64.dmg",
 };
 
 function releasePayload(overrides: {

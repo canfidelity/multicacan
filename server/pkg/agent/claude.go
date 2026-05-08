@@ -558,7 +558,7 @@ func filterCustomArgs(args []string, blocked map[string]blockedArgMode, logger *
 // writeMcpConfigToTemp writes raw MCP config JSON to a temporary file and returns
 // its path. The caller is responsible for removing the file when done.
 func writeMcpConfigToTemp(raw json.RawMessage) (string, error) {
-	f, err := os.CreateTemp("", "multica-mcp-*.json")
+	f, err := os.CreateTemp("", "multicacan-mcp-*.json")
 	if err != nil {
 		return "", fmt.Errorf("create mcp config temp file: %w", err)
 	}

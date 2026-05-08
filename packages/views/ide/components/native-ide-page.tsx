@@ -6,10 +6,10 @@ import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/resizable";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { PageHeader } from "../../layout/page-header";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import { FileTree } from "./file-tree";
 import { EditorTabs, type OpenFile } from "./editor-tabs";
 import { IDEEditor } from "./ide-editor";
@@ -104,7 +104,7 @@ export function NativeIDEPage() {
           <Code2 className="size-10 opacity-30" />
           <p className="text-sm">Code Editor unavailable</p>
           <p className="text-xs opacity-60">
-            Start the Multica daemon on your Mac Mini to connect.
+            Start the Multicacan daemon on your Mac Mini to connect.
           </p>
         </div>
       </div>

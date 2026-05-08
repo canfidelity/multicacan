@@ -9,7 +9,7 @@ import {
   Folder,
   FolderOpen,
 } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Tree data structures

@@ -16,19 +16,19 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Eye, MoreHorizontal } from "lucide-react";
-import type { Issue, IssueStatus } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
-import { useLoadMoreByStatus } from "@multica/core/issues/mutations";
-import type { MyIssuesFilter } from "@multica/core/issues/queries";
+import type { Issue, IssueStatus } from "@multicacan/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { useLoadMoreByStatus } from "@multicacan/core/issues/mutations";
+import type { MyIssuesFilter } from "@multicacan/core/issues/queries";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { ALL_STATUSES, STATUS_CONFIG } from "@multica/core/issues/config";
-import { useViewStoreApi, useViewStore } from "@multica/core/issues/stores/view-store-context";
-import type { SortField, SortDirection } from "@multica/core/issues/stores/view-store";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { ALL_STATUSES, STATUS_CONFIG } from "@multicacan/core/issues/config";
+import { useViewStoreApi, useViewStore } from "@multicacan/core/issues/stores/view-store-context";
+import type { SortField, SortDirection } from "@multicacan/core/issues/stores/view-store";
 import { sortIssues } from "../utils/sort";
 import { StatusIcon } from "./status-icon";
 import { BoardColumn } from "./board-column";

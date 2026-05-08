@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import { Bot, ChevronRight, GitBranch, Loader2, Square, Zap, Swords } from "lucide-react";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { Label } from "@multica/ui/components/ui/label";
-import { Button } from "@multica/ui/components/ui/button";
+import { Switch } from "@multicacan/ui/components/ui/switch";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@multica/ui/components/ui/select";
-import { ScrollArea } from "@multica/ui/components/ui/scroll-area";
-import { cn } from "@multica/ui/lib/utils";
-import { timeAgo } from "@multica/core/utils";
-import type { Agent } from "@multica/core/types";
-import type { PairSession, PairSuggestion } from "@multica/core/types/events";
+} from "@multicacan/ui/components/ui/select";
+import { ScrollArea } from "@multicacan/ui/components/ui/scroll-area";
+import { cn } from "@multicacan/ui/lib/utils";
+import { timeAgo } from "@multicacan/core/utils";
+import type { Agent } from "@multicacan/core/types";
+import type { PairSession, PairSuggestion } from "@multicacan/core/types/events";
 
 interface PairSidebarProps {
   session: PairSession | null;

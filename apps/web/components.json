@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@multica/ui/components",
-    "utils": "@multica/ui/lib/utils",
-    "ui": "@multica/ui/components/ui",
-    "lib": "@multica/ui/lib",
-    "hooks": "@multica/ui/hooks"
+    "components": "@multicacan/ui/components",
+    "utils": "@multicacan/ui/lib/utils",
+    "ui": "@multicacan/ui/components/ui",
+    "lib": "@multicacan/ui/lib",
+    "hooks": "@multicacan/ui/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

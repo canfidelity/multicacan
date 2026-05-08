@@ -31,7 +31,7 @@ var excludedPorts = map[int]bool{
 	9200: true, 9300: true,
 	// macOS system services (AirPlay, Bonjour, etc.)
 	5000: true, 7000: true, 7001: true,
-	// multica daemon health endpoint
+	// multicacan daemon health endpoint
 	19514: true,
 }
 

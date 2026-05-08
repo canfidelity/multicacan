@@ -944,7 +944,7 @@ func TestGetRemoteDefaultBranchUsesBareHeadHintForCustomDefault(t *testing.T) {
 
 // TestCreateWorktreeInstallsCoAuthoredByHook verifies that CreateWorktree
 // installs a prepare-commit-msg hook that appends a Co-authored-by trailer
-// for the Multica Agent to every commit made in the worktree.
+// for the Multicacan Agent to every commit made in the worktree.
 func TestCreateWorktreeInstallsCoAuthoredByHook(t *testing.T) {
 	t.Parallel()
 	sourceRepo := createTestRepo(t)

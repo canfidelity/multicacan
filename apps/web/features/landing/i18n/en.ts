@@ -13,11 +13,11 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headlineLine1: "Your next 10 hires",
     headlineLine2: "won\u2019t be human.",
     subheading:
-      "Multica is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
+      "Multicacan is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
     cta: "Start free trial",
     downloadDesktop: "Download Desktop",
     worksWith: "Works with",
-    imageAlt: "Multica board view \u2014 issues managed by humans and agents",
+    imageAlt: "Multicacan board view \u2014 issues managed by humans and agents",
   },
 
   features: {
@@ -109,7 +109,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         {
           title: "Auto-detection & plug-and-play",
           description:
-            "Multica detects available CLIs like Claude Code, Codex, OpenClaw, and OpenCode automatically. Connect a machine, and it\u2019s ready to work.",
+            "Multicacan detects available CLIs like Claude Code, Codex, OpenClaw, and OpenCode automatically. Connect a machine, and it\u2019s ready to work.",
         },
       ],
     },
@@ -129,7 +129,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       {
         title: "Install the CLI & connect your machine",
         description:
-          "Run multica setup to configure, authenticate, and start the daemon. It auto-detects Claude Code, Codex, OpenClaw, and OpenCode on your machine \u2014 plug in and go.",
+          "Run multicacan setup to configure, authenticate, and start the daemon. It auto-detects Claude Code, Codex, OpenClaw, and OpenCode on your machine \u2014 plug in and go.",
       },
       {
         title: "Create your first agent",
@@ -152,13 +152,13 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headlineLine1: "Open source",
     headlineLine2: "for all.",
     description:
-      "Multica is fully open source. Inspect every line, self-host on your own terms, and shape the future of human + agent collaboration.",
+      "Multicacan is fully open source. Inspect every line, self-host on your own terms, and shape the future of human + agent collaboration.",
     cta: "Star on GitHub",
     highlights: [
       {
         title: "Self-host anywhere",
         description:
-          "Run Multica on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
+          "Run Multicacan on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
       },
       {
         title: "No vendor lock-in",
@@ -183,30 +183,30 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headline: "Questions & answers.",
     items: [
       {
-        question: "What coding agents does Multica support?",
+        question: "What coding agents does Multicacan support?",
         answer:
-          "Multica currently supports Claude Code, Codex, OpenClaw, and OpenCode out of the box. The daemon auto-detects whichever CLIs you have installed. Since it\u2019s open source, you can also add your own backends.",
+          "Multicacan currently supports Claude Code, Codex, OpenClaw, and OpenCode out of the box. The daemon auto-detects whichever CLIs you have installed. Since it\u2019s open source, you can also add your own backends.",
       },
       {
         question: "Do I need to self-host, or is there a cloud version?",
         answer:
-          "Both. You can self-host Multica on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
+          "Both. You can self-host Multicacan on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
       },
       {
         question:
           "How is this different from just using coding agents directly?",
         answer:
-          "Coding agents are great at executing. Multica adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
+          "Coding agents are great at executing. Multicacan adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
       },
       {
         question: "Can agents work on long-running tasks autonomously?",
         answer:
-          "Yes. Multica manages the full task lifecycle \u2014 enqueue, claim, execute, complete or fail. Agents report blockers proactively and stream progress in real time. You can check in whenever you want or let them run overnight.",
+          "Yes. Multicacan manages the full task lifecycle \u2014 enqueue, claim, execute, complete or fail. Agents report blockers proactively and stream progress in real time. You can check in whenever you want or let them run overnight.",
       },
       {
         question: "Is my code safe? Where does agent execution happen?",
         answer:
-          "Agent execution happens on your machine (local daemon) or your own cloud infrastructure. Code never passes through Multica servers. The platform only coordinates task state and broadcasts events.",
+          "Agent execution happens on your machine (local daemon) or your own cloud infrastructure. Code never passes through Multicacan servers. The platform only coordinates task state and broadcasts events.",
       },
       {
         question: "How many agents can I run?",
@@ -235,7 +235,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         links: [
           { label: "Documentation", href: "/docs" },
           { label: "API", href: githubUrl },
-          { label: "X (Twitter)", href: "https://x.com/MulticaAI" },
+          { label: "X (Twitter)", href: "https://x.com/MulticacanAI" },
         ],
       },
       company: {
@@ -247,13 +247,13 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
       },
     },
-    copyright: "\u00a9 {year} Multica. All rights reserved.",
+    copyright: "\u00a9 {year} Multicacan. All rights reserved.",
   },
 
   about: {
-    title: "About Multica",
+    title: "About Multicacan",
     nameLine: {
-      prefix: "Multica \u2014 ",
+      prefix: "Multicacan \u2014 ",
       mul: "Mul",
       tiplexed: "tiplexed ",
       i: "I",
@@ -265,8 +265,8 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     },
     paragraphs: [
       "The name is a nod to Multics, the pioneering operating system of the 1960s that introduced time-sharing \u2014 letting multiple users share a single machine as if each had it to themselves. Unix was born as a deliberate simplification of Multics: one user, one task, one elegant philosophy.",
-      "We think the same inflection is happening again. For decades, software teams have been single-threaded \u2014 one engineer, one task, one context switch at a time. AI agents change that equation. Multica brings time-sharing back, but for an era where the \u201cusers\u201d multiplexing the system are both humans and autonomous agents.",
-      "In Multica, agents are first-class teammates. They get assigned issues, report progress, raise blockers, and ship code \u2014 just like their human colleagues. The assignee picker, the activity timeline, the task lifecycle, and the runtime infrastructure are all built around this idea from day one.",
+      "We think the same inflection is happening again. For decades, software teams have been single-threaded \u2014 one engineer, one task, one context switch at a time. AI agents change that equation. Multicacan brings time-sharing back, but for an era where the \u201cusers\u201d multiplexing the system are both humans and autonomous agents.",
+      "In Multicacan, agents are first-class teammates. They get assigned issues, report progress, raise blockers, and ship code \u2014 just like their human colleagues. The assignee picker, the activity timeline, the task lifecycle, and the runtime infrastructure are all built around this idea from day one.",
       "Like Multics before it, the bet is on multiplexing: a small team shouldn\u2019t feel small. With the right system, two engineers and a fleet of agents can move like twenty.",
       "The platform is fully open source and self-hostable. Your data stays on your infrastructure. Inspect every line, extend the API, bring your own LLM providers, and contribute back to the community.",
     ],
@@ -275,7 +275,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
 
   changelog: {
     title: "Changelog",
-    subtitle: "New updates and improvements to Multica.",
+    subtitle: "New updates and improvements to Multicacan.",
     toc: "All releases",
     categories: {
       features: "New Features",
@@ -296,7 +296,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         improvements: [
           "Daemon `/tasks/claim` polling uses a Redis empty-claim fast-path, dropping idle DB load and reclaiming disk on long-open issues",
-          "Multica Agent commits include a `Co-authored-by` trailer for proper Git attribution",
+          "Multicacan Agent commits include a `Co-authored-by` trailer for proper Git attribution",
           "Desktop blocks Cmd+R / Ctrl+R / F5 from reloading the app and shows the real version in dev and Updates settings",
         ],
         fixes: [
@@ -319,7 +319,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         improvements: [
           "Server caches PAT / daemon token lookups in Redis, so large fleets stop hammering the database on every request",
-          "Backend default agent CLI args via `MULTICA_CLAUDE_ARGS` / `MULTICA_CODEX_ARGS` env vars",
+          "Backend default agent CLI args via `MULTICACAN_CLAUDE_ARGS` / `MULTICACAN_CODEX_ARGS` env vars",
           "Manual and agent create-issue flows share one dialog shell, and picker agents become the default assignee",
         ],
         fixes: [
@@ -380,9 +380,9 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Custom Agent Env, Better Failure Messages & Reliability Fixes",
         changes: [],
         features: [
-          "`multica agent create/update --custom-env KEY=VALUE` injects custom environment variables into agent runs",
+          "`multicacan agent create/update --custom-env KEY=VALUE` injects custom environment variables into agent runs",
           "Agent failure messages now include a tail of the runtime CLI's stderr — much easier to debug runtime errors",
-          "CLI update download timeout is now configurable, so slow links no longer abort `multica update`",
+          "CLI update download timeout is now configurable, so slow links no longer abort `multicacan update`",
         ],
         improvements: [
           "Daemon reports cancelled tasks as `cancelled` instead of `timeout`, and reconciles agent status when an issue's tasks are cancelled",
@@ -459,7 +459,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         changes: [],
         features: [
           "Desktop app cross-platform packaging — macOS, Windows, and Linux artifacts from a single release pipeline",
-          "`multica update` self-update command — upgrade the CLI and local daemon without reinstalling",
+          "`multicacan update` self-update command — upgrade the CLI and local daemon without reinstalling",
           "Issue board paginates every status column, not only Done — large backlogs stay responsive",
         ],
         fixes: [
@@ -476,7 +476,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Per-Agent Models, Kimi Runtime & Self-Host Auth",
         changes: [],
         features: [
-          "Per-agent `model` field with a provider-aware dropdown — pick the LLM model for each agent from the UI or via `multica agent create/update --model`, with live discovery from each runtime's CLI",
+          "Per-agent `model` field with a provider-aware dropdown — pick the LLM model for each agent from the UI or via `multicacan agent create/update --model`, with live discovery from each runtime's CLI",
           "Kimi CLI as a new agent runtime (Moonshot AI's `kimi-cli` over ACP), with model selection, auto-approved tool permissions, and streaming tool-call rendering",
           "Expand toggle on inline comment and reply editors for composing long text",
         ],
@@ -624,7 +624,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "One-Click Setup, Self-Hosting & Stability",
         changes: [],
         features: [
-          "One-click install & setup — `curl | bash` installs CLI, `--with-server` bootstraps full self-hosting, `multica setup` configures your environment",
+          "One-click install & setup — `curl | bash` installs CLI, `--with-server` bootstraps full self-hosting, `multicacan setup` configures your environment",
           "Self-hosted storage — local file fallback when S3 is unavailable, plus custom S3 endpoint support (MinIO)",
           "Inline property editing (priority, status, lead) on project list page",
         ],
@@ -770,7 +770,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Load all open issues without pagination limit; closed issues paginate on scroll",
           "JWT and CloudFront cookie expiration extended from 72 hours to 30 days",
           "Remember last selected workspace after re-login",
-          "Daemon ensures multica CLI is on PATH in agent task environment",
+          "Daemon ensures multicacan CLI is on PATH in agent task environment",
           "PR template and CLI install guide for agent-driven setup",
         ],
       },
@@ -899,30 +899,30 @@ export function createEnDict(allowSignup: boolean): LandingDict {
   download: {
     hero: {
       macArm64: {
-        title: "Multica for macOS",
+        title: "Multicacan for macOS",
         sub: "Apple Silicon · bundled daemon, zero setup",
         primary: "Download (.dmg)",
         altZip: "or download .zip",
       },
       macIntel: {
-        title: "Multica for macOS",
+        title: "Multicacan for macOS",
         sub: "Apple Silicon required — Intel Macs not yet supported.",
         disabledCta: "Apple Silicon required",
         intelHint:
           "On an Intel Mac? Use the CLI below — it runs the same daemon.",
       },
       winX64: {
-        title: "Multica for Windows",
+        title: "Multicacan for Windows",
         sub: "Bundled daemon, zero setup",
         primary: "Download (.exe)",
       },
       winArm64: {
-        title: "Multica for Windows",
+        title: "Multicacan for Windows",
         sub: "ARM · bundled daemon, zero setup",
         primary: "Download (.exe)",
       },
       linux: {
-        title: "Multica for Linux",
+        title: "Multicacan for Linux",
         sub: "Bundled daemon, zero setup",
         primary: "Download AppImage",
         altFormats: "or .deb / .rpm",

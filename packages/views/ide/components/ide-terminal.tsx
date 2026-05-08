@@ -5,7 +5,7 @@ import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { Plus, Trash2, X, TerminalSquare } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 
 const DARK_THEME: ITheme = {
   background: "#141414",

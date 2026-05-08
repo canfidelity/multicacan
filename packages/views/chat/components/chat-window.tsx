@@ -3,8 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Minus, Maximize2, Minimize2, ChevronDown, Plus, Check } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +13,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useAuthStore } from "@multica/core/auth";
-import { agentListOptions, memberListOptions } from "@multica/core/workspace/queries";
-import { canAssignAgent } from "@multica/views/issues/components";
-import { api } from "@multica/core/api";
-import { useAgentPresenceDetail, useWorkspaceAgentAvailability } from "@multica/core/agents";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useAuthStore } from "@multicacan/core/auth";
+import { agentListOptions, memberListOptions } from "@multicacan/core/workspace/queries";
+import { canAssignAgent } from "@multicacan/views/issues/components";
+import { api } from "@multicacan/core/api";
+import { useAgentPresenceDetail, useWorkspaceAgentAvailability } from "@multicacan/core/agents";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { OfflineBanner } from "./offline-banner";
 import { NoAgentBanner } from "./no-agent-banner";
@@ -30,9 +30,9 @@ import {
   pendingChatTaskOptions,
   pendingChatTasksOptions,
   chatKeys,
-} from "@multica/core/chat/queries";
-import { useCreateChatSession, useMarkChatSessionRead } from "@multica/core/chat/mutations";
-import { useChatStore } from "@multica/core/chat";
+} from "@multicacan/core/chat/queries";
+import { useCreateChatSession, useMarkChatSessionRead } from "@multicacan/core/chat/mutations";
+import { useChatStore } from "@multicacan/core/chat";
 import { ChatMessageList, ChatMessageSkeleton } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import {
@@ -43,8 +43,8 @@ import {
 } from "./context-anchor";
 import { ChatResizeHandles } from "./chat-resize-handles";
 import { useChatResize } from "./use-chat-resize";
-import { createLogger } from "@multica/core/logger";
-import type { Agent, ChatMessage, ChatPendingTask, ChatSession } from "@multica/core/types";
+import { createLogger } from "@multicacan/core/logger";
+import type { Agent, ChatMessage, ChatPendingTask, ChatSession } from "@multicacan/core/types";
 
 const uiLogger = createLogger("chat.ui");
 const apiLogger = createLogger("chat.api");
@@ -768,7 +768,7 @@ function EmptyState({
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-8">
       <div className="text-center space-y-1">
         <h3 className="text-base font-semibold">
-          {agentName ? `Hi, I'm ${agentName}` : "Welcome to Multica"}
+          {agentName ? `Hi, I'm ${agentName}` : "Welcome to Multicacan"}
         </h3>
         <p className="text-sm text-muted-foreground">Try asking</p>
       </div>

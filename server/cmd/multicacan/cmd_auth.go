@@ -22,7 +22,7 @@ import (
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
-	Short: "Authenticate multicacan with Multica",
+	Short: "Authenticate multicacan with Multicacan",
 }
 
 var authStatusCmd = &cobra.Command{
@@ -48,7 +48,7 @@ func init() {
 }
 
 func resolveToken(cmd *cobra.Command) string {
-	if v := strings.TrimSpace(os.Getenv("MULTICA_TOKEN")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("MULTICACAN_TOKEN")); v != "" {
 		return v
 	}
 	profile := resolveProfile(cmd)
@@ -57,7 +57,7 @@ func resolveToken(cmd *cobra.Command) string {
 }
 
 func resolveAppURL(cmd *cobra.Command) string {
-	for _, key := range []string{"MULTICA_APP_URL", "FRONTEND_ORIGIN"} {
+	for _, key := range []string{"MULTICACAN_APP_URL", "FRONTEND_ORIGIN"} {
 		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
 			return strings.TrimRight(val, "/")
 		}
@@ -398,7 +398,7 @@ const callbackSuccessHTML = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multica — Authenticated</title>
+<title>Multicacan — Authenticated</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   @media (prefers-color-scheme: dark) {

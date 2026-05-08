@@ -8,19 +8,19 @@ import {
   projectResourcesOptions,
   useCreateProjectResource,
   useDeleteProjectResource,
-} from "@multica/core/projects";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useCurrentWorkspace } from "@multica/core/paths";
+} from "@multicacan/core/projects";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
 import type {
   GithubRepoResourceRef,
   ProjectResource,
-} from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@multica/ui/components/ui/popover";
+} from "@multicacan/ui/components/ui/popover";
 
 // Project Resources sidebar section.
 //

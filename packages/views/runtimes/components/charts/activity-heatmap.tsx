@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { RuntimeUsage } from "@multica/core/types";
+import type { RuntimeUsage } from "@multicacan/core/types";
 import { estimateCost } from "../../utils";
 
 // 26 weeks (~6 months) gives the heatmap real presence in the wider chart

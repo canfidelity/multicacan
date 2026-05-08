@@ -3,8 +3,8 @@
 import {
   ONBOARDING_STEP_ORDER,
   type OnboardingStep,
-} from "@multica/core/onboarding";
-import { cn } from "@multica/ui/lib/utils";
+} from "@multicacan/core/onboarding";
+import { cn } from "@multicacan/ui/lib/utils";
 
 /**
  * Horizontal step indicator shown at the top of every onboarding step

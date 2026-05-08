@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Button } from "@multica/ui/components/ui/button";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { cn } from "@multica/ui/lib/utils";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Switch } from "@multicacan/ui/components/ui/switch";
+import { cn } from "@multicacan/ui/lib/utils";
 import type { DaemonPrefs, DaemonStatus } from "../../../shared/daemon-types";
 import {
   DAEMON_STATE_COLORS,
@@ -115,8 +115,8 @@ export function DaemonSettingsTab() {
             {cliInstalled === null
               ? "Checking…"
               : cliInstalled
-                ? "multica CLI is installed and available in PATH."
-                : "multica CLI not found. Install it to enable daemon management."}
+                ? "multicacan CLI is installed and available in PATH."
+                : "multicacan CLI not found. Install it to enable daemon management."}
           </p>
           {cliInstalled === false && (
             <Button

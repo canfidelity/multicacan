@@ -6,7 +6,7 @@ import { useLocale } from "../../i18n";
 
 const INSTALL_CMD =
   "curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash";
-const SETUP_CMD = "multica setup";
+const SETUP_CMD = "multicacan setup";
 
 /**
  * Scenario-first CLI section. Copy leans into servers / remote dev

@@ -3,14 +3,14 @@
 import { useNavigation } from "../navigation";
 import { DragStrip } from "../platform";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
-} from "@multica/ui/components/ui/dialog";
-import { paths } from "@multica/core/paths";
+} from "@multicacan/ui/components/ui/dialog";
+import { paths } from "@multicacan/core/paths";
 import { CreateWorkspaceForm } from "../workspace/create-workspace-form";
 
 export function CreateWorkspaceModal({ onClose }: { onClose: () => void }) {

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Bot, Loader2, Square, Smartphone } from "lucide-react";
-import { api } from "@multica/core/api";
-import { useWSEvent } from "@multica/core/realtime";
-import type { TaskMessagePayload } from "@multica/core/types/events";
-import type { AgentTask } from "@multica/core/types/agent";
+import { api } from "@multicacan/core/api";
+import { useWSEvent } from "@multicacan/core/realtime";
+import type { TaskMessagePayload } from "@multicacan/core/types/events";
+import type { AgentTask } from "@multicacan/core/types/agent";
 import { toast } from "sonner";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { useActorName } from "@multica/core/workspace/hooks";
+import { useActorName } from "@multicacan/core/workspace/hooks";
 import {
   TranscriptButton,
   buildTimeline,

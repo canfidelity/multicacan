@@ -8,15 +8,15 @@ import {
   PenLine,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import { useScrollFade } from "@multica/ui/hooks/use-scroll-fade";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { useScrollFade } from "@multicacan/ui/hooks/use-scroll-fade";
 import type {
   QuestionnaireAnswers,
   Role,
   TeamSize,
   UseCase,
-} from "@multica/core/onboarding";
-import { DragStrip } from "@multica/views/platform";
+} from "@multicacan/core/onboarding";
+import { DragStrip } from "@multicacan/views/platform";
 import { StepHeader } from "../components/step-header";
 import { OptionCard, OtherOptionCard } from "../components/option-card";
 
@@ -205,8 +205,8 @@ export function StepQuestionnaire({
 
               <QuestionBlock
                 num={3}
-                question="What do you want to do with Multica?"
-                ariaLabel="What do you want to do with Multica?"
+                question="What do you want to do with Multicacan?"
+                ariaLabel="What do you want to do with Multicacan?"
               >
                 <OptionCard
                   selected={answers.use_case === "coding"}

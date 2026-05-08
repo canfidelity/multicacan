@@ -11,15 +11,15 @@ describe("clearWorkspaceStorage", () => {
 
     clearWorkspaceStorage(adapter, "ws_123");
 
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica_issue_draft:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica_issues_view:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica_issues_scope:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica_my_issues_view:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica:chat:selectedAgentId:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica:chat:activeSessionId:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica:chat:drafts:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica:chat:expanded:ws_123");
-    expect(adapter.removeItem).toHaveBeenCalledWith("multica_navigation:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan_issue_draft:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan_issues_view:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan_issues_scope:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan_my_issues_view:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan:chat:selectedAgentId:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan:chat:activeSessionId:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan:chat:drafts:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan:chat:expanded:ws_123");
+    expect(adapter.removeItem).toHaveBeenCalledWith("multicacan_navigation:ws_123");
     expect(adapter.removeItem).toHaveBeenCalledTimes(9);
   });
 });

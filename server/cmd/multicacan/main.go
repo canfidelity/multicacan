@@ -32,8 +32,8 @@ func init() {
 	// server can split logs/metrics by client version.
 	cli.ClientVersion = version
 
-	rootCmd.PersistentFlags().String("server-url", "", "Multica server URL (env: MULTICA_SERVER_URL)")
-	rootCmd.PersistentFlags().String("workspace-id", "", "Workspace ID (env: MULTICA_WORKSPACE_ID)")
+	rootCmd.PersistentFlags().String("server-url", "", "Multicacan server URL (env: MULTICACAN_SERVER_URL)")
+	rootCmd.PersistentFlags().String("workspace-id", "", "Workspace ID (env: MULTICACAN_WORKSPACE_ID)")
 	rootCmd.PersistentFlags().String("profile", "", "Configuration profile name (e.g. dev) — isolates config, daemon state, and workspaces")
 
 	// Core commands

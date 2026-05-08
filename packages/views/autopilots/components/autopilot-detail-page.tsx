@@ -3,30 +3,30 @@
 import { useState } from "react";
 import { Zap, Play, Clock, Plus, Trash2, CheckCircle2, XCircle, Loader2, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { autopilotDetailOptions, autopilotRunsOptions } from "@multica/core/autopilots/queries";
+import { autopilotDetailOptions, autopilotRunsOptions } from "@multicacan/core/autopilots/queries";
 import {
   useUpdateAutopilot,
   useDeleteAutopilot,
   useTriggerAutopilot,
   useCreateAutopilotTrigger,
   useDeleteAutopilotTrigger,
-} from "@multica/core/autopilots/mutations";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { useActorName } from "@multica/core/workspace/hooks";
+} from "@multicacan/core/autopilots/mutations";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { useActorName } from "@multicacan/core/workspace/hooks";
 import { useNavigation, AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { Button } from "@multica/ui/components/ui/button";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { cn } from "@multica/ui/lib/utils";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Switch } from "@multicacan/ui/components/ui/switch";
+import { cn } from "@multicacan/ui/lib/utils";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
+} from "@multicacan/ui/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +36,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@multicacan/ui/components/ui/alert-dialog";
 import {
   TriggerConfigSection,
   getDefaultTriggerConfig,
   toCronExpression,
 } from "./trigger-config";
 import type { TriggerConfig } from "./trigger-config";
-import type { AutopilotExecutionMode, AutopilotRun, AutopilotTrigger } from "@multica/core/types";
-import type { AgentTask } from "@multica/core/types/agent";
+import type { AutopilotExecutionMode, AutopilotRun, AutopilotTrigger } from "@multicacan/core/types";
+import type { AgentTask } from "@multicacan/core/types/agent";
 import { ReadonlyContent } from "../../editor";
 import { TranscriptButton } from "../../common/task-transcript";
 import { AutopilotDialog } from "./autopilot-dialog";

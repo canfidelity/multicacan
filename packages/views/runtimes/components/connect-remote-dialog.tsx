@@ -12,10 +12,10 @@ import {
   Wrench,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { runtimeKeys } from "@multica/core/runtimes/queries";
-import { useWSEvent } from "@multica/core/realtime";
-import { paths, useWorkspaceSlug } from "@multica/core/paths";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { runtimeKeys } from "@multicacan/core/runtimes/queries";
+import { useWSEvent } from "@multicacan/core/realtime";
+import { paths, useWorkspaceSlug } from "@multicacan/core/paths";
 import {
   Dialog,
   DialogContent,
@@ -23,8 +23,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/dialog";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { useNavigation } from "../../navigation";
 
 type Step = "instructions" | "waiting" | "success";
@@ -174,7 +174,7 @@ function InstructionsStep({
         <DialogTitle>Connect a remote machine</DialogTitle>
         <DialogDescription>
           Run these commands on your remote machine (e.g. AWS EC2) to install the
-          Multica CLI and register it as a runtime.
+          Multicacan CLI and register it as a runtime.
         </DialogDescription>
       </DialogHeader>
 
@@ -269,13 +269,13 @@ function InstructionsStep({
               <li>
                 Check status:{" "}
                 <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  multica daemon status
+                  multicacan daemon status
                 </code>
               </li>
               <li>
                 View logs:{" "}
                 <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  multica daemon logs -f
+                  multicacan daemon logs -f
                 </code>
               </li>
               <li>
@@ -288,7 +288,7 @@ function InstructionsStep({
                 Desktop auto-scans only your local machine. Remote machines must
                 run{" "}
                 <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  multica daemon
+                  multicacan daemon
                 </code>{" "}
                 separately.
               </li>
@@ -330,7 +330,7 @@ function WaitingStep({ onBack }: { onBack: () => void }) {
         <p className="text-sm text-muted-foreground">
           Run{" "}
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-            multica daemon status
+            multicacan daemon status
           </code>{" "}
           on the remote machine to verify it&apos;s running.
         </p>

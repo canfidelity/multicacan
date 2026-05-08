@@ -8,7 +8,7 @@ import {
   KeyRound,
   Terminal,
 } from "lucide-react";
-import type { Agent, AgentRuntime } from "@multica/core/types";
+import type { Agent, AgentRuntime } from "@multicacan/core/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@multicacan/ui/components/ui/alert-dialog";
 import { ActivityTab } from "./tabs/activity-tab";
 import { InstructionsTab } from "./tabs/instructions-tab";
 import { SkillsTab } from "./tabs/skills-tab";

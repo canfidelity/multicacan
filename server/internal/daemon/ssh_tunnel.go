@@ -22,7 +22,7 @@ const sshTunnelRemotePort = 2222
 // Topology:
 //
 //	Mac Mini ──ssh -R 2222:localhost:22──► VPS
-//	VPS ──sshfs -p 2222 user@127.0.0.1:/multica_workspaces──► /mnt/macmini
+//	VPS ──sshfs -p 2222 user@127.0.0.1:/multicacan_workspaces──► /mnt/macmini
 //	browser ──/api/ide/*──► VPS (openvscode-server proxy)
 func (d *Daemon) sshTunnelLoop(ctx context.Context) {
 	vpsHost, err := extractVPSHost(d.cfg.ServerBaseURL)

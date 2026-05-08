@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { Lock, UserMinus } from "lucide-react";
-import type { Agent, IssueAssigneeType, UpdateIssueRequest } from "@multica/core/types";
+import type { Agent, IssueAssigneeType, UpdateIssueRequest } from "@multicacan/core/types";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { canAssignAgentToIssue } from "@multica/core/permissions";
-import { useActorName } from "@multica/core/workspace/hooks";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { memberListOptions, agentListOptions, assigneeFrequencyOptions } from "@multica/core/workspace/queries";
+import { useAuthStore } from "@multicacan/core/auth";
+import { canAssignAgentToIssue } from "@multicacan/core/permissions";
+import { useActorName } from "@multicacan/core/workspace/hooks";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { memberListOptions, agentListOptions, assigneeFrequencyOptions } from "@multicacan/core/workspace/queries";
 import { ActorAvatar } from "../../../common/actor-avatar";
 import {
   PropertyPicker,

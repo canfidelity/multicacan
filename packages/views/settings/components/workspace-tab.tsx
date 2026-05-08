@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Save, LogOut } from "lucide-react";
-import { Input } from "@multica/ui/components/ui/input";
-import { Textarea } from "@multica/ui/components/ui/textarea";
-import { Label } from "@multica/ui/components/ui/label";
-import { Button } from "@multica/ui/components/ui/button";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Textarea } from "@multicacan/ui/components/ui/textarea";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Card, CardContent } from "@multicacan/ui/components/ui/card";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,25 +16,25 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@multicacan/ui/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { useLeaveWorkspace, useDeleteWorkspace } from "@multica/core/workspace/mutations";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useLeaveWorkspace, useDeleteWorkspace } from "@multicacan/core/workspace/mutations";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   memberListOptions,
   workspaceKeys,
   workspaceListOptions,
-} from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
+} from "@multicacan/core/workspace/queries";
+import { api } from "@multicacan/core/api";
 import {
   resolvePostAuthDestination,
   useCurrentWorkspace,
   useHasOnboarded,
-} from "@multica/core/paths";
-import { setCurrentWorkspace } from "@multica/core/platform";
-import type { Workspace } from "@multica/core/types";
+} from "@multicacan/core/paths";
+import { setCurrentWorkspace } from "@multicacan/core/platform";
+import type { Workspace } from "@multicacan/core/types";
 import { useNavigation } from "../../navigation";
 import { DeleteWorkspaceDialog } from "./delete-workspace-dialog";
 

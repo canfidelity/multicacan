@@ -1,5 +1,5 @@
 {
-  "name": "@multica/core",
+  "name": "@multicacan/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -91,7 +91,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@multica/tsconfig": "workspace:*",
+    "@multicacan/tsconfig": "workspace:*",
     "@types/react": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

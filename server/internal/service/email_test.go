@@ -119,7 +119,7 @@ func TestBuildInvitationParams_SubjectStripsControls(t *testing.T) {
 	if strings.ContainsAny(p.Subject, "\r\n\t") {
 		t.Errorf("subject still contains control characters: %q", p.Subject)
 	}
-	if p.Subject != "Alice invited you to Acme on Multica" {
+	if p.Subject != "Alice invited you to Acme on Multicacan" {
 		t.Errorf("unexpected subject: %q", p.Subject)
 	}
 }
@@ -150,9 +150,9 @@ func TestBuildInvitationParams_SubjectTruncated(t *testing.T) {
 		longWorkspace,
 		"http://166.1.91.184:3000/invite/abc",
 	)
-	// Template: "Alice invited you to <ws> on Multica"
+	// Template: "Alice invited you to <ws> on Multicacan"
 	// ws is capped at maxSubjectFieldRunes; overall subject should also be bounded.
-	maxExpected := len("Alice invited you to  on Multica") + maxSubjectFieldRunes
+	maxExpected := len("Alice invited you to  on Multicacan") + maxSubjectFieldRunes
 	if runes := len([]rune(p.Subject)); runes > maxExpected {
 		t.Errorf("subject not bounded: %d runes, max %d: %q", runes, maxExpected, p.Subject)
 	}

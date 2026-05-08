@@ -346,7 +346,7 @@ func (d *Daemon) serveNativeIDERelay(ctx context.Context, workspaceID string) er
 				cmd.Env = append(os.Environ(),
 					"TERM=xterm-256color",
 					fmt.Sprintf("HOME=%s", workspaceRoot),
-					fmt.Sprintf("MULTICA_WORKSPACE_ID=%s", workspaceID),
+					fmt.Sprintf("MULTICACAN_WORKSPACE_ID=%s", workspaceID),
 				)
 				cmd.Dir = workspaceRoot
 
@@ -485,7 +485,7 @@ func (d *Daemon) serveNativeIDEChat(
 		return
 	}
 
-	// IDE chat runs the CLI without Multica task credentials so the agent
+	// IDE chat runs the CLI without Multicacan task credentials so the agent
 	// doesn't register tasks or report to the server — it just does inline chat.
 	agentEnv := map[string]string{}
 	if selfBin, err := os.Executable(); err == nil {

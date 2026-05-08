@@ -2,14 +2,14 @@
 
 import type { ReactNode } from "react";
 import { useRef, useState, useCallback } from "react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import { ContentEditor, type ContentEditorRef } from "../../editor";
-import { SubmitButton } from "@multica/ui/components/common/submit-button";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
-import { useChatStore, DRAFT_NEW_SESSION } from "@multica/core/chat";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
-import { createLogger } from "@multica/core/logger";
+import { SubmitButton } from "@multicacan/ui/components/common/submit-button";
+import { FileUploadButton } from "@multicacan/ui/components/common/file-upload-button";
+import { useChatStore, DRAFT_NEW_SESSION } from "@multicacan/core/chat";
+import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
+import { api } from "@multicacan/core/api";
+import { createLogger } from "@multicacan/core/logger";
 
 const logger = createLogger("chat.ui");
 

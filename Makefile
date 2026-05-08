@@ -1,4 +1,4 @@
-.PHONY: help makehelp dev server daemon cli multicacan multica build test migrate-up migrate-down sqlc seed clean setup start stop check worktree-env setup-main start-main stop-main check-main setup-worktree start-worktree stop-worktree check-worktree db-up db-down db-reset selfhost selfhost-build selfhost-stop
+.PHONY: help makehelp dev server daemon cli multicacan multicacan build test migrate-up migrate-down sqlc seed clean setup start stop check worktree-env setup-main start-main stop-main check-main setup-worktree start-worktree stop-worktree check-worktree db-up db-down db-reset selfhost selfhost-build selfhost-stop
 
 MAIN_ENV_FILE ?= .env
 WORKTREE_ENV_FILE ?= .env.worktree
@@ -8,23 +8,23 @@ ifneq ($(wildcard $(ENV_FILE)),)
 include $(ENV_FILE)
 endif
 
-POSTGRES_DB ?= multica
-POSTGRES_USER ?= multica
-POSTGRES_PASSWORD ?= multica
+POSTGRES_DB ?= multicacan
+POSTGRES_USER ?= multicacan
+POSTGRES_PASSWORD ?= multicacan
 POSTGRES_PORT ?= 5432
 PORT ?= 8080
 FRONTEND_PORT ?= 3000
 FRONTEND_ORIGIN ?= http://localhost:$(FRONTEND_PORT)
-MULTICA_APP_URL ?= $(FRONTEND_ORIGIN)
+MULTICACAN_APP_URL ?= $(FRONTEND_ORIGIN)
 DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 NEXT_PUBLIC_API_URL ?= http://localhost:$(PORT)
 NEXT_PUBLIC_WS_URL ?= ws://localhost:$(PORT)/ws
 GOOGLE_REDIRECT_URI ?= $(FRONTEND_ORIGIN)/auth/callback
-MULTICA_SERVER_URL ?= ws://localhost:$(PORT)/ws
+MULTICACAN_SERVER_URL ?= ws://localhost:$(PORT)/ws
 
 export
 
-MULTICA_ARGS ?= $(ARGS)
+MULTICACAN_ARGS ?= $(ARGS)
 
 COMPOSE := docker compose
 
@@ -67,7 +67,7 @@ selfhost: ## Create .env if needed, then pull and start the official self-hosted
 	@echo "==> Pulling Multicacan images..."
 	@if ! docker compose -f docker-compose.selfhost.yml pull; then \
 		echo ""; \
-		echo "Images for tag '$${MULTICA_IMAGE_TAG:-latest}' are not available yet."; \
+		echo "Images for tag '$${MULTICACAN_IMAGE_TAG:-latest}' are not available yet."; \
 		echo "Build from the current checkout instead:"; \
 		echo "  make selfhost-build"; \
 		exit 1; \
@@ -87,8 +87,8 @@ selfhost: ## Create .env if needed, then pull and start the official self-hosted
 		echo "  Frontend: http://localhost:$${FRONTEND_PORT:-3000}"; \
 		echo "  Backend:  http://localhost:$${PORT:-8080}"; \
 		echo ""; \
-		echo "Images: $${MULTICA_BACKEND_IMAGE:-ghcr.io/canfidelity/multicacan-backend}:$${MULTICA_IMAGE_TAG:-latest}"; \
-		echo "        $${MULTICA_WEB_IMAGE:-ghcr.io/canfidelity/multicacan-web}:$${MULTICA_IMAGE_TAG:-latest}"; \
+		echo "Images: $${MULTICACAN_BACKEND_IMAGE:-ghcr.io/canfidelity/multicacan-backend}:$${MULTICACAN_IMAGE_TAG:-latest}"; \
+		echo "        $${MULTICACAN_WEB_IMAGE:-ghcr.io/canfidelity/multicacan-web}:$${MULTICACAN_IMAGE_TAG:-latest}"; \
 		echo ""; \
 		echo "Log in: configure RESEND_API_KEY in .env for email codes,"; \
 		echo "        or read the generated code from backend logs when Resend is unset."; \
@@ -275,15 +275,15 @@ server: ## Run only the Go server for the current checkout
 	cd server && go run ./cmd/server
 
 daemon: ## Restart the local agent daemon using the CLI's stored auth/session
-	@$(MAKE) multicacan MULTICA_ARGS="daemon restart --profile local"
+	@$(MAKE) multicacan MULTICACAN_ARGS="daemon restart --profile local"
 
-cli: ## Run the multicacan CLI with ARGS or MULTICA_ARGS from source
-	@$(MAKE) multicacan MULTICA_ARGS="$(MULTICA_ARGS)"
+cli: ## Run the multicacan CLI with ARGS or MULTICACAN_ARGS from source
+	@$(MAKE) multicacan MULTICACAN_ARGS="$(MULTICACAN_ARGS)"
 
 multicacan: ## Run the multicacan CLI entrypoint directly from the Go source tree
-	cd server && go run ./cmd/multicacan $(MULTICA_ARGS)
+	cd server && go run ./cmd/multicacan $(MULTICACAN_ARGS)
 
-multica: multicacan ## Alias for multicacan (backward compat)
+multicacan: multicacan ## Alias for multicacan (backward compat)
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)

@@ -25,7 +25,7 @@ const allowedDevOrigins = process.env.CORS_ALLOWED_ORIGINS
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   ...(process.env.STANDALONE === "true" ? { output: "standalone" as const } : {}),
-  transpilePackages: ["@multica/core", "@multica/ui", "@multica/views"],
+  transpilePackages: ["@multicacan/core", "@multicacan/ui", "@multicacan/views"],
   ...(allowedDevOrigins && allowedDevOrigins.length > 0
     ? { allowedDevOrigins }
     : {}),

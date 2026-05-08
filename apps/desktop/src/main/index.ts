@@ -17,7 +17,7 @@ const DEV_ICON_PATH = join(__dirname, "../../resources/icon.png");
 // macOS/Linux GUI launches inherit a minimal PATH from launchd that omits
 // the user's shell config (~/.zshrc, Homebrew, nvm, ~/.local/bin, etc.).
 // Run the user's login shell once to recover the real PATH so the bundled
-// multica CLI can find agent binaries like claude/codex/opencode. Must run
+// multicacan CLI can find agent binaries like claude/codex/opencode. Must run
 // before any child_process.spawn / execFile call in the main process —
 // ES module imports are hoisted, so this block executes before createWindow
 // or any daemon-manager spawn.
@@ -34,7 +34,7 @@ if (process.platform !== "win32") {
   process.env.PATH = `${fallbackPaths.join(":")}:${process.env.PATH ?? ""}`;
 }
 
-const PROTOCOL = "multica";
+const PROTOCOL = "multicacan";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -45,7 +45,7 @@ function handleDeepLink(url: string): void {
     const parsed = new URL(url);
     if (parsed.protocol !== `${PROTOCOL}:`) return;
 
-    // multica://auth/callback?token=<jwt>
+    // multicacan://auth/callback?token=<jwt>
     if (parsed.hostname === "auth" && parsed.pathname === "/callback") {
       const token = parsed.searchParams.get("token");
       if (token && mainWindow) {
@@ -54,7 +54,7 @@ function handleDeepLink(url: string): void {
       return;
     }
 
-    // multica://invite/<invitationId>
+    // multicacan://invite/<invitationId>
     // Dispatched from the web invite page when the user chooses "Open in
     // desktop app". The renderer opens the invite overlay — no tab, no
     // route persistence, so deep-linking the same invite twice stays safe.
@@ -147,10 +147,10 @@ function createWindow(): void {
 // without fighting for the shared single-instance lock. The suffix is
 // appended to the app name + userData path, so each worktree gets its own
 // lock file. Default (no env var) keeps behavior unchanged — the common
-// single-worktree case still lands at "Multica Canary".
+// single-worktree case still lands at "Multicacan Canary".
 const DEV_APP_NAME = process.env.DESKTOP_APP_SUFFIX
-  ? `Multica Canary ${process.env.DESKTOP_APP_SUFFIX}`
-  : "Multica Canary";
+  ? `Multicacan Canary ${process.env.DESKTOP_APP_SUFFIX}`
+  : "Multicacan Canary";
 
 if (is.dev) {
   app.setName(DEV_APP_NAME);
@@ -189,7 +189,7 @@ if (!gotTheLock) {
 
   app.whenReady().then(() => {
     electronApp.setAppUserModelId(
-      is.dev ? "ai.multica.desktop.dev" : "ai.multica.desktop",
+      is.dev ? "ai.multicacan.desktop.dev" : "ai.multicacan.desktop",
     );
 
     // macOS: replace the default Electron dock icon with the bundled logo

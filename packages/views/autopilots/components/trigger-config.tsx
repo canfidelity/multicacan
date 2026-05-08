@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@multica/ui/components/ui/select";
+} from "@multicacan/ui/components/ui/select";
 
 export type TriggerFrequency = "hourly" | "daily" | "weekdays" | "weekly" | "custom";
 

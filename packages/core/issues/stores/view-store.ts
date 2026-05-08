@@ -257,7 +257,7 @@ export function createIssueViewStore(persistKey: string): StoreApi<IssueViewStat
 
 /** Global singleton for the /issues page. */
 export const useIssueViewStore = create<IssueViewState>()(
-  persist(viewStoreSlice, viewStorePersistOptions("multica_issues_view"))
+  persist(viewStoreSlice, viewStorePersistOptions("multicacan_issues_view"))
 );
 
 registerForWorkspaceRehydration(() => useIssueViewStore.persist.rehydrate());

@@ -11,35 +11,35 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { Agent, AgentRuntime, CreateAgentRequest } from "@multica/core/types";
+import type { Agent, AgentRuntime, CreateAgentRequest } from "@multicacan/core/types";
 import {
   type AgentAvailability,
   agentRunCounts30dOptions,
   summarizeActivityWindow,
   useWorkspaceActivityMap,
   useWorkspacePresenceMap,
-} from "@multica/core/agents";
-import { api } from "@multica/core/api";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { canAssignAgentToIssue } from "@multica/core/permissions";
-import { useWorkspacePaths } from "@multica/core/paths";
+} from "@multicacan/core/agents";
+import { api } from "@multicacan/core/api";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { canAssignAgentToIssue } from "@multicacan/core/permissions";
+import { useWorkspacePaths } from "@multicacan/core/paths";
 import {
   agentListOptions,
   memberListOptions,
   workspaceKeys,
-} from "@multica/core/workspace/queries";
-import { runtimeListOptions } from "@multica/core/runtimes";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/workspace/queries";
+import { runtimeListOptions } from "@multicacan/core/runtimes";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { Input } from "@multica/ui/components/ui/input";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { DataTable } from "@multica/ui/components/ui/data-table";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
+import { DataTable } from "@multicacan/ui/components/ui/data-table";
 import { useNavigation } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { availabilityConfig, availabilityOrder } from "../presence";
@@ -825,7 +825,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <h2 className="mt-4 text-base font-semibold">No agents yet</h2>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">
         Create an agent and assign it issues, like any teammate. Local agents
-        run on your machine; cloud agents run on Multica&rsquo;s runtime.
+        run on your machine; cloud agents run on Multicacan&rsquo;s runtime.
       </p>
       <Button type="button" onClick={onCreate} size="sm" className="mt-5">
         <Plus className="h-3 w-3" />

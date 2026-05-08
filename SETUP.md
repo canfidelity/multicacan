@@ -10,7 +10,7 @@ Deploy Multicacan on your own infrastructure in minutes.
 | **Frontend** | Web application | Next.js 16 |
 | **Database** | Primary data store | PostgreSQL 17 with pgvector |
 
-Each user who runs AI agents locally also installs the **`multica` CLI** and runs the **agent daemon** on their own machine.
+Each user who runs AI agents locally also installs the **`multicacan` CLI** and runs the **agent daemon** on their own machine.
 
 ---
 
@@ -42,9 +42,9 @@ Open http://localhost:3000 in your browser. The Docker self-host stack defaults 
   ```bash
   docker compose -f docker-compose.selfhost.yml logs backend | grep "Verification code"
   ```
-- **Deterministic local/private testing:** set `APP_ENV=development` and `MULTICA_DEV_VERIFICATION_CODE=888888` in `.env`, then restart the backend.
+- **Deterministic local/private testing:** set `APP_ENV=development` and `MULTICACAN_DEV_VERIFICATION_CODE=888888` in `.env`, then restart the backend.
 
-> **Warning:** do **not** set `MULTICA_DEV_VERIFICATION_CODE` on a publicly reachable instance.
+> **Warning:** do **not** set `MULTICACAN_DEV_VERIFICATION_CODE` on a publicly reachable instance.
 
 ### Step 3 — Install CLI & Start Daemon
 

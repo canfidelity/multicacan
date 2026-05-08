@@ -12,28 +12,28 @@ import type {
   AgentRuntime,
   MemberWithUser,
   Skill,
-} from "@multica/core/types";
+} from "@multicacan/core/types";
 import { useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useWorkspacePaths } from "@multicacan/core/paths";
 import {
   agentListOptions,
   memberListOptions,
   selectSkillAssignments,
   skillListOptions,
-} from "@multica/core/workspace/queries";
-import { runtimeListOptions } from "@multica/core/runtimes";
-import { Button } from "@multica/ui/components/ui/button";
-import { DataTable } from "@multica/ui/components/ui/data-table";
-import { Input } from "@multica/ui/components/ui/input";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+} from "@multicacan/core/workspace/queries";
+import { runtimeListOptions } from "@multicacan/core/runtimes";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { DataTable } from "@multicacan/ui/components/ui/data-table";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/ui/components/ui/tooltip";
 import { useNavigation } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { canEditSkill } from "../hooks/use-can-edit-skill";

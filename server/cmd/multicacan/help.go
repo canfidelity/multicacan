@@ -108,7 +108,7 @@ func init() {
 	})
 }
 
-var rootHelpTemplate = `Work seamlessly with Multica from the command line.
+var rootHelpTemplate = `Work seamlessly with Multicacan from the command line.
 
 USAGE
   multicacan <command> <subcommand> [flags]
@@ -125,8 +125,8 @@ EXAMPLES
   $ multicacan agent list --output json
 
 ENVIRONMENT VARIABLES
-  MULTICA_SERVER_URL    Override the default server URL
-  MULTICA_WORKSPACE_ID  Set the active workspace
+  MULTICACAN_SERVER_URL    Override the default server URL
+  MULTICACAN_WORKSPACE_ID  Set the active workspace
 
 LEARN MORE
   Use ` + "`multicacan <command> <subcommand> --help`" + ` for more information about a command.

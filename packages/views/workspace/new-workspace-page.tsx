@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowLeft, LogOut } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import type { Workspace } from "@multica/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
+import type { Workspace } from "@multicacan/core/types";
 import { useLogout } from "../auth";
 import { DragStrip } from "../platform";
 import { CreateWorkspaceForm } from "./create-workspace-form";
@@ -57,7 +57,7 @@ export function NewWorkspacePage({
         <div className="flex w-full max-w-md flex-col items-center gap-6">
           <div className="text-center">
             <h1 className="text-3xl font-semibold tracking-tight">
-              Welcome to Multica
+              Welcome to Multicacan
             </h1>
             <p className="mt-3 text-muted-foreground">
               One workspace where you and your AI teammates work side by side —

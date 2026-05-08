@@ -1,4 +1,4 @@
-# Multica CLI — Installation Guide for AI Agents
+# Multicacan CLI — Installation Guide for AI Agents
 
 > **Audience:** This document is designed for AI agents (Claude Code, Codex, etc.) to read and execute step-by-step. Each step includes the exact shell commands to run, expected outcomes, and error handling.
 
@@ -7,12 +7,12 @@
 Give this instruction to your AI agent:
 
 ```
-Fetch https://github.com/canfidelity/multicacan/blob/main/CLI_INSTALL.md and follow the instructions to install Multica CLI, log in, and start the daemon on this machine.
+Fetch https://github.com/canfidelity/multicacan/blob/main/CLI_INSTALL.md and follow the instructions to install Multicacan CLI, log in, and start the daemon on this machine.
 ```
 
 ---
 
-## Step 1: Check if Multica CLI is already installed
+## Step 1: Check if Multicacan CLI is already installed
 
 Run:
 
@@ -20,12 +20,12 @@ Run:
 multicacan version
 ```
 
-- **If it prints a version string** (e.g. `multica v0.x.x`): skip to **Step 3**.
+- **If it prints a version string** (e.g. `multicacan v0.x.x`): skip to **Step 3**.
 - **If command not found**: continue to **Step 2**.
 
 ---
 
-## Step 2: Install the Multica CLI
+## Step 2: Install the Multicacan CLI
 
 > **Windows users:** Skip to [Option C: Windows (PowerShell)](#option-c-windows-powershell) below.
 
@@ -77,10 +77,10 @@ LATEST=$(curl -sI https://github.com/canfidelity/multicacan/releases/latest | gr
 
 # Download and extract
 VERSION="${LATEST#v}"
-curl -sL "https://github.com/canfidelity/multicacan/releases/download/${LATEST}/multica-cli-${VERSION}-${OS}-${ARCH}.tar.gz" -o /tmp/multica.tar.gz
-tar -xzf /tmp/multica.tar.gz -C /tmp multica
-sudo mv /tmp/multica /usr/local/bin/multica
-rm /tmp/multica.tar.gz
+curl -sL "https://github.com/canfidelity/multicacan/releases/download/${LATEST}/multicacan-cli-${VERSION}-${OS}-${ARCH}.tar.gz" -o /tmp/multicacan.tar.gz
+tar -xzf /tmp/multicacan.tar.gz -C /tmp multicacan
+sudo mv /tmp/multicacan /usr/local/bin/multicacan
+rm /tmp/multicacan.tar.gz
 ```
 
 Verify:
@@ -91,8 +91,8 @@ multicacan version
 
 **If this fails:**
 - Check that `/usr/local/bin` is in `$PATH`.
-- On Linux, you may need `chmod +x /usr/local/bin/multica`.
-- If `sudo` is not available, install to a user-writable directory: `mv /tmp/multica ~/.local/bin/multica` and ensure `~/.local/bin` is in `$PATH`.
+- On Linux, you may need `chmod +x /usr/local/bin/multicacan`.
+- If `sudo` is not available, install to a user-writable directory: `mv /tmp/multicacan ~/.local/bin/multicacan` and ensure `~/.local/bin` is in `$PATH`.
 
 ### Option C: Windows (PowerShell)
 
@@ -102,7 +102,7 @@ Run in PowerShell (no admin required):
 irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex
 ```
 
-This downloads the latest Windows binary from GitHub Releases, installs it to `%USERPROFILE%\.multica\bin\`, and adds it to your user PATH.
+This downloads the latest Windows binary from GitHub Releases, installs it to `%USERPROFILE%\.multicacan\bin\`, and adds it to your user PATH.
 
 Verify:
 
@@ -127,14 +127,14 @@ multicacan login
 
 **Important:** This command opens a browser window for OAuth authentication. Tell the user:
 
-> "A browser window will open for Multica login. Please complete the authentication in your browser, then come back here."
+> "A browser window will open for Multicacan login. Please complete the authentication in your browser, then come back here."
 
 Wait for the command to complete. It will automatically discover and watch all workspaces the user belongs to.
 
 Verify:
 
 ```bash
-multica auth status
+multicacan auth status
 ```
 
 Expected output should show the authenticated user and server URL.
@@ -190,7 +190,7 @@ Confirm:
 
 If the agents list is empty, tell the user:
 
-> "The Multica daemon is running but no AI agent CLIs were detected. Please install at least one supported CLI (`claude`, `codex`, `opencode`, `openclaw`, `hermes`, `gemini`, `pi`, or `cursor-agent`), then restart the daemon with `multicacan daemon stop && multicacan daemon start`."
+> "The Multicacan daemon is running but no AI agent CLIs were detected. Please install at least one supported CLI (`claude`, `codex`, `opencode`, `openclaw`, `hermes`, `gemini`, `pi`, or `cursor-agent`), then restart the daemon with `multicacan daemon stop && multicacan daemon start`."
 
 ---
 
@@ -198,4 +198,4 @@ If the agents list is empty, tell the user:
 
 When all steps are complete, inform the user:
 
-> "Multica CLI is installed and the daemon is running. Agents in your workspaces can now execute tasks on this machine. You can manage workspaces with `multica workspace list` and view daemon logs with `multicacan daemon logs -f`."
+> "Multicacan CLI is installed and the daemon is running. Agents in your workspaces can now execute tasks on this machine. You can manage workspaces with `multicacan workspace list` and view daemon logs with `multicacan daemon logs -f`."

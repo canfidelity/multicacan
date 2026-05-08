@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { useModalStore } from "@multica/core/modals";
-import { useIssueDraftStore } from "@multica/core/issues/stores/draft-store";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { useModalStore } from "@multicacan/core/modals";
+import { useIssueDraftStore } from "@multicacan/core/issues/stores/draft-store";
 import {
   inboxListOptions,
   deduplicateInboxItems,
   useInboxUnreadCount,
-} from "@multica/core/inbox/queries";
+} from "@multicacan/core/inbox/queries";
 import {
   useMarkInboxRead,
   useArchiveInbox,
@@ -19,7 +19,7 @@ import {
   useArchiveAllInbox,
   useArchiveAllReadInbox,
   useArchiveCompletedInbox,
-} from "@multica/core/inbox/mutations";
+} from "@multicacan/core/inbox/mutations";
 
 import { IssueDetail } from "../../issues/components";
 import { useNavigation } from "../../navigation";
@@ -33,22 +33,22 @@ import {
   ListChecks,
   ArrowLeft,
 } from "lucide-react";
-import type { InboxItem } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+import type { InboxItem } from "@multicacan/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+} from "@multicacan/ui/components/ui/resizable";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { useIsMobile } from "@multica/ui/hooks/use-mobile";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { useIsMobile } from "@multicacan/ui/hooks/use-mobile";
 import { PageHeader } from "../../layout/page-header";
 import { InboxListItem, timeAgo } from "./inbox-list-item";
 import { typeLabels } from "./inbox-detail-label";
@@ -106,7 +106,7 @@ export function InboxPage() {
   }, [loading, selectedKey, selected, replace, wsPaths, setSelectedKey]);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_inbox_layout",
+    id: "multicacan_inbox_layout",
   });
 
   const isMobile = useIsMobile();
@@ -249,7 +249,7 @@ export function InboxPage() {
       key={selected.issue_id}
       issueId={selected.issue_id}
       defaultSidebarOpen={false}
-      layoutId="multica_inbox_issue_detail_layout"
+      layoutId="multicacan_inbox_issue_detail_layout"
       highlightCommentId={selected.details?.comment_id ?? undefined}
       onDelete={() => {
         // Issue deletion CASCADE-deletes the inbox item server-side, and the

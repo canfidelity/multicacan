@@ -8,10 +8,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@multica/ui/components/ui/dialog";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/dialog";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { Button } from "@multicacan/ui/components/ui/button";
 
 /**
  * Typed-confirmation dialog for workspace deletion — GitHub's repo-delete

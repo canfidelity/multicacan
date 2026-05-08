@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import type { AgentPresenceDetail } from "@multica/core/agents";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
+import type { AgentPresenceDetail } from "@multicacan/core/agents";
 import { availabilityConfig, workloadConfig } from "../presence";
 
 interface PresenceIndicatorProps {

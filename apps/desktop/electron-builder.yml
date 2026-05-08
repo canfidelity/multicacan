@@ -1,5 +1,5 @@
-appId: ai.multica.desktop
-productName: Multica
+appId: ai.multicacan.desktop
+productName: Multicacan
 directories:
   buildResources: build
 files:
@@ -9,9 +9,9 @@ files:
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
 protocols:
-  - name: Multica
+  - name: Multicacan
     schemes:
-      - multica
+      - multicacan
 asarUnpack:
   - resources/**
 mac:
@@ -19,24 +19,24 @@ mac:
   target:
     - dmg
     - zip
-  # Hardcoded name avoids the `@multica/desktop-*` subdirectory that
+  # Hardcoded name avoids the `@multicacan/desktop-*` subdirectory that
   # `${name}` produces for scoped package names.
-  # Naming scheme: multica-desktop-<version>-<platform>-<arch>.<ext>
+  # Naming scheme: multicacan-desktop-<version>-<platform>-<arch>.<ext>
   # so the filename alone surfaces kind, version, platform, and CPU arch.
-  artifactName: multica-desktop-${version}-mac-${arch}.${ext}
+  artifactName: multicacan-desktop-${version}-mac-${arch}.${ext}
   # Notarize via notarytool. Requires APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD
   # + APPLE_TEAM_ID env vars at package time. Non-mac contributors are
   # unaffected because `pnpm package` already requires the Developer ID
   # signing cert — notarization is a strict superset.
   notarize: true
 dmg:
-  artifactName: multica-desktop-${version}-mac-${arch}.${ext}
+  artifactName: multicacan-desktop-${version}-mac-${arch}.${ext}
 linux:
   target:
     - AppImage
     - deb
     - rpm
-  artifactName: multica-desktop-${version}-linux-${arch}.${ext}
+  artifactName: multicacan-desktop-${version}-linux-${arch}.${ext}
 rpm:
   # Disable RPM build-id symlinks. Electron apps embed the upstream Electron
   # binary, whose GNU build-id is identical across every app shipping the same
@@ -48,7 +48,7 @@ rpm:
 win:
   target:
     - nsis
-  artifactName: multica-desktop-${version}-windows-${arch}.${ext}
+  artifactName: multicacan-desktop-${version}-windows-${arch}.${ext}
 publish:
   provider: github
   owner: canfidelity

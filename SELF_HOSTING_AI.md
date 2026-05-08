@@ -1,6 +1,6 @@
 # Self-Hosting Setup (for AI Agents)
 
-This document is designed for AI agents to execute. Follow these steps exactly to deploy a local Multica instance and connect to it.
+This document is designed for AI agents to execute. Follow these steps exactly to deploy a local Multicacan instance and connect to it.
 
 ## Prerequisites
 
@@ -18,18 +18,18 @@ curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts
 multicacan setup self-host
 ```
 
-Wait for the server output `✓ Multica server is running and CLI is ready!` before running `multicacan setup self-host`.
+Wait for the server output `✓ Multicacan server is running and CLI is ready!` before running `multicacan setup self-host`.
 
 **Expected result:**
 - Frontend at http://localhost:3000
 - Backend at http://localhost:8080
-- `multica` CLI installed and configured for localhost
+- `multicacan` CLI installed and configured for localhost
 
 ## Alternative: Manual Setup
 
 ```bash
 git clone https://github.com/canfidelity/multicacan.git
-cd multica
+cd multicacan
 make selfhost
 brew install multicacan
 multicacan setup self-host
@@ -56,7 +56,7 @@ Should show `running` with detected agents.
 multicacan daemon stop
 
 # Stop all Docker services
-cd multica
+cd multicacan
 make selfhost-stop
 ```
 

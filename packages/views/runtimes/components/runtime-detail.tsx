@@ -10,18 +10,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import type { AgentRuntime, Agent, MemberWithUser } from "@multica/core/types";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { memberListOptions, agentListOptions } from "@multica/core/workspace/queries";
-import { useDeleteRuntime } from "@multica/core/runtimes/mutations";
-import { deriveRuntimeHealth } from "@multica/core/runtimes";
+import type { AgentRuntime, Agent, MemberWithUser } from "@multicacan/core/types";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { memberListOptions, agentListOptions } from "@multicacan/core/workspace/queries";
+import { useDeleteRuntime } from "@multicacan/core/runtimes/mutations";
+import { deriveRuntimeHealth } from "@multicacan/core/runtimes";
 import {
   type AgentPresenceDetail,
   useWorkspacePresenceMap,
-} from "@multica/core/agents";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/agents";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,12 +31,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@multicacan/ui/components/ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/ui/components/ui/tooltip";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { AppLink } from "../../navigation";
 import { availabilityConfig, workloadConfig } from "../../agents/presence";
@@ -341,7 +341,7 @@ function HeroCard({
         </Fact>
       </dl>
 
-      {/* Diagnostic IDs — multica CLI git hash + truncated daemon UUID.
+      {/* Diagnostic IDs — multicacan CLI git hash + truncated daemon UUID.
           Only useful when filing an issue or reading logs; folded by
           default so they don't compete with the user-visible facts above. */}
       {hasTechDetails && (

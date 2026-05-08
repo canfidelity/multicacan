@@ -262,7 +262,7 @@ func diffFromAgentFiles(workDir string) string {
 			// Skip daemon's own workdir, system dirs, and hidden dirs
 			if dir == workDir || strings.HasPrefix(dir, "/System") ||
 				strings.HasPrefix(dir, "/usr/") || strings.HasPrefix(dir, "/private/tmp/com.apple") ||
-				strings.Contains(dir, "multica_workspaces") || strings.Contains(dir, ".hermes") {
+				strings.Contains(dir, "multicacan_workspaces") || strings.Contains(dir, ".hermes") {
 				continue
 			}
 			// Only consider dirs inside home or /tmp

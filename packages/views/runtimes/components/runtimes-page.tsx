@@ -3,20 +3,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, Server } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { runtimeListOptions, runtimeKeys } from "@multica/core/runtimes/queries";
-import { useUpdatableRuntimeIds } from "@multica/core/runtimes/hooks";
-import { deriveRuntimeHealth } from "@multica/core/runtimes";
-import { useWSEvent } from "@multica/core/realtime";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { runtimeListOptions, runtimeKeys } from "@multicacan/core/runtimes/queries";
+import { useUpdatableRuntimeIds } from "@multicacan/core/runtimes/hooks";
+import { deriveRuntimeHealth } from "@multicacan/core/runtimes";
+import { useWSEvent } from "@multicacan/core/realtime";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/ui/components/ui/tooltip";
 import { PageHeader } from "../../layout/page-header";
 import { ConnectRemoteDialog } from "./connect-remote-dialog";
 import { RuntimeList } from "./runtime-list";

@@ -926,7 +926,7 @@ func (d *Daemon) handleUpdate(ctx context.Context, runtimeID string, update *Pen
 		d.logger.Info("refusing CLI self-update: daemon is managed by Desktop", "runtime_id", runtimeID, "update_id", update.ID)
 		d.client.ReportUpdateResult(ctx, runtimeID, update.ID, map[string]any{
 			"status": "failed",
-			"error":  "CLI is managed by Multica Desktop — update the Desktop app to upgrade the CLI",
+			"error":  "CLI is managed by Multicacan Desktop — update the Desktop app to upgrade the CLI",
 		})
 		return
 	}
@@ -1103,7 +1103,7 @@ func (d *Daemon) pollLoop(ctx context.Context, taskWakeups <-chan struct{}) erro
 
 // newTaskSlotSemaphore returns a buffered channel pre-populated with stable
 // slot indices [0, n). Receive to acquire a slot, send the same slot back to
-// release. Used by pollLoop to expose MULTICA_TASK_SLOT to spawned tasks.
+// release. Used by pollLoop to expose MULTICACAN_TASK_SLOT to spawned tasks.
 func newTaskSlotSemaphore(maxConcurrentTasks int) chan int {
 	sem := make(chan int, maxConcurrentTasks)
 	for i := 0; i < maxConcurrentTasks; i++ {
@@ -1242,7 +1242,7 @@ func (d *Daemon) handleTask(ctx context.Context, task Task, slot int) {
 
 func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot int, taskLog *slog.Logger) (TaskResult, error) {
 	// Refuse to spawn an agent without a workspace. An empty workspace_id
-	// here would make MULTICA_WORKSPACE_ID empty in the agent env, and the
+	// here would make MULTICACAN_WORKSPACE_ID empty in the agent env, and the
 	// CLI would otherwise silently fall back to the user-global config — a
 	// path that can leak operations into an unrelated workspace when
 	// multiple workspaces share a host.
@@ -1276,7 +1276,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 
 	// Prepare isolated execution environment.
 	// Repos are passed as metadata only — the agent checks them out on demand
-	// via `multica repo checkout <url>`.
+	// via `multicacan repo checkout <url>`.
 	taskCtx := execenv.TaskContextForEnv{
 		IssueID:                 task.IssueID,
 		TriggerCommentID:        task.TriggerCommentID,
@@ -1370,37 +1370,37 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	prompt := BuildPrompt(task)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI
-	// can call the Multica API and the local daemon (e.g. `multicacan repo checkout`).
-	// MULTICA_TASK_SLOT is allocated from the daemon-wide concurrency pool, not
+	// can call the Multicacan API and the local daemon (e.g. `multicacan repo checkout`).
+	// MULTICACAN_TASK_SLOT is allocated from the daemon-wide concurrency pool, not
 	// per-agent. When one daemon hosts multiple agents, slots index shared
 	// daemon-level resources such as GPUs.
 	agentEnv := map[string]string{
-		"MULTICA_TOKEN":        d.client.Token(),
-		"MULTICA_SERVER_URL":   d.cfg.ServerBaseURL,
-		"MULTICA_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
-		"MULTICA_WORKSPACE_ID": task.WorkspaceID,
-		"MULTICA_AGENT_NAME":   agentName,
-		"MULTICA_AGENT_ID":     task.AgentID,
-		"MULTICA_TASK_ID":      task.ID,
-		"MULTICA_TASK_SLOT":    strconv.Itoa(slot),
+		"MULTICACAN_TOKEN":        d.client.Token(),
+		"MULTICACAN_SERVER_URL":   d.cfg.ServerBaseURL,
+		"MULTICACAN_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
+		"MULTICACAN_WORKSPACE_ID": task.WorkspaceID,
+		"MULTICACAN_AGENT_NAME":   agentName,
+		"MULTICACAN_AGENT_ID":     task.AgentID,
+		"MULTICACAN_TASK_ID":      task.ID,
+		"MULTICACAN_TASK_SLOT":    strconv.Itoa(slot),
 	}
 	if task.AutopilotRunID != "" {
-		agentEnv["MULTICA_AUTOPILOT_RUN_ID"] = task.AutopilotRunID
+		agentEnv["MULTICACAN_AUTOPILOT_RUN_ID"] = task.AutopilotRunID
 	}
 	if task.AutopilotID != "" {
-		agentEnv["MULTICA_AUTOPILOT_ID"] = task.AutopilotID
+		agentEnv["MULTICACAN_AUTOPILOT_ID"] = task.AutopilotID
 	}
-	// Quick-create marker — when set, the multica CLI's `issue create`
+	// Quick-create marker — when set, the multicacan CLI's `issue create`
 	// command stamps the new issue with origin_type=quick_create +
 	// origin_id=<task_id> so the completion handler can find it
 	// deterministically (see GetIssueByOrigin).
 	if task.QuickCreatePrompt != "" {
-		agentEnv["MULTICA_QUICK_CREATE_TASK_ID"] = task.ID
+		agentEnv["MULTICACAN_QUICK_CREATE_TASK_ID"] = task.ID
 	}
-	// Ensure the multica CLI is on PATH inside the agent's environment.
+	// Ensure the multicacan CLI is on PATH inside the agent's environment.
 	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not
 	// inherit the daemon's PATH. Prepend the directory of the running
-	// multica binary so that `multica` commands in the agent always resolve.
+	// multicacan binary so that `multicacan` commands in the agent always resolve.
 	if selfBin, err := os.Executable(); err == nil {
 		binDir := filepath.Dir(selfBin)
 		agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
@@ -1459,7 +1459,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		mcpConfig = task.Agent.McpConfig
 	}
 	// Two-tier model resolution: an explicit agent.model wins,
-	// then the daemon-wide MULTICA_<PROVIDER>_MODEL env var. If
+	// then the daemon-wide MULTICACAN_<PROVIDER>_MODEL env var. If
 	// both are empty we deliberately pass "" through — each
 	// backend omits `--model` from the CLI invocation, so the
 	// provider picks its own default (Claude Code's shipped
@@ -1978,7 +1978,7 @@ func convertSkillsForEnv(skills []SkillData) []execenv.SkillContextForEnv {
 // daemon-internal variables and critical system paths.
 func isBlockedEnvKey(key string) bool {
 	upper := strings.ToUpper(key)
-	if strings.HasPrefix(upper, "MULTICA_") {
+	if strings.HasPrefix(upper, "MULTICACAN_") {
 		return true
 	}
 	switch upper {

@@ -26,28 +26,28 @@ import {
 import { Command as CommandPrimitive } from "cmdk";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { SearchIssueResult, SearchProjectResult } from "@multica/core/types";
-import { api } from "@multica/core/api";
-import { useRecentIssuesStore } from "@multica/core/issues/stores";
-import { issueDetailOptions } from "@multica/core/issues/queries";
-import { useWorkspaceId } from "@multica/core";
-import { paths, useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
-import type { WorkspacePaths } from "@multica/core/paths";
-import { useModalStore } from "@multica/core/modals";
-import { workspaceListOptions } from "@multica/core/workspace/queries";
+import type { SearchIssueResult, SearchProjectResult } from "@multicacan/core/types";
+import { api } from "@multicacan/core/api";
+import { useRecentIssuesStore } from "@multicacan/core/issues/stores";
+import { issueDetailOptions } from "@multicacan/core/issues/queries";
+import { useWorkspaceId } from "@multicacan/core";
+import { paths, useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
+import type { WorkspacePaths } from "@multicacan/core/paths";
+import { useModalStore } from "@multicacan/core/modals";
+import { workspaceListOptions } from "@multicacan/core/workspace/queries";
 import { StatusIcon } from "../issues/components";
 import { ProjectIcon } from "../projects/components/project-icon";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
-import { PROJECT_STATUS_CONFIG } from "@multica/core/projects/config";
-import type { ProjectStatus } from "@multica/core/types";
+import { STATUS_CONFIG } from "@multicacan/core/issues/config";
+import { PROJECT_STATUS_CONFIG } from "@multicacan/core/projects/config";
+import type { ProjectStatus } from "@multicacan/core/types";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@multica/ui/components/ui/dialog";
-import { useTheme } from "@multica/ui/components/common/theme-provider";
+} from "@multicacan/ui/components/ui/dialog";
+import { useTheme } from "@multicacan/ui/components/common/theme-provider";
 import { useNavigation } from "../navigation";
 import { useSearchStore } from "./search-store";
 

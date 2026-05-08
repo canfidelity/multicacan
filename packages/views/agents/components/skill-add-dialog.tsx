@@ -4,14 +4,14 @@ import { useState } from "react";
 import { FileText } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Agent } from "@multica/core/types";
-import { api } from "@multica/core/api";
-import { useWorkspaceId } from "@multica/core/hooks";
+import type { Agent } from "@multicacan/core/types";
+import { api } from "@multicacan/core/api";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   skillListOptions,
   workspaceKeys,
-} from "@multica/core/workspace/queries";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/workspace/queries";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
+} from "@multicacan/ui/components/ui/dialog";
 
 /**
  * Single source of truth for "attach a workspace skill to this agent".

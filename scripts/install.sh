@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Multica installer — installs the CLI and optionally provisions a self-host server.
+# Multicacancan installer — installs the CLI and optionally provisions a self-host server.
 #
 # Install / upgrade CLI only:
 #   curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash
@@ -16,7 +16,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 REPO_URL="https://github.com/canfidelity/multicacan.git"
 REPO_WEB_URL="https://github.com/canfidelity/multicacan"  # without .git, for GitHub web APIs
-INSTALL_DIR="${MULTICA_INSTALL_DIR:-$HOME/.multicacan/server}"
+INSTALL_DIR="${MULTICACAN_INSTALL_DIR:-$HOME/.multicacan/server}"
 BREW_PACKAGE="multicacan"
 
 # Colors (disabled when not a terminal)
@@ -48,7 +48,7 @@ detect_os() {
     MINGW*|MSYS*|CYGWIN*)
             fail "This script does not support Windows. Use the PowerShell installer instead:
   irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex" ;;
-    *)      fail "Unsupported operating system: $(uname -s). Multicacan supports macOS, Linux, and Windows." ;;
+    *)      fail "Unsupported operating system: $(uname -s). Multicacancan supports macOS, Linux, and Windows." ;;
   esac
 
   ARCH="$(uname -m)"
@@ -64,24 +64,24 @@ detect_os() {
 # CLI Installation
 # ---------------------------------------------------------------------------
 install_cli_brew() {
-  info "Installing Multicacan CLI via Homebrew..."
+  info "Installing Multicacancan CLI via Homebrew..."
   if ! brew tap multicacan 2>/dev/null; then
     fail "Failed to add Homebrew tap. Check your network connection."
   fi
   # brew install exits non-zero if already installed on older Homebrew versions
   if ! brew install "$BREW_PACKAGE" 2>/dev/null; then
     if brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
-      ok "Multicacan CLI already installed via Homebrew"
+      ok "Multicacancan CLI already installed via Homebrew"
     else
       fail "Failed to install multicacan via Homebrew."
     fi
   else
-    ok "Multicacan CLI installed via Homebrew"
+    ok "Multicacancan CLI installed via Homebrew"
   fi
 }
 
 install_cli_binary() {
-  info "Installing Multicacan CLI from GitHub Releases..."
+  info "Installing Multicacancan CLI from GitHub Releases..."
 
   # Get latest release tag
   local latest
@@ -91,7 +91,7 @@ install_cli_binary() {
   fi
 
   local version="${latest#v}"
-  local url="https://github.com/canfidelity/multicacan/releases/download/${latest}/multica-cli-${version}-${OS}-${ARCH}.tar.gz"
+  local url="https://github.com/canfidelity/multicacan/releases/download/${latest}/multicacan-cli-${version}-${OS}-${ARCH}.tar.gz"
   local tmp_dir
   tmp_dir=$(mktemp -d)
 
@@ -122,7 +122,7 @@ install_cli_binary() {
   fi
 
   rm -rf "$tmp_dir"
-  ok "Multicacan CLI installed to $bin_dir/multicacan"
+  ok "Multicacancan CLI installed to $bin_dir/multicacan"
 }
 
 add_to_path() {
@@ -130,7 +130,7 @@ add_to_path() {
   local line="export PATH=\"$dir:\$PATH\""
   for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
     if [ -f "$rc" ] && ! grep -qF "$dir" "$rc"; then
-      printf '\n# Added by Multicacan installer\n%s\n' "$line" >> "$rc"
+      printf '\n# Added by Multicacancan installer\n%s\n' "$line" >> "$rc"
     fi
   done
 }
@@ -141,8 +141,8 @@ get_latest_version() {
 }
 
 get_selfhost_ref() {
-  if [ -n "${MULTICA_SELFHOST_REF:-}" ]; then
-    printf '%s' "$MULTICA_SELFHOST_REF"
+  if [ -n "${MULTICACAN_SELFHOST_REF:-}" ]; then
+    printf '%s' "$MULTICACAN_SELFHOST_REF"
     return
   fi
 
@@ -190,20 +190,20 @@ pull_official_selfhost_images() {
 }
 
 upgrade_cli_brew() {
-  info "Upgrading Multicacan CLI via Homebrew..."
+  info "Upgrading Multicacancan CLI via Homebrew..."
   brew update 2>/dev/null || true
   if brew upgrade "$BREW_PACKAGE" 2>/dev/null; then
-    ok "Multicacan CLI upgraded via Homebrew"
+    ok "Multicacancan CLI upgraded via Homebrew"
   else
     # brew upgrade exits non-zero if already up to date
-    ok "Multicacan CLI is already the latest version"
+    ok "Multicacancan CLI is already the latest version"
   fi
 }
 
 install_cli() {
   if command_exists multicacan; then
     local current_ver
-    # `multicacan version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
+    # `multicacan version` outputs "multicacan v0.1.13 (commit: abc1234)" — extract just the version
     current_ver=$(multicacan version 2>/dev/null | awk '{print $2}' || echo "unknown")
 
     local latest_ver
@@ -214,11 +214,11 @@ install_cli() {
     local latest_cmp="${latest_ver#v}"
 
     if [ -z "$latest_ver" ] || [ "$current_cmp" = "$latest_cmp" ]; then
-      ok "Multicacan CLI is up to date ($current_ver)"
+      ok "Multicacancan CLI is up to date ($current_ver)"
       return 0
     fi
 
-    info "Multicacan CLI $current_ver installed, latest is $latest_ver — upgrading..."
+    info "Multicacancan CLI $current_ver installed, latest is $latest_ver — upgrading..."
     if command_exists brew && brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
       upgrade_cli_brew
     else
@@ -227,7 +227,7 @@ install_cli() {
 
     local new_ver
     new_ver=$(multicacan version 2>/dev/null | awk '{print $2}' || echo "unknown")
-    ok "Multicacan CLI upgraded ($current_ver → $new_ver)"
+    ok "Multicacancan CLI upgraded ($current_ver → $new_ver)"
     return 0
   fi
 
@@ -249,7 +249,7 @@ install_cli() {
 check_docker() {
   if ! command_exists docker; then
     printf "\n"
-    fail "Docker is not installed. Multicacan self-hosting requires Docker and Docker Compose.
+    fail "Docker is not installed. Multicacancan self-hosting requires Docker and Docker Compose.
 
 Install Docker:
   macOS:  https://docs.docker.com/desktop/install/mac-install/
@@ -269,7 +269,7 @@ After installing Docker, re-run this script with --with-server."
 # Server setup (self-host / --with-server)
 # ---------------------------------------------------------------------------
 setup_server() {
-  info "Setting up Multicacan server..."
+  info "Setting up Multicacancan server..."
   local server_ref
   server_ref=$(get_selfhost_ref)
   info "Using self-host assets from ${server_ref}..."
@@ -278,7 +278,7 @@ setup_server() {
     info "Updating existing installation at $INSTALL_DIR..."
     cd "$INSTALL_DIR"
   else
-    info "Cloning Multicacan repository..."
+    info "Cloning Multicacancan repository..."
     if ! command_exists git; then
       fail "Git is not installed. Please install git and re-run."
     fi
@@ -313,9 +313,9 @@ setup_server() {
   fi
 
   # Start Docker Compose
-  info "Pulling Multicacan images..."
+  info "Pulling Multicacancan images..."
   pull_official_selfhost_images
-  info "Starting Multicacan services (this may take a few minutes on first run)..."
+  info "Starting Multicacancan services (this may take a few minutes on first run)..."
   docker compose -f docker-compose.selfhost.yml up -d
 
   # Wait for health check
@@ -330,7 +330,7 @@ setup_server() {
   done
 
   if [ "$ready" = true ]; then
-    ok "Multicacan server is running"
+    ok "Multicacancan server is running"
   else
     warn "Server is still starting. You can check logs with:"
     echo "  cd $INSTALL_DIR && docker compose -f docker-compose.selfhost.yml logs"
@@ -344,7 +344,7 @@ setup_server() {
 # ---------------------------------------------------------------------------
 run_default() {
   printf "\n"
-  printf "${BOLD}  Multicacan — Installer${RESET}\n"
+  printf "${BOLD}  Multicacancan — Installer${RESET}\n"
   printf "\n"
 
   detect_os
@@ -352,12 +352,12 @@ run_default() {
 
   printf "\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-  printf "${BOLD}${GREEN}  ✓ Multicacan CLI is ready!${RESET}\n"
+  printf "${BOLD}${GREEN}  ✓ Multicacancan CLI is ready!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
   printf "  ${BOLD}Next: configure your environment${RESET}\n"
   printf "\n"
-  printf "     ${CYAN}multicacan setup${RESET}                # Connect to Multicacan\n"
+  printf "     ${CYAN}multicacan setup${RESET}                # Connect to Multicacancan\n"
   printf "     ${CYAN}multicacan setup self-host${RESET}       # Connect to a self-hosted server\n"
   printf "\n"
   printf "  ${BOLD}Self-hosting?${RESET} Install the server first:\n"
@@ -370,7 +370,7 @@ run_default() {
 # ---------------------------------------------------------------------------
 run_with_server() {
   printf "\n"
-  printf "${BOLD}  Multicacan — Self-Host Installer${RESET}\n"
+  printf "${BOLD}  Multicacancan — Self-Host Installer${RESET}\n"
   printf "  Provisioning server infrastructure + installing CLI\n"
   printf "\n"
 
@@ -381,7 +381,7 @@ run_with_server() {
 
   printf "\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-  printf "${BOLD}${GREEN}  ✓ Multicacan server is running and CLI is ready!${RESET}\n"
+  printf "${BOLD}${GREEN}  ✓ Multicacancan server is running and CLI is ready!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
   printf "  ${BOLD}Frontend:${RESET}  http://localhost:3000\n"
@@ -405,7 +405,7 @@ run_with_server() {
 # ---------------------------------------------------------------------------
 run_stop() {
   printf "\n"
-  info "Stopping Multicacan services..."
+  info "Stopping Multicacancan services..."
 
   if [ -d "$INSTALL_DIR" ]; then
     cd "$INSTALL_DIR"
@@ -416,7 +416,7 @@ run_stop() {
       warn "No docker-compose.selfhost.yml found at $INSTALL_DIR"
     fi
   else
-    warn "No Multicacan installation found at $INSTALL_DIR"
+    warn "No Multicacancan installation found at $INSTALL_DIR"
   fi
 
   if command_exists multicacan; then
@@ -440,7 +440,7 @@ main() {
       --help|-h)
         echo "Usage: install.sh [--with-server | --stop]"
         echo ""
-        echo "  (default)       Install / upgrade the Multicacan CLI"
+        echo "  (default)       Install / upgrade the Multicacancan CLI"
         echo "  --with-server   Install CLI + provision a self-host server (Docker)"
         echo "  --stop          Stop a self-hosted installation"
         echo ""

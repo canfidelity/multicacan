@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   completeOnboarding,
   type OnboardingCompletionPath,
-} from "@multica/core/onboarding";
+} from "@multicacan/core/onboarding";
 
 /**
  * Step 5 — the final onboarding beat.

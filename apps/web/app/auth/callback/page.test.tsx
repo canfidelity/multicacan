@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
-import { paths } from "@multica/core/paths";
+import { paths } from "@multicacan/core/paths";
 
 const {
   mockPush,
@@ -41,10 +41,10 @@ vi.mock("@tanstack/react-query", () => ({
 
 // Preserve the real sanitizeNextUrl so the "drop unsafe ?next=" behavior is
 // exercised rather than silently diverging from the source of truth.
-vi.mock("@multica/core/auth", async () => {
+vi.mock("@multicacan/core/auth", async () => {
   const actual =
-    await vi.importActual<typeof import("@multica/core/auth")>(
-      "@multica/core/auth",
+    await vi.importActual<typeof import("@multicacan/core/auth")>(
+      "@multicacan/core/auth",
     );
   return {
     ...actual,
@@ -53,14 +53,14 @@ vi.mock("@multica/core/auth", async () => {
   };
 });
 
-vi.mock("@multica/core/workspace/queries", () => ({
+vi.mock("@multicacan/core/workspace/queries", () => ({
   workspaceKeys: {
     list: () => ["workspaces"],
     myInvitations: () => ["invitations", "mine"],
   },
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@multicacan/core/api", () => ({
   api: {
     listWorkspaces: mockListWorkspaces,
     listMyInvitations: mockListMyInvitations,

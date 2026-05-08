@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { setCurrentWorkspace } from "@multica/core/platform";
-import { useAuthStore } from "@multica/core/auth";
+import { setCurrentWorkspace } from "@multicacan/core/platform";
+import { useAuthStore } from "@multicacan/core/auth";
 import {
   completeOnboarding,
   ONBOARDING_STEP_ORDER,
@@ -12,10 +12,10 @@ import {
   type OnboardingCompletionPath,
   type OnboardingStep,
   type QuestionnaireAnswers,
-} from "@multica/core/onboarding";
-import { workspaceListOptions, workspaceKeys } from "@multica/core/workspace/queries";
-import type { Agent, AgentRuntime, Workspace } from "@multica/core/types";
-import { DragStrip } from "@multica/views/platform";
+} from "@multicacan/core/onboarding";
+import { workspaceListOptions, workspaceKeys } from "@multicacan/core/workspace/queries";
+import type { Agent, AgentRuntime, Workspace } from "@multicacan/core/types";
+import { DragStrip } from "@multicacan/views/platform";
 import { StepHeader } from "./components/step-header";
 import { StepWelcome } from "./steps/step-welcome";
 import { StepQuestionnaire } from "./steps/step-questionnaire";

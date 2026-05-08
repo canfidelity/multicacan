@@ -14,29 +14,29 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { api } from "@multica/core/api";
-import type { Skill } from "@multica/core/types";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { api } from "@multicacan/core/api";
+import type { Skill } from "@multicacan/core/types";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   skillDetailOptions,
   workspaceKeys,
-} from "@multica/core/workspace/queries";
+} from "@multicacan/core/workspace/queries";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
+} from "@multicacan/ui/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { Textarea } from "@multica/ui/components/ui/textarea";
-import { useScrollFade } from "@multica/ui/hooks/use-scroll-fade";
-import { cn } from "@multica/ui/lib/utils";
+} from "@multicacan/ui/components/ui/tooltip";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { Textarea } from "@multicacan/ui/components/ui/textarea";
+import { useScrollFade } from "@multicacan/ui/hooks/use-scroll-fade";
+import { cn } from "@multicacan/ui/lib/utils";
 import { openExternal } from "../../platform";
 import { RuntimeLocalSkillImportPanel } from "./runtime-local-skill-import-panel";
 

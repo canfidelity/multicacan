@@ -1,1 +1,1 @@
-export { WebPreviewPage as default } from "@multica/views/preview";
+export { WebPreviewPage as default } from "@multicacan/views/preview";

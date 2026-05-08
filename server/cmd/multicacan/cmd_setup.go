@@ -76,8 +76,8 @@ func runSetupCloud(cmd *cobra.Command, args []string) error {
 
 var setupSelfHostCmd = &cobra.Command{
 	Use:   "self-host",
-	Short: "Configure the CLI for a self-hosted Multica server",
-	Long: `Configures the CLI to connect to a self-hosted Multica server.
+	Short: "Configure the CLI for a self-hosted Multicacan server",
+	Long: `Configures the CLI to connect to a self-hosted Multicacan server.
 
 By default, connects to http://localhost:8080 (backend) and http://localhost:3000 (frontend).
 Use --server-url and --app-url to specify a custom server (e.g. an on-premise deployment).
@@ -256,7 +256,7 @@ func promptAppURL(serverURL string) (string, error) {
 	return strings.TrimRight(strings.TrimSpace(line), "/"), nil
 }
 
-// probeServer checks whether a Multica backend is reachable at the given URL.
+// probeServer checks whether a Multicacan backend is reachable at the given URL.
 func probeServer(baseURL string) bool {
 	url := strings.TrimRight(baseURL, "/") + "/health"
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

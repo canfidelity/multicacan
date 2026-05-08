@@ -89,7 +89,7 @@ func workspaceIDFromArgs(cmd *cobra.Command, args []string) string {
 func runWorkspaceGet(cmd *cobra.Command, args []string) error {
 	wsID := workspaceIDFromArgs(cmd, args)
 	if wsID == "" {
-		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICA_WORKSPACE_ID")
+		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICACAN_WORKSPACE_ID")
 	}
 
 	client, err := newAPIClient(cmd)
@@ -135,7 +135,7 @@ func runWorkspaceGet(cmd *cobra.Command, args []string) error {
 func runWorkspaceMembers(cmd *cobra.Command, args []string) error {
 	wsID := workspaceIDFromArgs(cmd, args)
 	if wsID == "" {
-		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICA_WORKSPACE_ID")
+		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICACAN_WORKSPACE_ID")
 	}
 
 	client, err := newAPIClient(cmd)

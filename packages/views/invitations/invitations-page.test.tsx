@@ -35,7 +35,7 @@ vi.mock("../platform", () => ({
   DragStrip: () => null,
 }));
 
-vi.mock("@multica/core/auth", () => ({
+vi.mock("@multicacan/core/auth", () => ({
   useAuthStore: Object.assign(
     (selector?: (s: unknown) => unknown) => {
       const state = { refreshMe };
@@ -47,7 +47,7 @@ vi.mock("@multica/core/auth", () => ({
   ),
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@multicacan/core/api", () => ({
   api: {
     acceptInvitation,
     markOnboardingComplete,

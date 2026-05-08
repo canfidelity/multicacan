@@ -1,6 +1,6 @@
 # Self-Hosting Guide
 
-Deploy Multica on your own infrastructure in minutes.
+Deploy Multicacan on your own infrastructure in minutes.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ Deploy Multica on your own infrastructure in minutes.
 | **Frontend** | Web application | Next.js 16 |
 | **Database** | Primary data store | PostgreSQL 17 with pgvector |
 
-Each user who runs AI agents locally also installs the **`multica` CLI** and runs the **agent daemon** on their own machine.
+Each user who runs AI agents locally also installs the **`multicacan` CLI** and runs the **agent daemon** on their own machine.
 
 ## Quick Install (Recommended)
 
@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts
 multicacan setup self-host
 ```
 
-This installs the `multica` CLI, checks out the latest self-host assets, pulls the official Multica images from GHCR, and configures everything for localhost.
+This installs the `multicacan` CLI, checks out the latest self-host assets, pulls the official Multicacan images from GHCR, and configures everything for localhost.
 
 Open http://localhost:3000. To log in, configure `RESEND_API_KEY` in `.env` for email-based codes (recommended), or leave Resend unset and copy the generated code from the backend logs. See [Step 2 — Log In](#step-2--log-in) for details.
 
@@ -48,7 +48,7 @@ If you prefer to run each step manually:
 
 ```bash
 git clone https://github.com/canfidelity/multicacan.git
-cd multica
+cd multicacan
 make selfhost
 ```
 
@@ -56,7 +56,7 @@ make selfhost
 
 By default it pulls the latest stable release images from GHCR. To build the backend/web from your current checkout instead, run `make selfhost-build`.
 If the selected GHCR tag has not been published yet, `make selfhost` now tells you to fall back to `make selfhost-build`.
-`make selfhost-build` uses local `multica-backend:dev` / `multica-web:dev` tags, so it does not overwrite the pulled `:latest` images.
+`make selfhost-build` uses local `multicacan-backend:dev` / `multicacan-web:dev` tags, so it does not overwrite the pulled `:latest` images.
 
 Once ready:
 
@@ -71,11 +71,11 @@ Open http://localhost:3000 in your browser. The Docker self-host stack defaults 
 
 - **Recommended (production):** configure `RESEND_API_KEY` in `.env`, then restart the backend. Real verification codes will be sent to the email address you enter. See [Advanced Configuration → Email](SELF_HOSTING_ADVANCED.md#email-required-for-authentication).
 - **Without email configured:** the verification code is generated server-side and printed to the backend container logs (look for `[DEV] Verification code for ...:`). Useful for one-off testing on a single machine.
-- **Deterministic local/private testing:** set `APP_ENV=development` and `MULTICA_DEV_VERIFICATION_CODE=888888` in `.env`, then restart the backend. This fixed code is ignored when `APP_ENV=production`.
+- **Deterministic local/private testing:** set `APP_ENV=development` and `MULTICACAN_DEV_VERIFICATION_CODE=888888` in `.env`, then restart the backend. This fixed code is ignored when `APP_ENV=production`.
 
 Changes to `ALLOW_SIGNUP` and `GOOGLE_CLIENT_ID` also take effect after restarting the backend / compose stack. The web UI reads both from `/api/config` at runtime, so no web rebuild is needed.
 
-> **Warning:** do **not** set `MULTICA_DEV_VERIFICATION_CODE` on a publicly reachable instance — anyone who knows an email address can then log in with that fixed code.
+> **Warning:** do **not** set `MULTICACAN_DEV_VERIFICATION_CODE` on a publicly reachable instance — anyone who knows an email address can then log in with that fixed code.
 
 ### Step 3 — Install CLI & Start Daemon
 
@@ -152,9 +152,9 @@ make selfhost-stop
 multicacan daemon stop
 ```
 
-## Switching to Multica Cloud
+## Switching to Multicacan Cloud
 
-If you've been self-hosting and want to switch your CLI to [Multica Cloud](https://multicacan (self-hosted)):
+If you've been self-hosting and want to switch your CLI to [Multicacan Cloud](https://multicacan (self-hosted)):
 
 ```bash
 multicacan setup
@@ -171,7 +171,7 @@ docker compose -f docker-compose.selfhost.yml pull
 docker compose -f docker-compose.selfhost.yml up -d
 ```
 
-Pin `MULTICA_IMAGE_TAG` in `.env` to an exact version like `v0.2.4` if you want to stay on a specific release. Migrations run automatically on backend startup.
+Pin `MULTICACAN_IMAGE_TAG` in `.env` to an exact version like `v0.2.4` if you want to stay on a specific release. Migrations run automatically on backend startup.
 If the selected GHCR tag has not been published yet, fall back to `make selfhost-build` or `docker compose -f docker-compose.selfhost.yml -f docker-compose.selfhost.build.yml up -d --build`.
 
 ---
@@ -182,7 +182,7 @@ If you prefer running Docker Compose steps manually instead of `make selfhost`:
 
 ```bash
 git clone https://github.com/canfidelity/multicacan.git
-cd multica
+cd multicacan
 cp .env.example .env
 ```
 

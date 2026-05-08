@@ -2,13 +2,13 @@
 
 import { useRef, useState, useCallback } from "react";
 import { ArrowUp, Loader2, Maximize2, Minimize2 } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { cn } from "@multica/ui/lib/utils";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
+import { cn } from "@multicacan/ui/lib/utils";
 import { ContentEditor, type ContentEditorRef, useFileDropZone, FileDropOverlay } from "../../editor";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
+import { FileUploadButton } from "@multicacan/ui/components/common/file-upload-button";
+import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
+import { api } from "@multicacan/core/api";
 
 interface CommentInputProps {
   issueId: string;

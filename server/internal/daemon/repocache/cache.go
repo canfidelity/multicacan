@@ -63,7 +63,7 @@ type CachedRepo struct {
 
 // Cache manages bare git clones for workspace repositories.
 type Cache struct {
-	root   string // base directory for all caches (e.g. ~/multica_workspaces/.repos)
+	root   string // base directory for all caches (e.g. ~/multicacan_workspaces/.repos)
 	logger *slog.Logger
 	// repoLocks maps bare repo path → dedicated mutex. Any mutating operation
 	// on a given bare repo (clone, fetch, worktree add, ref update) must
@@ -446,7 +446,7 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 			_ = excludeFromGit(worktreePath, pattern)
 		}
 
-		// Install Co-authored-by hook for Multica Agent attribution (if enabled).
+		// Install Co-authored-by hook for Multicacan Agent attribution (if enabled).
 		if params.CoAuthoredByEnabled {
 			if err := installCoAuthoredByHook(worktreePath); err != nil {
 				c.logger.Warn("repo checkout: install co-authored-by hook failed (non-fatal)", "error", err)
@@ -478,7 +478,7 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 		_ = excludeFromGit(worktreePath, pattern)
 	}
 
-	// Install Co-authored-by hook for Multica Agent attribution (if enabled).
+	// Install Co-authored-by hook for Multicacan Agent attribution (if enabled).
 	if params.CoAuthoredByEnabled {
 		if err := installCoAuthoredByHook(worktreePath); err != nil {
 			c.logger.Warn("repo checkout: install co-authored-by hook failed (non-fatal)", "error", err)
@@ -710,10 +710,10 @@ func bareHeadBranch(barePath string) string {
 }
 
 // prepareCommitMsgHook is the prepare-commit-msg hook script that appends a
-// Co-authored-by trailer for the Multica Agent to every commit message.
+// Co-authored-by trailer for the Multicacan Agent to every commit message.
 const prepareCommitMsgHook = `#!/bin/sh
-# Multica: add Co-authored-by trailer for the Multica Agent.
-# Installed by the Multica daemon. Do not edit — it will be overwritten.
+# Multicacan: add Co-authored-by trailer for the Multicacan Agent.
+# Installed by the Multicacan daemon. Do not edit — it will be overwritten.
 
 COMMIT_MSG_FILE="$1"
 COMMIT_SOURCE="$2"
@@ -735,7 +735,7 @@ git interpret-trailers --in-place --trailer "$TRAILER" "$COMMIT_MSG_FILE"
 `
 
 // installCoAuthoredByHook installs a prepare-commit-msg git hook that appends
-// a Co-authored-by trailer for the Multica Agent. The hook is installed in the
+// a Co-authored-by trailer for the Multicacan Agent. The hook is installed in the
 // git common directory (the bare repo for worktrees) so it applies to all
 // worktrees created from this cache.
 func installCoAuthoredByHook(worktreePath string) error {

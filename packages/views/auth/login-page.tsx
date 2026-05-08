@@ -9,19 +9,19 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@multica/ui/components/ui/card";
-import { Input } from "@multica/ui/components/ui/input";
-import { Button } from "@multica/ui/components/ui/button";
-import { Label } from "@multica/ui/components/ui/label";
+} from "@multicacan/ui/components/ui/card";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Label } from "@multicacan/ui/components/ui/label";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
-} from "@multica/ui/components/ui/input-otp";
-import { useAuthStore } from "@multica/core/auth";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
-import type { User } from "@multica/core/types";
+} from "@multicacan/ui/components/ui/input-otp";
+import { useAuthStore } from "@multicacan/core/auth";
+import { workspaceKeys } from "@multicacan/core/workspace/queries";
+import { api } from "@multicacan/core/api";
+import type { User } from "@multicacan/core/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,7 +135,7 @@ export function LoginPage({
       })
       .catch(() => {
         // Cookie auth failed — fall back to localStorage token
-        const token = localStorage.getItem("multica_token");
+        const token = localStorage.getItem("multicacan_token");
         if (!token) return;
 
         api.setToken(token);
@@ -148,7 +148,7 @@ export function LoginPage({
           })
           .catch(() => {
             api.setToken(null);
-            localStorage.removeItem("multica_token");
+            localStorage.removeItem("multicacan_token");
           });
       });
   }, [cliCallback]);
@@ -196,7 +196,7 @@ export function LoginPage({
         if (cliCallback) {
           // CLI path: get token directly for the redirect URL
           const { token } = await api.verifyCode(email, value);
-          localStorage.setItem("multica_token", token);
+          localStorage.setItem("multicacan_token", token);
           api.setToken(token);
           onTokenObtained?.();
           redirectToCliCallback(cliCallback.url, token, cliCallback.state);
@@ -245,7 +245,7 @@ export function LoginPage({
 
       if (authSourceRef.current === "localStorage") {
         // Session was detected via localStorage — reuse that token directly.
-        const stored = localStorage.getItem("multica_token");
+        const stored = localStorage.getItem("multicacan_token");
         if (!stored) throw new Error("token missing");
         token = stored;
       } else {
@@ -294,7 +294,7 @@ export function LoginPage({
             {logo && <div className="mx-auto mb-4">{logo}</div>}
             <CardTitle className="text-2xl">Authorize CLI</CardTitle>
             <CardDescription>
-              Allow the CLI to access Multica as{" "}
+              Allow the CLI to access Multicacan as{" "}
               <span className="font-medium text-foreground">
                 {existingUser.email}
               </span>
@@ -403,7 +403,7 @@ export function LoginPage({
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           {logo && <div className="mx-auto mb-4">{logo}</div>}
-          <CardTitle className="text-2xl">Sign in to Multica</CardTitle>
+          <CardTitle className="text-2xl">Sign in to Multicacan</CardTitle>
           <CardDescription>
             Enter your email to get a login code
           </CardDescription>

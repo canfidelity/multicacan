@@ -1,1 +1,1 @@
-export { SimulatorPage as default } from "@multica/views/simulator";
+export { SimulatorPage as default } from "@multicacan/views/simulator";

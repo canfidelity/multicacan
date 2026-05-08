@@ -3,15 +3,15 @@
 import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, ChevronDown, Plus, Send, Square } from "lucide-react";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { Button } from "@multica/ui/components/ui/button";
-import { cn } from "@multica/ui/lib/utils";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { cn } from "@multicacan/ui/lib/utils";
 
 interface IDEChatPanelProps {
   activeFile: string | null;
@@ -148,7 +148,7 @@ export function IDEChatPanel({ activeFile, onAgentDone }: IDEChatPanelProps) {
         document.cookie
           .split(";")
           .map((c) => c.trim())
-          .find((c) => c.startsWith("multica_csrf="))
+          .find((c) => c.startsWith("multicacan_csrf="))
           ?.split("=")[1] ?? "";
 
       const response = await fetch(`/api/native-ide/${wsId}/chat/stream`, {

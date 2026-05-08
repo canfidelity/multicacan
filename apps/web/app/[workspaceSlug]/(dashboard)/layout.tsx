@@ -1,15 +1,15 @@
 "use client";
 
-import { DashboardLayout } from "@multica/views/layout";
-import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
-import { SearchCommand, SearchTrigger } from "@multica/views/search";
-import { ChatFab, ChatWindow } from "@multica/views/chat";
-import { StarterContentPrompt } from "@multica/views/onboarding";
+import { DashboardLayout } from "@multicacan/views/layout";
+import { MulticacanIcon } from "@multicacan/ui/components/common/multicacan-icon";
+import { SearchCommand, SearchTrigger } from "@multicacan/views/search";
+import { ChatFab, ChatWindow } from "@multicacan/views/chat";
+import { StarterContentPrompt } from "@multicacan/views/onboarding";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout
-      loadingIndicator={<MulticaIcon className="size-6" />}
+      loadingIndicator={<MulticacanIcon className="size-6" />}
       searchSlot={<SearchTrigger />}
       extra={
         <>

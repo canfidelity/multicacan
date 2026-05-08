@@ -12,22 +12,22 @@ import {
 import { ReactRenderer } from "@tiptap/react";
 import { computePosition, offset, flip, shift } from "@floating-ui/dom";
 import type { QueryClient } from "@tanstack/react-query";
-import { getCurrentWsId } from "@multica/core/platform";
-import { flattenIssueBuckets, issueKeys } from "@multica/core/issues/queries";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { useAuthStore } from "@multica/core/auth";
-import { canAssignAgentToIssue } from "@multica/core/permissions";
-import { api } from "@multica/core/api";
+import { getCurrentWsId } from "@multicacan/core/platform";
+import { flattenIssueBuckets, issueKeys } from "@multicacan/core/issues/queries";
+import { workspaceKeys } from "@multicacan/core/workspace/queries";
+import { useAuthStore } from "@multicacan/core/auth";
+import { canAssignAgentToIssue } from "@multicacan/core/permissions";
+import { api } from "@multicacan/core/api";
 import type {
   Issue,
   ListIssuesCache,
   MemberWithUser,
   Agent,
-} from "@multica/core/types";
+} from "@multicacan/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { StatusIcon } from "../../issues/components/status-icon";
-import { Badge } from "@multica/ui/components/ui/badge";
-import type { IssueStatus } from "@multica/core/types";
+import { Badge } from "@multicacan/ui/components/ui/badge";
+import type { IssueStatus } from "@multicacan/core/types";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
 import {
   getRecencyMap,

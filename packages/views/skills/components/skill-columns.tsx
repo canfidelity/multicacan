@@ -14,14 +14,14 @@ import type {
   AgentRuntime,
   MemberWithUser,
   Skill,
-} from "@multica/core/types";
-import { timeAgo } from "@multica/core/utils";
-import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
+} from "@multicacan/core/types";
+import { timeAgo } from "@multicacan/core/utils";
+import { ActorAvatar } from "@multicacan/ui/components/common/actor-avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/ui/components/ui/tooltip";
 import { readOrigin, totalFileCount } from "../lib/origin";
 
 // Per-row data assembled at the page level. The columns reach into

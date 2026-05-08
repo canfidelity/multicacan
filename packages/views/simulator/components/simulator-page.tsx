@@ -2,15 +2,15 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Smartphone, RefreshCw } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { PageHeader } from "../../layout/page-header";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { api } from "@multica/core/api";
+import { api } from "@multicacan/core/api";
 import { useQuery } from "@tanstack/react-query";
-import { useWSEvent } from "@multica/core/realtime";
-import { useWorkspaceId } from "@multica/core/hooks";
-import type { TaskMessagePayload } from "@multica/core/types/events";
-import type { AgentTask } from "@multica/core/types/agent";
+import { useWSEvent } from "@multicacan/core/realtime";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import type { TaskMessagePayload } from "@multicacan/core/types/events";
+import type { AgentTask } from "@multicacan/core/types/agent";
 import {
   buildTimeline,
   latestSimulatorAction,
@@ -37,7 +37,7 @@ interface SimDevice {
 
 function readCsrfToken(): string | null {
   if (typeof document === "undefined") return null;
-  const match = document.cookie.split("; ").find((c) => c.startsWith("multica_csrf="));
+  const match = document.cookie.split("; ").find((c) => c.startsWith("multicacan_csrf="));
   return match ? match.split("=")[1] ?? null : null;
 }
 
@@ -200,7 +200,7 @@ const HID_USAGE: Record<string, number> = {
   MetaLeft: 0xe3, MetaRight: 0xe7,
 };
 
-// ─── Toolbar (Multica theme + serve-sim style picker) ───
+// ─── Toolbar (Multicacan theme + serve-sim style picker) ───
 
 function groupByRuntime(devices: SimDevice[], currentUdid: string) {
   const grouped = new Map<string, SimDevice[]>();
@@ -531,7 +531,7 @@ function SimulatorViewport({ state, onStateChange, switchingRef }: { state: Simu
       if (d.state !== "Booted") {
         await execOnHost(`xcrun simctl boot ${d.udid}`, workspaceId);
       }
-      localStorage.setItem("multica_sim_device", d.udid);
+      localStorage.setItem("multicacan_sim_device", d.udid);
       // Update state — useNativeSimulator hook will reconnect with new UDID in query param
       onStateChange({ ...state, device: d.udid });
       switchingRef.current = false;
@@ -786,7 +786,7 @@ export default function SimulatorPage() {
       const data = await res.json();
       if (data) {
         // Honor user's last-selected device if it's still booted
-        const preferred = typeof window !== "undefined" ? localStorage.getItem("multica_sim_device") : null;
+        const preferred = typeof window !== "undefined" ? localStorage.getItem("multicacan_sim_device") : null;
         if (preferred && preferred !== data.device) {
           // Check if preferred is still booted
           try {

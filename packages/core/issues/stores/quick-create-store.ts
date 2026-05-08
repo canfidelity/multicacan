@@ -28,7 +28,7 @@ export const useQuickCreateStore = create<QuickCreateState>()(
       setKeepOpen: (v) => set({ keepOpen: v }),
     }),
     {
-      name: "multica_quick_create",
+      name: "multicacan_quick_create",
       storage: createJSONStorage(() => createWorkspaceAwareStorage(defaultStorage)),
     },
   ),

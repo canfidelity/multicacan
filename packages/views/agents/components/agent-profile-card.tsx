@@ -1,18 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Agent, AgentRuntime } from "@multica/core/types";
-import { useAgentPresenceDetail } from "@multica/core/agents";
-import { useWorkspaceId } from "@multica/core/hooks";
+import type { Agent, AgentRuntime } from "@multicacan/core/types";
+import { useAgentPresenceDetail } from "@multicacan/core/agents";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   deriveRuntimeHealth,
   type RuntimeHealth,
-} from "@multica/core/runtimes";
-import { agentListOptions, memberListOptions } from "@multica/core/workspace/queries";
-import { runtimeListOptions } from "@multica/core/runtimes/queries";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { ActorAvatar as ActorAvatarBase } from "@multica/ui/components/common/actor-avatar";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+} from "@multicacan/core/runtimes";
+import { agentListOptions, memberListOptions } from "@multicacan/core/workspace/queries";
+import { runtimeListOptions } from "@multicacan/core/runtimes/queries";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { ActorAvatar as ActorAvatarBase } from "@multicacan/ui/components/common/actor-avatar";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { AppLink } from "../../navigation";
 import { HealthIcon } from "../../runtimes/components/shared";
 import { availabilityConfig } from "../presence";

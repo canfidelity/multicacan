@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@multica/ui/lib/utils";
-import { UnicodeSpinner } from "@multica/ui/components/common/unicode-spinner";
-import type { AgentAvailability } from "@multica/core/agents";
-import type { ChatPendingTask, TaskMessagePayload } from "@multica/core/types";
+import { cn } from "@multicacan/ui/lib/utils";
+import { UnicodeSpinner } from "@multicacan/ui/components/common/unicode-spinner";
+import type { AgentAvailability } from "@multicacan/core/agents";
+import type { ChatPendingTask, TaskMessagePayload } from "@multicacan/core/types";
 import { formatElapsedSecs } from "../lib/format";
 
 interface Props {

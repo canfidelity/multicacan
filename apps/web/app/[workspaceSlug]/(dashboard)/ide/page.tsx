@@ -1,1 +1,1 @@
-export { NativeIDEPage as default } from "@multica/views/ide";
+export { NativeIDEPage as default } from "@multicacan/views/ide";

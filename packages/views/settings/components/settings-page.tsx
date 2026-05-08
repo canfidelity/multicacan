@@ -2,8 +2,8 @@
 
 import React from "react";
 import { User, Palette, Key, Settings, Users, FolderGit2, FlaskConical, Bell } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@multica/ui/components/ui/tabs";
-import { useCurrentWorkspace } from "@multica/core/paths";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@multicacan/ui/components/ui/tabs";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
 import { AccountTab } from "./account-tab";
 import { AppearanceTab } from "./appearance-tab";
 import { TokensTab } from "./tokens-tab";

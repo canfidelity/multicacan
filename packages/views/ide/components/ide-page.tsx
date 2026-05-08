@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Code2, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { PageHeader } from "../../layout/page-header";
 
 const IDE_PORT = 18080;

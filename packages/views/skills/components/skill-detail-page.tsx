@@ -22,23 +22,23 @@ import type {
   Skill,
   SkillFile,
   UpdateSkillRequest,
-} from "@multica/core/types";
+} from "@multicacan/core/types";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@multica/core/api";
-import { timeAgo } from "@multica/core/utils";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
+import { api } from "@multicacan/core/api";
+import { timeAgo } from "@multicacan/core/utils";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useWorkspacePaths } from "@multicacan/core/paths";
 import {
   agentListOptions,
   memberListOptions,
   selectSkillAssignments,
   skillDetailOptions,
   workspaceKeys,
-} from "@multica/core/workspace/queries";
-import { runtimeListOptions } from "@multica/core/runtimes";
-import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
-import { Button, buttonVariants } from "@multica/ui/components/ui/button";
+} from "@multicacan/core/workspace/queries";
+import { runtimeListOptions } from "@multicacan/core/runtimes";
+import { ActorAvatar } from "@multicacan/ui/components/common/actor-avatar";
+import { Button, buttonVariants } from "@multicacan/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -46,20 +46,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { Textarea } from "@multica/ui/components/ui/textarea";
+} from "@multicacan/ui/components/ui/dialog";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Label } from "@multicacan/ui/components/ui/label";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
+import { Textarea } from "@multicacan/ui/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@multica/ui/components/ui/tooltip";
+} from "@multicacan/ui/components/ui/tooltip";
 import { AppLink, useNavigation } from "../../navigation";
 import { useCanEditSkill } from "../hooks/use-can-edit-skill";
-import { useSkillPermissions } from "@multica/core/permissions";
-import { CapabilityBanner } from "@multica/ui/components/common/capability-banner";
+import { useSkillPermissions } from "@multicacan/core/permissions";
+import { CapabilityBanner } from "@multicacan/ui/components/common/capability-banner";
 import { readOrigin, totalFileCount, type OriginInfo } from "../lib/origin";
 import { FileTree } from "./file-tree";
 import { FileViewer } from "./file-viewer";

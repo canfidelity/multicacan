@@ -16,36 +16,36 @@ import {
   X as XIcon,
   Zap,
 } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@multicacan/ui/components/ui/dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
+import { Button } from "@multicacan/ui/components/ui/button";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@multica/ui/components/ui/select";
-import { TimeInput } from "@multica/ui/components/ui/time-input";
+} from "@multicacan/ui/components/ui/select";
+import { TimeInput } from "@multicacan/ui/components/ui/time-input";
 import { TimezonePicker } from "./pickers/timezone-picker";
-import { useCurrentWorkspace } from "@multica/core/paths";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { agentListOptions } from "@multica/core/workspace/queries";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { agentListOptions } from "@multicacan/core/workspace/queries";
 import {
   useCreateAutopilot,
   useCreateAutopilotTrigger,
   useUpdateAutopilot,
   useUpdateAutopilotTrigger,
-} from "@multica/core/autopilots/mutations";
+} from "@multicacan/core/autopilots/mutations";
 import type {
   AutopilotExecutionMode,
   AutopilotTrigger,
-} from "@multica/core/types";
+} from "@multicacan/core/types";
 import { TitleEditor, ContentEditor } from "../../editor";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { AgentPicker } from "./pickers/agent-picker";

@@ -8,21 +8,21 @@ import type {
   MemberWithUser,
   Agent,
   UpdateIssueRequest,
-} from "@multica/core/types";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { useModalStore } from "@multica/core/modals";
-import { useUpdateIssue } from "@multica/core/issues/mutations";
+} from "@multicacan/core/types";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { useModalStore } from "@multicacan/core/modals";
+import { useUpdateIssue } from "@multicacan/core/issues/mutations";
 import {
   memberListOptions,
   agentListOptions,
-} from "@multica/core/workspace/queries";
-import { pinListOptions, useCreatePin, useDeletePin } from "@multica/core/pins";
+} from "@multicacan/core/workspace/queries";
+import { pinListOptions, useCreatePin, useDeletePin } from "@multicacan/core/pins";
 import { canAssignAgent } from "../components/pickers";
 import { useNavigation } from "../../navigation";
 
-const BACKLOG_HINT_LS_KEY = "multica:backlog-agent-hint-dismissed";
+const BACKLOG_HINT_LS_KEY = "multicacan:backlog-agent-hint-dismissed";
 
 export interface UseIssueActionsResult {
   // Derived data for rendering menu rows

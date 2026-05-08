@@ -36,7 +36,7 @@ func (e SignupError) Error() string {
 var ErrSignupProhibited = SignupError{Message: "user registration is disabled on this self-hosted instance"}
 var ErrEmailNotAllowed = SignupError{Message: "email address or domain not allowed on this instance"}
 
-const devVerificationCodeEnv = "MULTICA_DEV_VERIFICATION_CODE"
+const devVerificationCodeEnv = "MULTICACAN_DEV_VERIFICATION_CODE"
 
 type UserResponse struct {
 	ID                      string          `json:"id"`
@@ -182,7 +182,7 @@ func (h *Handler) findOrCreateUser(ctx context.Context, email string) (user db.U
 const signupSourceMaxLen = 512
 
 func signupSourceFromRequest(r *http.Request) string {
-	c, err := r.Cookie("multica_signup_source")
+	c, err := r.Cookie("multicacan_signup_source")
 	if err != nil || c == nil {
 		return ""
 	}

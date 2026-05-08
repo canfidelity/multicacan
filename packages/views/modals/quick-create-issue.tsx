@@ -4,41 +4,41 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight, Check, ChevronRight, X as XIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { DialogTitle } from "@multica/ui/components/ui/dialog";
+import { DialogTitle } from "@multicacan/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { Button } from "@multica/ui/components/ui/button";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { api, ApiError } from "@multica/core/api";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useCurrentWorkspace } from "@multica/core/paths";
-import { agentListOptions } from "@multica/core/workspace/queries";
-import { useQuickCreateStore } from "@multica/core/issues/stores/quick-create-store";
-import { useIssueDraftStore } from "@multica/core/issues/stores/draft-store";
-import { useCreateModeStore } from "@multica/core/issues/stores/create-mode-store";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Switch } from "@multicacan/ui/components/ui/switch";
+import { api, ApiError } from "@multicacan/core/api";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { useCurrentWorkspace } from "@multicacan/core/paths";
+import { agentListOptions } from "@multicacan/core/workspace/queries";
+import { useQuickCreateStore } from "@multicacan/core/issues/stores/quick-create-store";
+import { useIssueDraftStore } from "@multicacan/core/issues/stores/draft-store";
+import { useCreateModeStore } from "@multicacan/core/issues/stores/create-mode-store";
 import {
   runtimeListOptions,
   checkQuickCreateCliVersion,
   readRuntimeCliVersion,
   MIN_QUICK_CREATE_CLI_VERSION,
-} from "@multica/core/runtimes";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import type { Agent } from "@multica/core/types";
+} from "@multicacan/core/runtimes";
+import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
+import type { Agent } from "@multicacan/core/types";
 import { ActorAvatar } from "../common/actor-avatar";
 import { canAssignAgent } from "../issues/components/pickers/assignee-picker";
-import { useAuthStore } from "@multica/core/auth";
-import { memberListOptions } from "@multica/core/workspace/queries";
+import { useAuthStore } from "@multicacan/core/auth";
+import { memberListOptions } from "@multicacan/core/workspace/queries";
 import {
   ContentEditor,
   type ContentEditorRef,
   useFileDropZone,
   FileDropOverlay,
 } from "../editor";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
+import { FileUploadButton } from "@multicacan/ui/components/common/file-upload-button";
 
 // AgentCreatePanel — agent-mode body of the create-issue dialog. Renders
 // only the inner content; the surrounding `<Dialog>` AND `<DialogContent>`
@@ -108,7 +108,7 @@ export function AgentCreatePanel({
   );
 
   // Daemon CLI version gate. The agent-create flow needs the runtime's
-  // bundled multica CLI to be ≥ MIN_QUICK_CREATE_CLI_VERSION; older
+  // bundled multicacan CLI to be ≥ MIN_QUICK_CREATE_CLI_VERSION; older
   // daemons handle attachments and partial-failure retries incorrectly
   // (see PR #1851 / MUL-1496). Pre-check on the picker so the user gets
   // immediate feedback instead of waiting for the inbox failure; the
@@ -322,7 +322,7 @@ export function AgentCreatePanel({
         {selectedAgent && versionBlocked && (
           <div className="mx-5 mb-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
             {versionCheck.state === "missing"
-              ? `This agent's daemon doesn't report a CLI version. Create with agent needs multica CLI ≥ ${versionCheck.min}. Upgrade the daemon and reconnect, or switch to manual create.`
+              ? `This agent's daemon doesn't report a CLI version. Create with agent needs multicacan CLI ≥ ${versionCheck.min}. Upgrade the daemon and reconnect, or switch to manual create.`
               : `This agent's daemon CLI is ${versionCheck.current} — Create with agent needs ≥ ${versionCheck.min}. Upgrade the daemon, or switch to manual create.`}
           </div>
         )}

@@ -15,7 +15,7 @@ import (
 // tryResolveAppURL returns the app URL if configured, or "" if not available.
 // Unlike resolveAppURL, it never calls os.Exit.
 func tryResolveAppURL(cmd *cobra.Command) string {
-	for _, key := range []string{"MULTICA_APP_URL", "FRONTEND_ORIGIN"} {
+	for _, key := range []string{"MULTICACAN_APP_URL", "FRONTEND_ORIGIN"} {
 		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
 			return strings.TrimRight(val, "/")
 		}
@@ -31,7 +31,7 @@ func tryResolveAppURL(cmd *cobra.Command) string {
 var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Authenticate and set up workspaces",
-	Long:  "Log in to Multica, then automatically discover and watch all your workspaces.",
+	Long:  "Log in to Multicacan, then automatically discover and watch all your workspaces.",
 	RunE:  runLogin,
 }
 

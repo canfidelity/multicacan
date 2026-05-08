@@ -8,9 +8,9 @@ import {
   Loader2,
   ChevronDown,
 } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@multicacan/ui/components/ui/button";
 import { PageHeader } from "../../layout/page-header";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 
 interface PortEntry {
   port: number;

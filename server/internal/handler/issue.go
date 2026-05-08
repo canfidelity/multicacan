@@ -855,7 +855,7 @@ func (h *Handler) ChildIssueProgress(w http.ResponseWriter, r *http.Request) {
 // user picks an agent in the modal and types one line of natural language;
 // the server validates the agent's reachability up front, queues a quick-
 // create task, and returns 202 immediately. The agent translates the prompt
-// into a `multica issue create` invocation in the background; success and
+// into a `multicacan issue create` invocation in the background; success and
 // failure both surface as inbox notifications to the requester.
 type QuickCreateIssueRequest struct {
 	AgentID string `json:"agent_id"`
@@ -1025,7 +1025,7 @@ func (h *Handler) checkQuickCreateDaemonVersion(ctx context.Context, runtimeID p
 }
 
 // readRuntimeCLIVersion pulls metadata.cli_version off a runtime row. The
-// metadata column is JSONB on the wire; the daemon stores the multica CLI
+// metadata column is JSONB on the wire; the daemon stores the multicacan CLI
 // version under that key during registration (see DaemonRegister).
 func readRuntimeCLIVersion(metadata []byte) string {
 	if len(metadata) == 0 {

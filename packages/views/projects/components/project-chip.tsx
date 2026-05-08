@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { projectListOptions, projectDetailOptions } from "@multica/core/projects/queries";
-import { useWorkspaceId } from "@multica/core/hooks";
+import { projectListOptions, projectDetailOptions } from "@multicacan/core/projects/queries";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import { ProjectIcon } from "./project-icon";
 
 /**

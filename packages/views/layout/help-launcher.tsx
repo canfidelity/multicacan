@@ -6,8 +6,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { useModalStore } from "@multica/core/modals";
+} from "@multicacan/ui/components/ui/dropdown-menu";
+import { useModalStore } from "@multicacan/core/modals";
 
 const DOCS_URL = "https://github.com/canfidelity/multicacan";
 const CHANGELOG_URL = "https://github.com/canfidelity/multicacan/releases";

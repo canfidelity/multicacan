@@ -1,19 +1,19 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { issueKeys, PAGINATED_STATUSES } from "@multica/core/issues/queries";
-import type { IssueStatus, ListIssuesCache } from "@multica/core/types";
+import { workspaceKeys } from "@multicacan/core/workspace/queries";
+import { issueKeys, PAGINATED_STATUSES } from "@multicacan/core/issues/queries";
+import type { IssueStatus, ListIssuesCache } from "@multicacan/core/types";
 import type { QueryClient } from "@tanstack/react-query";
 
 // Mock the workspace id singleton — items() reads it imperatively.
-vi.mock("@multica/core/platform", () => ({
+vi.mock("@multicacan/core/platform", () => ({
   getCurrentWsId: () => "ws-1",
 }));
 
 // Mock the API so we control searchIssues responses + observe calls.
 const searchIssuesMock = vi.fn();
-vi.mock("@multica/core/api", () => ({
+vi.mock("@multicacan/core/api", () => ({
   api: {
     get searchIssues() {
       return searchIssuesMock;
@@ -24,7 +24,7 @@ vi.mock("@multica/core/api", () => ({
 // Mock the auth store: items() reads `useAuthStore.getState()` imperatively
 // to identify the current user when filtering personal agents.
 const authState = { user: { id: "u1" } as { id: string } | null };
-vi.mock("@multica/core/auth", () => ({
+vi.mock("@multicacan/core/auth", () => ({
   useAuthStore: { getState: () => authState },
 }));
 

@@ -1,5 +1,5 @@
-import type { IssueStatus } from "@multica/core/types";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
+import type { IssueStatus } from "@multicacan/core/types";
+import { STATUS_CONFIG } from "@multicacan/core/issues/config";
 import { StatusIcon } from "./status-icon";
 
 export function StatusHeading({

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@multica/ui/components/ui/sonner";
-import { cn } from "@multica/ui/lib/utils";
+import { Toaster } from "@multicacan/ui/components/ui/sonner";
+import { cn } from "@multicacan/ui/lib/utils";
 import { WebProviders } from "@/components/web-providers";
 import { LocaleSync } from "@/components/locale-sync";
 import "./globals.css";
@@ -69,8 +69,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("http://localhost:3000"),
   title: {
-    default: "Multica — Project Management for Human + Agent Teams",
-    template: "%s | Multica",
+    default: "Multicacan — Project Management for Human + Agent Teams",
+    template: "%s | Multicacan",
   },
   description:
     "Open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills.",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Multica",
+    siteName: "Multicacan",
     locale: "en_US",
   },
   twitter: {

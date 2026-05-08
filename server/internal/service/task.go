@@ -721,6 +721,9 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID pgtype.UUID, resu
 	// Reconcile agent status
 	s.ReconcileAgentStatus(ctx, task.AgentID)
 
+	// Process any pending handoff: create next task for target agent.
+	s.processHandoff(ctx, task)
+
 	// Broadcast
 	s.broadcastTaskEvent(ctx, protocol.EventTaskCompleted, task)
 
@@ -1660,4 +1663,111 @@ func agentToMap(a db.Agent) map[string]any {
 		"archived_at":          util.TimestampToPtr(a.ArchivedAt),
 		"archived_by":          util.UUIDToPtr(a.ArchivedBy),
 	}
+}
+
+const maxHandoffDepth = 10
+
+// HandoffTask records a pending handoff from a running task to a named or
+// UUID-identified agent. The handoff is processed (new task created) when
+// CompleteTask fires. toAgent accepts either a UUID or an agent name
+// (case-insensitive); name lookup is scoped to the task's workspace.
+func (s *TaskService) HandoffTask(ctx context.Context, taskID pgtype.UUID, toAgent, context string) (db.TaskHandoff, error) {
+	task, err := s.Queries.GetAgentTask(ctx, taskID)
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("load task: %w", err)
+	}
+	if task.Status != "running" && task.Status != "dispatched" {
+		return db.TaskHandoff{}, fmt.Errorf("handoff only allowed on running tasks (current status: %s)", task.Status)
+	}
+	if task.HandoffDepth >= maxHandoffDepth {
+		return db.TaskHandoff{}, fmt.Errorf("handoff chain limit reached (%d)", maxHandoffDepth)
+	}
+
+	workspaceID := s.ResolveTaskWorkspaceID(ctx, task)
+	wsUUID, err := util.ParseUUID(workspaceID)
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("parse workspace_id: %w", err)
+	}
+
+	// Resolve target agent: try UUID first, fall back to name.
+	var targetAgent db.Agent
+	if agentUUID, uuidErr := util.ParseUUID(toAgent); uuidErr == nil {
+		targetAgent, err = s.Queries.GetAgentInWorkspace(ctx, db.GetAgentInWorkspaceParams{ID: agentUUID, WorkspaceID: wsUUID})
+	} else {
+		targetAgent, err = s.Queries.GetAgentByNameInWorkspace(ctx, db.GetAgentByNameInWorkspaceParams{WorkspaceID: wsUUID, Lower: strings.ToLower(toAgent)})
+	}
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("agent not found: %w", err)
+	}
+	if targetAgent.ArchivedAt.Valid {
+		return db.TaskHandoff{}, fmt.Errorf("target agent is archived")
+	}
+
+	handoff, err := s.Queries.CreateTaskHandoff(ctx, db.CreateTaskHandoffParams{
+		FromTaskID:  taskID,
+		ToAgentID:   targetAgent.ID,
+		WorkspaceID: wsUUID,
+		IssueID:     task.IssueID,
+		Context:     context,
+		Depth:       task.HandoffDepth + 1,
+	})
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("create handoff: %w", err)
+	}
+
+	slog.Info("task handoff registered",
+		"task_id", util.UUIDToString(taskID),
+		"to_agent", targetAgent.Name,
+		"depth", handoff.Depth,
+	)
+	return handoff, nil
+}
+
+// processHandoff checks for an unconsumed handoff on a completed task and,
+// if found, creates the next task for the target agent.
+func (s *TaskService) processHandoff(ctx context.Context, task db.AgentTaskQueue) {
+	if !task.IssueID.Valid {
+		return
+	}
+	handoff, err := s.Queries.ConsumeTaskHandoff(ctx, task.ID)
+	if err != nil {
+		// pgx.ErrNoRows means no pending handoff — expected, not an error.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			slog.Error("processHandoff: consume failed", "task_id", util.UUIDToString(task.ID), "error", err)
+		}
+		return
+	}
+
+	targetAgent, err := s.Queries.GetAgent(ctx, handoff.ToAgentID)
+	if err != nil || !targetAgent.RuntimeID.Valid || targetAgent.ArchivedAt.Valid {
+		slog.Error("processHandoff: target agent unavailable", "task_id", util.UUIDToString(task.ID), "to_agent_id", util.UUIDToString(handoff.ToAgentID))
+		return
+	}
+
+	issue, err := s.Queries.GetIssue(ctx, task.IssueID)
+	if err != nil {
+		slog.Error("processHandoff: load issue failed", "task_id", util.UUIDToString(task.ID), "error", err)
+		return
+	}
+
+	newTask, err := s.Queries.CreateHandoffTask(ctx, db.CreateHandoffTaskParams{
+		AgentID:        handoff.ToAgentID,
+		RuntimeID:      targetAgent.RuntimeID,
+		IssueID:        task.IssueID,
+		Priority:       priorityToInt(issue.Priority),
+		HandoffContext: handoff.Context,
+		HandoffDepth:   handoff.Depth,
+	})
+	if err != nil {
+		slog.Error("processHandoff: create task failed", "error", err)
+		return
+	}
+
+	slog.Info("handoff task created",
+		"new_task_id", util.UUIDToString(newTask.ID),
+		"to_agent", targetAgent.Name,
+		"depth", handoff.Depth,
+	)
+	s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, newTask)
+	s.notifyTaskAvailable(newTask)
 }

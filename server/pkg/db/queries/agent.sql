@@ -16,6 +16,11 @@ WHERE id = $1;
 SELECT * FROM agent
 WHERE id = $1 AND workspace_id = $2;
 
+-- name: GetAgentByNameInWorkspace :one
+SELECT * FROM agent
+WHERE workspace_id = $1 AND lower(name) = lower($2) AND archived_at IS NULL
+LIMIT 1;
+
 -- name: CreateAgent :one
 INSERT INTO agent (
     workspace_id, name, description, avatar_url, runtime_mode,
@@ -441,4 +446,25 @@ SET status = CASE WHEN EXISTS (
 ) THEN 'working' ELSE 'idle' END,
     updated_at = now()
 WHERE a.id = $1
+RETURNING *;
+
+-- name: CreateHandoffTask :one
+-- Creates a task for the target agent with handoff context already embedded.
+INSERT INTO agent_task_queue (
+    agent_id, runtime_id, issue_id, status, priority,
+    handoff_context, handoff_depth
+)
+VALUES ($1, $2, $3, 'queued', $4, $5, $6)
+RETURNING *;
+
+-- name: CreateTaskHandoff :one
+INSERT INTO task_handoff (from_task_id, to_agent_id, workspace_id, issue_id, context, depth)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING *;
+
+-- name: ConsumeTaskHandoff :one
+-- Atomically marks the pending handoff consumed and returns it.
+UPDATE task_handoff
+SET consumed = TRUE
+WHERE from_task_id = $1 AND consumed = FALSE
 RETURNING *;

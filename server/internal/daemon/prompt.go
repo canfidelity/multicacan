@@ -27,8 +27,21 @@ func BuildPrompt(task Task) string {
 	b.WriteString("You are running as a local coding agent for a Multicacan workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
 	fmt.Fprintf(&b, "Start by running `multicacan issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	appendHandoffContext(&b, task)
 	appendPairInterventions(&b, task)
 	return b.String()
+}
+
+// appendHandoffContext injects context from a previous agent's handoff into the prompt.
+func appendHandoffContext(b *strings.Builder, task Task) {
+	if task.HandoffContext == "" {
+		return
+	}
+	b.WriteString("\n---\n")
+	b.WriteString("## Handoff from Previous Agent\n")
+	b.WriteString("Another agent completed work on this issue and handed it off to you with the following context:\n\n")
+	fmt.Fprintf(b, "%s\n\n", task.HandoffContext)
+	b.WriteString("Review the issue and the above context, then continue from where the previous agent left off.\n")
 }
 
 // appendPairInterventions injects any pending pair agent instructions at the end of the prompt.

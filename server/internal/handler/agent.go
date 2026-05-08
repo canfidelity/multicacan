@@ -172,7 +172,9 @@ type AgentTaskResponse struct {
 	AutopilotSource         string          `json:"autopilot_source,omitempty"`          // manual, schedule, webhook, or api
 	AutopilotTriggerPayload json.RawMessage `json:"autopilot_trigger_payload,omitempty"` // optional trigger payload for webhook/api runs
 	QuickCreatePrompt       string          `json:"quick_create_prompt,omitempty"`       // user's natural-language input for quick-create tasks
-	Kind                    string          `json:"kind"`                                // discriminator: "comment" | "autopilot" | "chat" | "quick_create" | "direct" — used by the activity row to label tasks that have no linked issue
+	HandoffContext          string          `json:"handoff_context,omitempty"`           // context passed from the previous agent via handoff
+	HandoffDepth            int32           `json:"handoff_depth,omitempty"`             // handoff chain depth (0 = not a handoff)
+	Kind                    string          `json:"kind"`                                // discriminator: "comment" | "autopilot" | "chat" | "quick_create" | "direct" | "handoff"
 }
 
 // TaskAgentData holds agent info included in claim responses so the daemon
@@ -221,6 +223,8 @@ func taskToResponse(t db.AgentTaskQueue) AgentTaskResponse {
 		// with issue_id = "" once a task has no linked issue.
 		ChatSessionID:  uuidToString(t.ChatSessionID),
 		AutopilotRunID: uuidToString(t.AutopilotRunID),
+		HandoffContext: t.HandoffContext,
+		HandoffDepth:   t.HandoffDepth,
 		Kind:           computeTaskKind(t),
 	}
 }
@@ -243,6 +247,9 @@ func computeTaskKind(t db.AgentTaskQueue) string {
 	}
 	if uuidToString(t.TriggerCommentID) != "" {
 		return "comment"
+	}
+	if t.HandoffDepth > 0 {
+		return "handoff"
 	}
 	return "direct"
 }

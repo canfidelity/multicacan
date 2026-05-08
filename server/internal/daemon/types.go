@@ -59,6 +59,8 @@ type Task struct {
 	AutopilotTriggerPayload json.RawMessage `json:"autopilot_trigger_payload,omitempty"` // optional trigger payload for webhook/api runs
 	QuickCreatePrompt       string          `json:"quick_create_prompt,omitempty"`       // user's natural-language input for quick-create tasks
 	PendingInterventions    []string        `json:"pending_interventions,omitempty"`      // pair agent instructions injected before this task
+	HandoffContext          string          `json:"handoff_context,omitempty"`            // context passed from the previous agent via handoff
+	HandoffDepth            int             `json:"handoff_depth,omitempty"`              // handoff chain depth (0 = not a handoff)
 }
 
 // AgentData holds agent details returned by the claim endpoint.

@@ -92,6 +92,8 @@ type AgentTaskQueue struct {
 	LastHeartbeatAt   pgtype.Timestamptz `json:"last_heartbeat_at"`
 	TriggerSummary    pgtype.Text        `json:"trigger_summary"`
 	ForceFreshSession bool               `json:"force_fresh_session"`
+	HandoffContext    string             `json:"handoff_context"`
+	HandoffDepth      int32              `json:"handoff_depth"`
 }
 
 type Attachment struct {
@@ -430,6 +432,18 @@ type SkillFile struct {
 	Content   string             `json:"content"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TaskHandoff struct {
+	ID          pgtype.UUID        `json:"id"`
+	FromTaskID  pgtype.UUID        `json:"from_task_id"`
+	ToAgentID   pgtype.UUID        `json:"to_agent_id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	Context     string             `json:"context"`
+	Depth       int32              `json:"depth"`
+	Consumed    bool               `json:"consumed"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type TaskMessage struct {

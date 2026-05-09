@@ -29,6 +29,15 @@ interface Runtime {
   provider: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function runtimeDisplayName(rt: Runtime): string {
+  if (!rt.name || UUID_RE.test(rt.name)) {
+    return rt.provider || rt.id.slice(0, 8);
+  }
+  return rt.name;
+}
+
 export function NativeIDEPage() {
   const wsId = useWorkspaceId();
   const [active, setActive] = useState(false);
@@ -184,7 +193,7 @@ export function NativeIDEPage() {
                   <SelectContent>
                     {runtimes.map((rt) => (
                       <SelectItem key={rt.id} value={rt.id} className="text-xs">
-                        {rt.name}
+                        {runtimeDisplayName(rt)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -198,7 +207,6 @@ export function NativeIDEPage() {
             <div className="flex-1 overflow-auto py-1">
               <FileTree
                 wsId={wsId!}
-                rootPath={selectedRuntimeId ? `/${selectedRuntimeId}` : undefined}
                 onFileOpen={handleFileOpen}
               />
             </div>

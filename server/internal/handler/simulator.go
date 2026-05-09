@@ -668,18 +668,26 @@ func (h *Handler) SimulatorWSProxy(w http.ResponseWriter, r *http.Request) {
 	<-done
 }
 
-// execAllowedPrefixes defines the commands that can be run through the exec proxy.
-// For compound commands (pipelines, semicolons) each segment is checked.
-var execAllowedPrefixes = []string{
-	"xcrun simctl ",
-	"serve-sim ",
-	"bunx serve-sim ",
-	"kill ",
-	"nohup ",
-	"sleep ",
-	"cat ",
-	"grep ",
+// execAllowedBinaries is the exact set of binary names permitted as the first
+// token of a simulator exec command. Prefix matching is intentionally avoided —
+// only the base name of the binary is checked so path-prefixed variants
+// (e.g. "/usr/bin/xcrun") are also covered via filepath.Base.
+var execAllowedBinaries = map[string]bool{
+	"xcrun":     true,
+	"serve-sim": true,
+	"bunx":      true,
+	"kill":      true,
+	"nohup":     true,
+	"sleep":     true,
+	"cat":       true,
+	"grep":      true,
 }
+
+// shellUnsafeChars are characters the shell interprets specially. A command
+// containing any of these is rejected outright so injection via subshell,
+// pipe, redirection, or variable expansion is impossible even when the command
+// is forwarded to the daemon.
+const shellUnsafeChars = "&|;$`\n\r><!()"
 
 // SimulatorExecProxy runs an allowlisted shell command on the host.
 func (h *Handler) SimulatorExecProxy(w http.ResponseWriter, r *http.Request) {
@@ -691,25 +699,23 @@ func (h *Handler) SimulatorExecProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Allowlist check — split on ; and check each segment.
-	segments := strings.Split(req.Command, ";")
-	for _, seg := range segments {
-		seg = strings.TrimSpace(seg)
-		if seg == "" {
-			continue
-		}
-		segAllowed := false
-		for _, prefix := range execAllowedPrefixes {
-			if strings.HasPrefix(seg, prefix) {
-				segAllowed = true
-				break
-			}
-		}
-		if !segAllowed {
-			slog.Warn("simulator exec: blocked command segment", "segment", seg, "full", req.Command)
-			writeError(w, http.StatusForbidden, "command not allowed — only xcrun simctl and serve-sim commands are permitted")
-			return
-		}
+	// Reject shell metacharacters before any further processing.
+	if strings.ContainsAny(req.Command, shellUnsafeChars) {
+		slog.Warn("simulator exec: shell metacharacter rejected", "command", req.Command)
+		writeError(w, http.StatusForbidden, "command not allowed")
+		return
+	}
+
+	// Validate binary: the first token must be in the exact allowlist.
+	parts := strings.Fields(req.Command)
+	if len(parts) == 0 {
+		writeError(w, http.StatusBadRequest, "missing command")
+		return
+	}
+	if !execAllowedBinaries[filepath.Base(parts[0])] {
+		slog.Warn("simulator exec: blocked binary", "binary", parts[0], "command", req.Command)
+		writeError(w, http.StatusForbidden, "command not allowed — only xcrun simctl and serve-sim commands are permitted")
+		return
 	}
 
 	slog.Info("simulator exec", "command", req.Command)
@@ -829,8 +835,8 @@ func (h *Handler) SimulatorExecProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Regular commands run in their own process group.
-	cmd := exec.Command("sh", "-c", req.Command)
+	// Run without shell interpretation — parts is already validated above.
+	cmd := exec.Command(parts[0], parts[1:]...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	var stdoutBuf, stderrBuf strings.Builder
 	cmd.Stdout = &stdoutBuf

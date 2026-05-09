@@ -237,13 +237,22 @@ func UpdateViaDownloadRelease(release *GitHubRelease, downloadTimeout time.Durat
 		return "", fmt.Errorf("read binary from %s: %w", asset.Name, err)
 	}
 
-	// Atomic replace: write to temp file, then rename over the original.
-	dir := filepath.Dir(exePath)
-	tmpFile, err := os.CreateTemp(dir, "multicacan-update-*")
-	if err != nil {
-		return "", fmt.Errorf("create temp file: %w", err)
+	// Write to a temp file. Try the same directory first (atomic rename on same
+	// fs); fall back to os.TempDir() when the install dir is not writable
+	// (e.g. /usr/local/bin owned by root).
+	tryDirs := []string{filepath.Dir(exePath), os.TempDir()}
+	var tmpFile *os.File
+	var tmpPath string
+	for _, d := range tryDirs {
+		tmpFile, err = os.CreateTemp(d, "multicacan-update-*")
+		if err == nil {
+			tmpPath = tmpFile.Name()
+			break
+		}
 	}
-	tmpPath := tmpFile.Name()
+	if tmpFile == nil {
+		return "", fmt.Errorf("create temp file: %w (try: sudo multicacan update)", err)
+	}
 
 	if _, err := tmpFile.Write(binaryData); err != nil {
 		tmpFile.Close()
@@ -265,9 +274,11 @@ func UpdateViaDownloadRelease(release *GitHubRelease, downloadTimeout time.Durat
 
 	// Replace the original binary. On Windows this moves the running executable
 	// aside first; on Unix a plain rename over the running inode is fine.
+	// If rename fails (e.g. cross-device or permission denied), fall back to
+	// copy so the user gets a clear error rather than a confusing temp-file message.
 	if err := replaceBinary(tmpPath, exePath); err != nil {
 		os.Remove(tmpPath)
-		return "", fmt.Errorf("replace binary: %w", err)
+		return "", fmt.Errorf("replace binary: %w\n\nTip: run with sudo — e.g. sudo multicacan update", err)
 	}
 
 	return fmt.Sprintf("Downloaded %s and replaced %s", asset.Name, exePath), nil

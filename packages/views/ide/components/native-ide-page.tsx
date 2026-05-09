@@ -8,6 +8,13 @@ import {
   ResizableHandle,
 } from "@multicacan/ui/components/ui/resizable";
 import { Button } from "@multicacan/ui/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@multicacan/ui/components/ui/select";
 import { PageHeader } from "../../layout/page-header";
 import { useWorkspaceId } from "@multicacan/core/hooks";
 import { FileTree } from "./file-tree";
@@ -15,6 +22,12 @@ import { EditorTabs, type OpenFile } from "./editor-tabs";
 import { IDEEditor } from "./ide-editor";
 import { IDETerminal } from "./ide-terminal";
 import { IDEChatPanel } from "./ide-chat-panel";
+
+interface Runtime {
+  id: string;
+  name: string;
+  provider: string;
+}
 
 export function NativeIDEPage() {
   const wsId = useWorkspaceId();
@@ -24,6 +37,8 @@ export function NativeIDEPage() {
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [showTerminal, setShowTerminal] = useState(false);
   const [editorRefreshKey, setEditorRefreshKey] = useState(0);
+  const [runtimes, setRuntimes] = useState<Runtime[]>([]);
+  const [selectedRuntimeId, setSelectedRuntimeId] = useState<string | null>(null);
 
   const handleAgentDone = useCallback(() => {
     setEditorRefreshKey((k) => k + 1);
@@ -54,6 +69,21 @@ export function NativeIDEPage() {
       clearInterval(interval);
     };
   }, [wsId]);
+
+  useEffect(() => {
+    if (!wsId || !active) return;
+    fetch(`/api/native-ide/${wsId}/runtimes`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Runtime[] = d.runtimes ?? [];
+        setRuntimes(list);
+        setSelectedRuntimeId((prev) => {
+          if (prev && list.some((r) => r.id === prev)) return prev;
+          return list[0]?.id ?? null;
+        });
+      })
+      .catch(() => {});
+  }, [wsId, active]);
 
   const handleFileOpen = useCallback((path: string) => {
     setOpenFiles((prev) => {
@@ -138,11 +168,39 @@ export function NativeIDEPage() {
           groupResizeBehavior="preserve-pixel-size"
         >
           <div className="h-full flex flex-col overflow-hidden border-r">
-            <div className="shrink-0 border-b px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Files
+            <div className="shrink-0 border-b px-2 py-1.5">
+              {runtimes.length > 0 ? (
+                <Select
+                  value={selectedRuntimeId ?? ""}
+                  onValueChange={(v) => {
+                    setSelectedRuntimeId(v || null);
+                    setOpenFiles([]);
+                    setActiveFile(null);
+                  }}
+                >
+                  <SelectTrigger className="h-6 text-xs border-0 shadow-none px-0 gap-1 font-medium text-muted-foreground uppercase tracking-wide focus:ring-0">
+                    <SelectValue placeholder="Select agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {runtimes.map((rt) => (
+                      <SelectItem key={rt.id} value={rt.id} className="text-xs">
+                        {rt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Files
+                </span>
+              )}
             </div>
             <div className="flex-1 overflow-auto py-1">
-              <FileTree wsId={wsId!} onFileOpen={handleFileOpen} />
+              <FileTree
+                wsId={wsId!}
+                rootPath={selectedRuntimeId ? `/${selectedRuntimeId}` : undefined}
+                onFileOpen={handleFileOpen}
+              />
             </div>
           </div>
         </ResizablePanel>

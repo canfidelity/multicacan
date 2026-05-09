@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Loader2,
 } from "lucide-react";
+
 interface Entry {
   name: string;
   dir: boolean;
@@ -101,15 +102,19 @@ function FileTreeNode({ wsId, path, name, isDir, depth, onFileOpen }: FileTreeNo
 
 interface FileTreeProps {
   wsId: string;
+  rootPath?: string;
   onFileOpen: (path: string) => void;
 }
 
-export function FileTree({ wsId, onFileOpen }: FileTreeProps) {
+export function FileTree({ wsId, rootPath, onFileOpen }: FileTreeProps) {
   const [roots, setRoots] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const base = rootPath ?? "/";
 
   useEffect(() => {
-    fetch(`/api/native-ide/${wsId}/files?path=/`)
+    setLoading(true);
+    setRoots([]);
+    fetch(`/api/native-ide/${wsId}/files?path=${encodeURIComponent(base)}`)
       .then((r) => r.json())
       .then((d) => {
         setRoots(
@@ -120,12 +125,20 @@ export function FileTree({ wsId, onFileOpen }: FileTreeProps) {
         );
       })
       .finally(() => setLoading(false));
-  }, [wsId]);
+  }, [wsId, base]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (roots.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-4 text-xs text-muted-foreground">
+        No files
       </div>
     );
   }
@@ -136,7 +149,7 @@ export function FileTree({ wsId, onFileOpen }: FileTreeProps) {
         <FileTreeNode
           key={e.name}
           wsId={wsId}
-          path={`/${e.name}`}
+          path={`${base === "/" ? "" : base}/${e.name}`}
           name={e.name}
           isDir={e.dir}
           depth={0}

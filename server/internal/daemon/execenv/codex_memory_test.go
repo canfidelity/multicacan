@@ -531,8 +531,8 @@ features.multi_agent = true
 	data, _ := os.ReadFile(configPath)
 	got := string(data)
 	for _, marker := range []string{
-		multicaManagedBeginMarker,
-		multicaMultiAgentBeginMarker,
+		multicacanManagedBeginMarker,
+		multicacanMultiAgentBeginMarker,
 		multicaMemoryFeatureBeginMarker,
 		multicaMemoryConfigBeginMarker,
 	} {

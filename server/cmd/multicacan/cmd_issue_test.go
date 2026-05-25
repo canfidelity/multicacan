@@ -268,9 +268,9 @@ func TestRunIssueCreateSendsAllowDuplicate(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := newIssueCreateTestCmd()
 	_ = cmd.Flags().Set("title", "Duplicate allowed")
@@ -303,9 +303,9 @@ func TestRunIssueCreateShowsDuplicateMessage(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := newIssueCreateTestCmd()
 	_ = cmd.Flags().Set("title", "SH-PM-SYNTH-01 Synthesize recommendation-to-shortlist planning outputs")
@@ -688,9 +688,9 @@ func TestRunIssueRunMessagesResolvesShortTaskPrefix(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "run-messages"}
 	cmd.Flags().String("output", "json", "")
@@ -1590,9 +1590,9 @@ func TestRunIssueCommentListFlagGuards(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cases := []struct {
 		name    string
@@ -1707,9 +1707,9 @@ func TestRunIssueCommentList_ThreadTailPassesThroughAndPrintsReplyCursor(t *test
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	// Redirect stderr so we can assert on the "Next reply cursor" line —
 	// that's the user-visible signal that the CLI knew it was paging
@@ -1759,9 +1759,9 @@ func TestRunIssueCommentList_RecentStillLabelsCursorAsThread(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	stderr := captureStderr(t)
 	defer stderr.restore()

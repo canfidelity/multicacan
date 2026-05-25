@@ -1693,7 +1693,7 @@ func ambiguousAssigneeError(input string, matches []assigneeMatch) error {
 // with overlapping names.
 func resolveAssigneeByID(ctx context.Context, client *cli.APIClient, id string, kinds assigneeKinds) (string, string, error) {
 	if client.WorkspaceID == "" {
-		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set MULTICA_WORKSPACE_ID")
+		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set MULTICACAN_WORKSPACE_ID")
 	}
 	input := strings.TrimSpace(id)
 	if !uuidRegexp.MatchString(input) {

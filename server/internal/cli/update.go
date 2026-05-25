@@ -5,6 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -387,4 +389,48 @@ func MatchKnownBrewPrefix(path string) string {
 		}
 	}
 	return ""
+}
+
+// findChecksumManifestAsset returns the checksums.txt asset from a release asset list.
+func findChecksumManifestAsset(assets []GitHubReleaseAsset) (*GitHubReleaseAsset, error) {
+	for i := range assets {
+		if assets[i].Name == "checksums.txt" {
+			return &assets[i], nil
+		}
+	}
+	return nil, fmt.Errorf("checksums.txt not found in release assets")
+}
+
+// parseChecksumManifest parses a GoReleaser checksums.txt and returns the
+// lowercase hex SHA-256 for the named asset. Lines beginning with '#' or
+// that are blank are skipped. Both space- and tab-separated entries are supported.
+func parseChecksumManifest(manifest []byte, assetName string) (string, error) {
+	for _, line := range strings.Split(string(manifest), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Format: "<sha256>  <filename>" (two spaces) or "<sha256>\t<filename>"
+		var hash, name string
+		if idx := strings.IndexAny(line, " \t"); idx > 0 {
+			hash = strings.ToLower(strings.TrimSpace(line[:idx]))
+			name = strings.TrimSpace(line[idx+1:])
+			// Strip any extra leading whitespace between hash and name.
+			name = strings.TrimLeft(name, " \t")
+		}
+		if name == assetName {
+			return hash, nil
+		}
+	}
+	return "", fmt.Errorf("%q not found in checksum manifest", assetName)
+}
+
+// verifyAssetSHA256 checks that data matches expectedHex (case-insensitive).
+func verifyAssetSHA256(data []byte, expectedHex, assetName string) error {
+	sum := sha256.Sum256(data)
+	got := hex.EncodeToString(sum[:])
+	if got != strings.ToLower(expectedHex) {
+		return fmt.Errorf("SHA-256 mismatch for %s: got %s, want %s", assetName, got, strings.ToLower(expectedHex))
+	}
+	return nil
 }

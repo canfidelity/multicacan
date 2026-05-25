@@ -40,9 +40,9 @@ func TestRunWorkspaceSwitch(t *testing.T) {
 
 	// Isolate HOME so the test never touches the developer's ~/.multica.
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_TOKEN", "test-token")
-	t.Setenv("MULTICA_WORKSPACE_ID", "")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "")
 
 	t.Run("switches by slug and persists workspace_id", func(t *testing.T) {
 		cmd := newWorkspaceSwitchTestCmd()
@@ -96,7 +96,7 @@ func TestRunWorkspaceSwitch(t *testing.T) {
 
 		// Verify the staging profile config landed in the expected path.
 		path, _ := cli.CLIConfigPathForProfile("staging")
-		wantSuffix := filepath.Join(".multica", "profiles", "staging", "config.json")
+		wantSuffix := filepath.Join(".multicacan", "profiles", "staging", "config.json")
 		if !strings.HasSuffix(path, wantSuffix) {
 			t.Errorf("staging config path = %q, want suffix %q", path, wantSuffix)
 		}

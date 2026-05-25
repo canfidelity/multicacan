@@ -60,10 +60,10 @@ var workspaceSwitchCmd = &cobra.Command{
 	Long: "Sets the default workspace for the current profile after verifying you " +
 		"have access to it. Accepts a full UUID, a slug, or a short UUID " +
 		"prefix (≥4 hex chars) as shown in 'workspace list'. Subsequent " +
-		"commands without --workspace-id or MULTICA_WORKSPACE_ID will target " +
+		"commands without --workspace-id or MULTICACAN_WORKSPACE_ID will target " +
 		"this workspace.\n\n" +
 		"Resolution priority (highest to lowest): --workspace-id flag, " +
-		"MULTICA_WORKSPACE_ID env, profile default (set by this command).\n\n" +
+		"MULTICACAN_WORKSPACE_ID env, profile default (set by this command).\n\n" +
 		"For low-level use, 'multicacan config set workspace_id <id>' writes the " +
 		"same setting without verification.",
 	Args: exactArgs(1),

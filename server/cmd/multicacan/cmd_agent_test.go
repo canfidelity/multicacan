@@ -547,9 +547,9 @@ func TestAgentAvatarHappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -570,9 +570,9 @@ func TestAgentAvatarHappyPath(t *testing.T) {
 
 // TestAgentAvatarUnsupportedFormat rejects files with unsupported extensions.
 func TestAgentAvatarUnsupportedFormat(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	dir := t.TempDir()
 	txtPath := filepath.Join(dir, "avatar.txt")
@@ -599,9 +599,9 @@ func TestAgentAvatarUnsupportedFormat(t *testing.T) {
 
 // TestAgentAvatarOversizedFile rejects files larger than 5MB.
 func TestAgentAvatarOversizedFile(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	dir := t.TempDir()
 	bigPath := filepath.Join(dir, "big.png")
@@ -645,9 +645,9 @@ func TestAgentAvatarMissingAgent(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -687,9 +687,9 @@ func TestAgentAvatarUploadFailure(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -736,9 +736,9 @@ func TestAgentAvatarUpdateFailure(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -759,9 +759,9 @@ func TestAgentAvatarUpdateFailure(t *testing.T) {
 
 // TestAgentAvatarMissingFileFlag rejects when --file is not provided.
 func TestAgentAvatarMissingFileFlag(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -779,9 +779,9 @@ func TestAgentAvatarMissingFileFlag(t *testing.T) {
 
 // TestAgentAvatarNonexistentFile rejects when the file path does not exist.
 func TestAgentAvatarNonexistentFile(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "avatar"}
 	cmd.Flags().String("file", "", "")
@@ -802,9 +802,9 @@ func TestAgentAvatarNonexistentFile(t *testing.T) {
 
 // TestAgentAvatarSizeBoundary verifies that exactly 5MB passes and 5MB+1 fails.
 func TestAgentAvatarSizeBoundary(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	t.Run("exactly 5MB passes", func(t *testing.T) {
 		dir := t.TempDir()
@@ -857,9 +857,9 @@ func TestAgentAvatarSizeBoundary(t *testing.T) {
 
 // TestAgentAvatarCaseInsensitiveExtension verifies uppercase extensions are accepted.
 func TestAgentAvatarCaseInsensitiveExtension(t *testing.T) {
-	t.Setenv("MULTICA_SERVER_URL", "http://127.0.0.1:0")
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", "http://127.0.0.1:0")
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	for _, ext := range []string{"avatar.PNG", "avatar.JPG", "avatar.JPEG", "avatar.GIF", "avatar.WEBP"} {
 		t.Run(ext, func(t *testing.T) {
@@ -904,9 +904,9 @@ func TestAgentGetTableIncludesAvatarURL(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := &cobra.Command{Use: "get"}
 	cmd.Flags().String("output", "table", "")

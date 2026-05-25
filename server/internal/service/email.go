@@ -228,11 +228,11 @@ func buildInvitationParams(from, to, inviterName, workspaceName, inviteURL strin
 	return &resend.SendEmailRequest{
 		From:    from,
 		To:      []string{to},
-		Subject: fmt.Sprintf("%s invited you to %s on Multica", subjectInviter, subjectWorkspace),
+		Subject: fmt.Sprintf("%s invited you to %s on Multicacan", subjectInviter, subjectWorkspace),
 		Html: fmt.Sprintf(
 			`<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
 				<h2>You're invited to join %s</h2>
-				<p><strong>%s</strong> invited you to collaborate in the <strong>%s</strong> workspace on Multica.</p>
+				<p><strong>%s</strong> invited you to collaborate in the <strong>%s</strong> workspace on Multicacan.</p>
 				<p style="margin: 24px 0;">
 					<a href="%s" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">Accept invitation</a>
 				</p>

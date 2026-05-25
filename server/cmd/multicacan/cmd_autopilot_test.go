@@ -154,9 +154,9 @@ func TestRunAutopilotCreateSendsProjectID(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	cmd := newAutopilotCreateTestCmd()
 	_ = cmd.Flags().Set("title", "Daily planner")
@@ -200,9 +200,9 @@ func TestRunAutopilotUpdateSendsProjectIDChanges(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("MULTICA_SERVER_URL", srv.URL)
-	t.Setenv("MULTICA_WORKSPACE_ID", "ws-1")
-	t.Setenv("MULTICA_TOKEN", "test-token")
+	t.Setenv("MULTICACAN_SERVER_URL", srv.URL)
+	t.Setenv("MULTICACAN_WORKSPACE_ID", "ws-1")
+	t.Setenv("MULTICACAN_TOKEN", "test-token")
 
 	t.Run("set project", func(t *testing.T) {
 		cmd := newAutopilotUpdateTestCmd()

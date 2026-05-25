@@ -62,7 +62,7 @@ func TestTriggerRestart_BrewLinuxCellarDeleted(t *testing.T) {
 	})
 
 	prefix := filepath.Join(t.TempDir(), "home", "linuxbrew", ".linuxbrew")
-	deletedCellarPath := filepath.Join(prefix, "Cellar", "multica", "0.2.9", "bin", "multica")
+	deletedCellarPath := filepath.Join(prefix, "Cellar", "multicacan", "0.2.9", "bin", "multicacan")
 	isBrewInstall = func() bool { return true }
 	getBrewPrefix = func() string { return prefix }
 
@@ -71,7 +71,7 @@ func TestTriggerRestart_BrewLinuxCellarDeleted(t *testing.T) {
 	}
 	d.triggerRestart()
 
-	want := filepath.Join(prefix, "bin", "multica")
+	want := filepath.Join(prefix, "bin", "multicacan")
 	if got := d.RestartBinary(); got != want {
 		t.Fatalf("restart binary = %q, want %q", got, want)
 	}
@@ -103,7 +103,7 @@ func TestTriggerRestart_BrewPrefixUnavailable_FallsBackToKnownPrefix(t *testing.
 	}
 	d.triggerRestart()
 
-	want := filepath.Join(knownPrefix, "bin", "multica")
+	want := filepath.Join(knownPrefix, "bin", "multicacan")
 	if got := d.RestartBinary(); got != want {
 		t.Fatalf("restart binary = %q, want %q", got, want)
 	}
@@ -497,7 +497,7 @@ func TestBuildPromptSquadLeaderNoActionProhibition(t *testing.T) {
 	for _, want := range []string{
 		"Squad leader no_action rule",
 		"DO NOT post any comment",
-		"multica squad activity",
+		"multicacan squad activity",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("squad leader prompt missing %q\n---\n%s", want, prompt)

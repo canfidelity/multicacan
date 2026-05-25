@@ -19,7 +19,7 @@ import { useIssueSelectionStore } from "@multicacan/core/issues/stores/selection
 import { useBatchUpdateIssues, useBatchDeleteIssues } from "@multicacan/core/issues/mutations";
 import { StatusPicker, PriorityPicker, AssigneePicker } from "./pickers";
 import { useT } from "../../i18n";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 
 export function BatchActionToolbar({
   placement = "fixed-bottom",

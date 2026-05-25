@@ -1,6 +1,6 @@
 import { loader } from "fumadocs-core/source";
 import { defineI18n } from "fumadocs-core/i18n";
-import type { SupportedLocale } from "@multica/core/i18n";
+import type { SupportedLocale } from "@multicacan/core/i18n";
 import { useCases } from "@/.source";
 
 // Use-case content still uses dot-suffixed MDX files (`<slug>.en.mdx` and

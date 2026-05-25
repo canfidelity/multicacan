@@ -1,4 +1,4 @@
-import type { SupportedLocale } from "@multica/core/i18n";
+import type { SupportedLocale } from "@multicacan/core/i18n";
 
 export type Locale = SupportedLocale;
 export type LandingDictionaryLocale = "en" | "zh";

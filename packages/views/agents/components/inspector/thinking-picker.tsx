@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RuntimeModelThinkingLevel } from "@multica/core/types";
+import type { RuntimeModelThinkingLevel } from "@multicacan/core/types";
 import {
   PickerItem,
   PropertyPicker,

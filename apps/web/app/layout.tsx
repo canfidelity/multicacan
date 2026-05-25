@@ -4,8 +4,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@multicacan/ui/components/ui/sonner";
 import { cn } from "@multicacan/ui/lib/utils";
 import { WebProviders } from "@/components/web-providers";
-import type { SupportedLocale } from "@multica/core/i18n";
-import { RESOURCES } from "@multica/views/locales";
+import type { SupportedLocale } from "@multicacan/core/i18n";
+import { RESOURCES } from "@multicacan/views/locales";
 import { getRequestLocale } from "@/lib/request-locale";
 import "./globals.css";
 

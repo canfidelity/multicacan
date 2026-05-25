@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@multicacan/ui/lib/utils";
 import { LandingHeader } from "@/features/landing/components/landing-header";
 import { LandingFooter } from "@/features/landing/components/landing-footer";
 import { Screenshot } from "@/features/landing/components/mdx/screenshot";
@@ -15,7 +15,7 @@ import {
   getUseCaseLocale,
   useCaseText,
 } from "@/lib/use-cases-i18n";
-import type { SupportedLocale } from "@multica/core/i18n";
+import type { SupportedLocale } from "@multicacan/core/i18n";
 
 type Params = { slug: string };
 

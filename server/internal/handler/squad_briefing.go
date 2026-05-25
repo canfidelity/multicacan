@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/multica-ai/multica/server/internal/util"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/util"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 // squadOperatingProtocol is the hard-coded system-level briefing prepended to

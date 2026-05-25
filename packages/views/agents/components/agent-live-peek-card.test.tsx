@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { I18nProvider } from "@multica/core/i18n/react";
+import { I18nProvider } from "@multicacan/core/i18n/react";
 import enCommon from "../../locales/en/common.json";
 import enAgents from "../../locales/en/agents.json";
 
@@ -10,13 +10,13 @@ const TEST_RESOURCES = { en: { common: enCommon, agents: enAgents } };
 
 // useWorkspaceId is a Context-backed hook in core; stub it to a static id so
 // the card runs outside a WorkspaceIdProvider in tests.
-vi.mock("@multica/core/hooks", () => ({
+vi.mock("@multicacan/core/hooks", () => ({
   useWorkspaceId: () => "ws-1",
 }));
 
 // Paths only needs issueDetail for the "Now on" link. A simple stub keeps the
 // test free of WorkspaceSlugProvider wiring.
-vi.mock("@multica/core/paths", () => ({
+vi.mock("@multicacan/core/paths", () => ({
   useWorkspacePaths: () => ({
     issueDetail: (id: string) => `/test/issues/${id}`,
   }),
@@ -83,10 +83,10 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
-vi.mock("@multica/core/agents", async () => {
+vi.mock("@multicacan/core/agents", async () => {
   const actual =
-    await vi.importActual<typeof import("@multica/core/agents")>(
-      "@multica/core/agents",
+    await vi.importActual<typeof import("@multicacan/core/agents")>(
+      "@multicacan/core/agents",
     );
   return {
     ...actual,

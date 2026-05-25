@@ -13,10 +13,10 @@ import (
 	"time"
 
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/multica-ai/multica/server/internal/auth"
-	"github.com/multica-ai/multica/server/internal/cloudruntime"
-	"github.com/multica-ai/multica/server/internal/logger"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/auth"
+	"github.com/canfidelity/multicacan/server/internal/cloudruntime"
+	"github.com/canfidelity/multicacan/server/internal/logger"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 const maxCloudRuntimeRequestBodySize = 1 << 20

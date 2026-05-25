@@ -3,8 +3,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import type { AgentRuntime } from "@multica/core/types";
-import { I18nProvider } from "@multica/core/i18n/react";
+import type { AgentRuntime } from "@multicacan/core/types";
+import { I18nProvider } from "@multicacan/core/i18n/react";
 import enCommon from "../../locales/en/common.json";
 import enRuntimes from "../../locales/en/runtimes.json";
 import enAgents from "../../locales/en/agents.json";
@@ -27,16 +27,16 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
-vi.mock("@multica/core/runtimes/mutations", () => ({
+vi.mock("@multicacan/core/runtimes/mutations", () => ({
   useDeleteRuntime: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock("@multica/core/runtimes", () => ({
+vi.mock("@multicacan/core/runtimes", () => ({
   deriveRuntimeHealth: () => "online",
   runtimeUsageOptions: () => ({ kind: "usage" }),
 }));
 
-vi.mock("@multica/core/agents", () => ({
+vi.mock("@multicacan/core/agents", () => ({
   deriveWorkload: () => "idle",
 }));
 

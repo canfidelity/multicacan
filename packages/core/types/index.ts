@@ -130,3 +130,5 @@ export type {
   SquadMemberStatus,
   SquadMemberStatusListResponse,
 } from "./squad";
+
+export type { WorkspaceAsset } from "./asset";

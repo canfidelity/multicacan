@@ -30,11 +30,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/multica-ai/multica/server/internal/analytics"
-	"github.com/multica-ai/multica/server/internal/issueguard"
-	"github.com/multica-ai/multica/server/internal/logger"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
-	"github.com/multica-ai/multica/server/pkg/protocol"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/issueguard"
+	"github.com/canfidelity/multicacan/server/internal/logger"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/pkg/protocol"
 )
 
 // Runtime bootstrap is just workspace_id + runtime_id, but keep a separate

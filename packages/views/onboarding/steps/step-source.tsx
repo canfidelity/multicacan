@@ -9,7 +9,7 @@ import {
   Newspaper,
   Users,
 } from "lucide-react";
-import type { QuestionnaireAnswers, Source } from "@multica/core/onboarding";
+import type { QuestionnaireAnswers, Source } from "@multicacan/core/onboarding";
 import {
   GoogleIcon,
   LinkedInIcon,

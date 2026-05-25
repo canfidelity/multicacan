@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { I18nProvider } from "@multica/core/i18n/react";
+import { I18nProvider } from "@multicacan/core/i18n/react";
 import enOnboarding from "../locales/en/onboarding.json";
 import enCommon from "../locales/en/common.json";
 import { NavigationProvider } from "../navigation";
 import type { NavigationAdapter } from "../navigation";
-import { useWelcomeStore } from "@multica/core/onboarding";
+import { useWelcomeStore } from "@multicacan/core/onboarding";
 import { WelcomeAfterOnboarding } from "./welcome-after-onboarding";
 
 const TEST_RESOURCES = {
@@ -30,7 +30,7 @@ const mockUser = {
   created_at: "",
   updated_at: "",
 };
-vi.mock("@multica/core/auth", () => ({
+vi.mock("@multicacan/core/auth", () => ({
   useAuthStore: Object.assign(
     (selector?: (s: { user: typeof mockUser }) => unknown) => {
       const state = { user: mockUser };
@@ -51,9 +51,9 @@ const mockGetWorkspace = vi.fn();
 // `useCurrentWorkspace` is gated by `WorkspaceSlugProvider`; in tests
 // we short-circuit to a fixture matching the welcome signal's workspace id
 // so the cross-workspace guard doesn't drop the component.
-vi.mock("@multica/core/paths", async () => {
-  const actual = await vi.importActual<typeof import("@multica/core/paths")>(
-    "@multica/core/paths",
+vi.mock("@multicacan/core/paths", async () => {
+  const actual = await vi.importActual<typeof import("@multicacan/core/paths")>(
+    "@multicacan/core/paths",
   );
   return {
     ...actual,
@@ -65,7 +65,7 @@ vi.mock("@multica/core/paths", async () => {
   };
 });
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@multicacan/core/api", () => ({
   api: {
     listAgents: (...args: unknown[]) => mockListAgents(...args),
     createAgent: (...args: unknown[]) => mockCreateAgent(...args),

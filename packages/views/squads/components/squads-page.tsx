@@ -2,19 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
-import { agentListOptions, memberListOptions, squadListOptions } from "@multica/core/workspace/queries";
-import { useAuthStore } from "@multica/core/auth";
-import { useSquadsViewStore } from "@multica/core/squads/stores";
+import { useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
+import { agentListOptions, memberListOptions, squadListOptions } from "@multicacan/core/workspace/queries";
+import { useAuthStore } from "@multicacan/core/auth";
+import { useSquadsViewStore } from "@multicacan/core/squads/stores";
 import { AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { Users, Plus, Search, Bot, User } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { ActorAvatar as ActorAvatarBase } from "@multica/ui/components/common/actor-avatar";
-import { useModalStore } from "@multica/core/modals";
-import type { Agent, Squad } from "@multica/core/types";
+import { Button } from "@multicacan/ui/components/ui/button";
+import { Input } from "@multicacan/ui/components/ui/input";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
+import { ActorAvatar as ActorAvatarBase } from "@multicacan/ui/components/common/actor-avatar";
+import { useModalStore } from "@multicacan/core/modals";
+import type { Agent, Squad } from "@multicacan/core/types";
 import { useT } from "../../i18n";
 import { matchesPinyin } from "../../editor/extensions/pinyin-match";
 

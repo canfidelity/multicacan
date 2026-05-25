@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/multica-ai/multica/server/internal/middleware"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/middleware"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 func TestExtractIdentifiers(t *testing.T) {

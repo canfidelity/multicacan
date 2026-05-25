@@ -1,16 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { SquadMemberPreview } from "@multica/core/types";
-import { useWorkspaceId } from "@multica/core/hooks";
+import type { SquadMemberPreview } from "@multicacan/core/types";
+import { useWorkspaceId } from "@multicacan/core/hooks";
 import {
   squadListOptions,
   agentListOptions,
   memberListOptions,
-} from "@multica/core/workspace/queries";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { ActorAvatar as ActorAvatarBase } from "@multica/ui/components/common/actor-avatar";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+} from "@multicacan/core/workspace/queries";
+import { useWorkspacePaths } from "@multicacan/core/paths";
+import { ActorAvatar as ActorAvatarBase } from "@multicacan/ui/components/common/actor-avatar";
+import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { AppLink } from "../../navigation";
 import { useT } from "../../i18n";

@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/multica-ai/multica/server/internal/auth"
-	"github.com/multica-ai/multica/server/internal/cloudruntime"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/auth"
+	"github.com/canfidelity/multicacan/server/internal/cloudruntime"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 type fakeCloudRuntimeProxy struct {

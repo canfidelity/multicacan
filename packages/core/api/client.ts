@@ -101,6 +101,7 @@ import type {
   Squad,
   SquadMember,
   SquadMemberStatusListResponse,
+  WorkspaceAsset,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type {
@@ -1813,5 +1814,55 @@ export class ApiClient {
 
   async listIssuePullRequests(issueId: string): Promise<{ pull_requests: GitHubPullRequest[] }> {
     return this.fetch(`/api/issues/${issueId}/pull-requests`);
+  }
+
+  // Workspace Assets
+  async listAssets(params?: { tag?: string }): Promise<WorkspaceAsset[]> {
+    const query = params?.tag ? `?tag=${encodeURIComponent(params.tag)}` : "";
+    return this.fetch(`/api/assets${query}`);
+  }
+
+  async getAsset(id: string): Promise<WorkspaceAsset> {
+    return this.fetch(`/api/assets/${id}`);
+  }
+
+  async uploadAsset(file: File, opts?: { name?: string; description?: string; tags?: string[] }): Promise<WorkspaceAsset> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (opts?.name) formData.append("name", opts.name);
+    if (opts?.description) formData.append("description", opts.description);
+    if (opts?.tags?.length) formData.append("tags", opts.tags.join(","));
+
+    const rid = createRequestId();
+    const start = Date.now();
+    this.logger.info("→ POST /api/assets", { rid });
+
+    const res = await fetch(`${this.baseUrl}/api/assets`, {
+      method: "POST",
+      headers: this.authHeaders(),
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) this.handleUnauthorized();
+      const message = await this.parseErrorMessage(res, `Upload failed: ${res.status}`);
+      this.logger.error(`← ${res.status} /api/assets`, { rid, duration: `${Date.now() - start}ms`, error: message });
+      throw new Error(message);
+    }
+
+    this.logger.info(`← ${res.status} /api/assets`, { rid, duration: `${Date.now() - start}ms` });
+    return res.json() as Promise<WorkspaceAsset>;
+  }
+
+  async updateAsset(id: string, data: { name?: string; description?: string; tags?: string[] }): Promise<WorkspaceAsset> {
+    return this.fetch(`/api/assets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAsset(id: string): Promise<void> {
+    await this.fetch(`/api/assets/${id}`, { method: "DELETE" });
   }
 }

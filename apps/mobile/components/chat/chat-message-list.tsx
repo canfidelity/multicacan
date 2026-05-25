@@ -46,8 +46,8 @@ import type {
   ChatMessage,
   ChatPendingTask,
   TaskMessagePayload,
-} from "@multica/core/types";
-import type { AgentAvailability } from "@multica/core/agents";
+} from "@multicacan/core/types";
+import type { AgentAvailability } from "@multicacan/core/agents";
 import { taskMessagesOptions } from "@/data/queries/chat";
 import { Text } from "@/components/ui/text";
 import { Markdown } from "@/lib/markdown";

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/multica-ai/multica/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
 )
 
 type AppConfig struct {

@@ -10,9 +10,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/multica-ai/multica/server/internal/analytics"
-	"github.com/multica-ai/multica/server/internal/logger"
-	db "github.com/multica-ai/multica/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/analytics"
+	"github.com/canfidelity/multicacan/server/internal/logger"
+	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
 
 // Public, unauthenticated endpoint for the landing-page "Contact Sales"

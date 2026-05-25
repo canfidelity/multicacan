@@ -49,7 +49,11 @@
     "./i18n": "./i18n/index.ts",
     "./attachments": "./attachments/index.ts",
     "./locales": "./locales/index.ts",
-    "./locales/*": "./locales/*"
+    "./locales/*": "./locales/*",
+    "./ide": "./ide/index.ts",
+    "./assets": "./assets/index.ts",
+    "./preview": "./preview/index.ts",
+    "./simulator": "./simulator/index.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

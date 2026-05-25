@@ -9,7 +9,7 @@ import { api } from "@multicacan/core/api";
 import { useHasOnboarded } from "@multicacan/core/paths";
 import { setCurrentWorkspace } from "@multicacan/core/platform";
 import { ThemeProvider } from "@multicacan/ui/components/common/theme-provider";
-import { MulticaIcon } from "@multicacan/ui/components/common/multica-icon";
+import { MulticacanIcon } from "@multicacan/ui/components/common/multicacan-icon";
 import { Toaster } from "@multicacan/ui/components/ui/sonner";
 import { DesktopLoginPage } from "./pages/login";
 import { DesktopShell } from "./components/desktop-layout";
@@ -226,7 +226,7 @@ function AppContent() {
   if (isLoading || bootstrapping) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <MulticaIcon className="size-6 animate-pulse" />
+        <MulticacanIcon className="size-6 animate-pulse" />
       </div>
     );
   }

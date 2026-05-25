@@ -9,7 +9,7 @@ import { setCurrentWorkspace } from "@multicacan/core/platform";
 import { useAuthStore } from "@multicacan/core/auth";
 import { NoAccessPage } from "@multicacan/views/workspace/no-access-page";
 import { WelcomeAfterOnboarding } from "@multicacan/views/workspace/welcome-after-onboarding";
-import { MulticaIcon } from "@multicacan/ui/components/common/multica-icon";
+import { MulticacanIcon } from "@multicacan/ui/components/common/multicacan-icon";
 import { useWorkspaceSeen } from "@multicacan/views/workspace/use-workspace-seen";
 
 export default function WorkspaceLayout({
@@ -76,7 +76,7 @@ export default function WorkspaceLayout({
 
   const loadingIndicator = (
     <div className="flex h-svh items-center justify-center">
-      <MulticaIcon className="size-6 animate-pulse" />
+      <MulticacanIcon className="size-6 animate-pulse" />
     </div>
   );
 

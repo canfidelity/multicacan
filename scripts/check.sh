@@ -18,13 +18,8 @@ set -a
 . "$ENV_FILE"
 set +a
 
-POSTGRES_DB="${POSTGRES_DB:-multicacan}"
-POSTGRES_USER="${POSTGRES_USER:-multicacan}"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-PORT="${PORT:-8080}"
-FRONTEND_PORT="${FRONTEND_PORT:-3000}"
-PLAYWRIGHT_BASE_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:${FRONTEND_PORT}}"
-export PLAYWRIGHT_BASE_URL
+# shellcheck disable=SC1091
+. scripts/local-env.sh
 
 BACKEND_PID=""
 FRONTEND_PID=""
@@ -114,7 +109,7 @@ if curl -sf "http://localhost:${PORT}/health" > /dev/null 2>&1; then
   echo "    Backend already running on :$PORT"
 else
   echo "    Starting backend..."
-  (cd server && go run ./cmd/server) > /tmp/multicacan-check-backend.log 2>&1 &
+  (cd server && go run ./cmd/server) > /tmp/multica-check-backend.log 2>&1 &
   BACKEND_PID=$!
   STARTED_BACKEND=true
   wait_for_port "$PORT" "Backend" 90 "/health"
@@ -124,7 +119,7 @@ if curl -sf "http://localhost:${FRONTEND_PORT}" > /dev/null 2>&1; then
   echo "    Frontend already running on :$FRONTEND_PORT"
 else
   echo "    Starting frontend..."
-  pnpm dev:web > /tmp/multicacan-check-frontend.log 2>&1 &
+  pnpm dev:web > /tmp/multica-check-frontend.log 2>&1 &
   FRONTEND_PID=$!
   STARTED_FRONTEND=true
   wait_for_port "$FRONTEND_PORT" "Frontend" 120 "/"

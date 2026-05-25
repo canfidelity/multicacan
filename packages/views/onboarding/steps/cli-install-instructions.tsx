@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { Check, Copy, Terminal } from "lucide-react";
 import { Card, CardContent } from "@multicacan/ui/components/ui/card";
+import { useT } from "../../i18n";
 
 const INSTALL_CMD =
   "curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash";
-const SETUP_CMD = "multicacan setup";
+const SETUP_CMD = "multica setup";
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useT("onboarding");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -22,7 +24,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={handleCopy}
       className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-      aria-label="Copy"
+      aria-label={t(($) => $.cli_install.copy_aria)}
     >
       {copied ? (
         <Check className="h-3.5 w-3.5 text-success" />
@@ -53,22 +55,21 @@ function Step({ n, label, cmd }: { n: number; label: string; cmd: string }) {
 /**
  * CLI install instructions — two copy-and-run commands. Hardcoded because
  * there's nothing environmental to infer: step 1 is the public install
- * script, step 2 is the cloud `multicacan setup` which the CLI itself knows
+ * script, step 2 is the cloud `multica setup` which the CLI itself knows
  * the endpoints for. Local development tests a self-host variant by
  * typing the extended command directly in the terminal; no need to
  * thread env vars through React.
  */
 export function CliInstallInstructions() {
+  const { t } = useT("onboarding");
   return (
     <Card className="w-full">
       <CardContent className="space-y-4 pt-4">
         <p className="text-xs leading-[1.55] text-muted-foreground">
-          You&apos;ll need an AI coding tool on this machine (Claude
-          Code, Codex, Cursor, …) for the daemon to do real work. Also
-          works on servers and remote dev boxes.
+          {t(($) => $.cli_install.intro)}
         </p>
-        <Step n={1} label="Install the Multicacan CLI" cmd={INSTALL_CMD} />
-        <Step n={2} label="Start the daemon" cmd={SETUP_CMD} />
+        <Step n={1} label={t(($) => $.cli_install.step1_label)} cmd={INSTALL_CMD} />
+        <Step n={2} label={t(($) => $.cli_install.step2_label)} cmd={SETUP_CMD} />
       </CardContent>
     </Card>
   );

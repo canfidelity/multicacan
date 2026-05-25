@@ -13,7 +13,6 @@ import { ModalRegistry } from "@multicacan/views/modals/registry";
 import { AppSidebar } from "@multicacan/views/layout";
 import { SearchCommand, SearchTrigger } from "@multicacan/views/search";
 import { ChatFab, ChatWindow } from "@multicacan/views/chat";
-import { StarterContentPrompt } from "@multicacan/views/onboarding";
 import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multicacan/core/paths";
 import { getCurrentSlug, subscribeToCurrentSlug } from "@multicacan/core/platform";
 import { useDesktopUnreadBadge } from "@multicacan/views/platform";
@@ -53,6 +52,20 @@ function SidebarTopBar() {
       </div>
     </div>
   );
+}
+
+function useNativeNavigationGestures() {
+  const { goBack, goForward } = useTabHistory();
+
+  useEffect(() => {
+    return window.desktopAPI.onNavigationGesture((gesture) => {
+      if (gesture === "back") {
+        goBack();
+      } else {
+        goForward();
+      }
+    });
+  }, [goBack, goForward]);
 }
 
 // The main area's top bar doubles as a window drag region. When the sidebar
@@ -133,6 +146,7 @@ function DesktopInboxBridge() {
 export function DesktopShell() {
   useInternalLinkHandler();
   useActiveTitleSync();
+  useNativeNavigationGestures();
 
   // Reactive read of current workspace slug from the platform singleton.
   // On first mount, slug is null until WorkspaceRouteLayout (inside the tab
@@ -169,7 +183,6 @@ export function DesktopShell() {
         </div>
         {slug && <ModalRegistry />}
         {slug && <SearchCommand />}
-        {slug && <StarterContentPrompt />}
         <WindowOverlay />
       </WorkspaceSlugProvider>
     </DesktopNavigationProvider>

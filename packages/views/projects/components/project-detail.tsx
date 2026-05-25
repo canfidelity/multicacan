@@ -2,23 +2,31 @@
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useDefaultLayout, usePanelRef } from "react-resizable-panels";
-import { Check, ChevronRight, Link2, ListTodo, MoreHorizontal, PanelRight, Pin, PinOff, Trash2, UserMinus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Check, ChevronRight, Link2, ListTodo, MoreHorizontal, PanelRight, Pin, PinOff, Plus, Trash2, UserMinus } from "lucide-react";
+import { useQuery, type QueryKey } from "@tanstack/react-query";
 import { cn } from "@multicacan/ui/lib/utils";
 import { toast } from "sonner";
-import type { Issue, IssueStatus, ProjectStatus, ProjectPriority } from "@multicacan/core/types";
+import type { Issue, IssueAssigneeGroup, ProjectStatus, ProjectPriority, UpdateIssueRequest } from "@multicacan/core/types";
 import { useAuthStore } from "@multicacan/core/auth";
 import { projectDetailOptions } from "@multicacan/core/projects/queries";
 import { useUpdateProject, useDeleteProject } from "@multicacan/core/projects/mutations";
 import { pinListOptions } from "@multicacan/core/pins";
 import { useCreatePin, useDeletePin } from "@multicacan/core/pins";
-import { myIssueListOptions, childIssueProgressOptions, type MyIssuesFilter } from "@multicacan/core/issues/queries";
+import {
+  myIssueAssigneeGroupsOptions,
+  myIssueListOptions,
+  projectGanttIssuesOptions,
+  childIssueProgressOptions,
+  type AssigneeGroupedIssuesFilter,
+  type MyIssuesFilter,
+} from "@multicacan/core/issues/queries";
 import { useUpdateIssue } from "@multicacan/core/issues/mutations";
+import { useModalStore } from "@multicacan/core/modals";
 import { memberListOptions, agentListOptions } from "@multicacan/core/workspace/queries";
 import { useWorkspaceId } from "@multicacan/core/hooks";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
 import { useActorName } from "@multicacan/core/workspace/hooks";
-import { PROJECT_STATUS_ORDER, PROJECT_STATUS_CONFIG, PROJECT_PRIORITY_ORDER, PROJECT_PRIORITY_CONFIG } from "@multicacan/core/projects/config";
+import { PROJECT_STATUS_ORDER, PROJECT_STATUS_CONFIG, PROJECT_PRIORITY_ORDER } from "@multicacan/core/projects/config";
 import { BOARD_STATUSES } from "@multicacan/core/issues/config";
 import { createIssueViewStore } from "@multicacan/core/issues/stores/view-store";
 import { ViewStoreProvider, useViewStore } from "@multicacan/core/issues/stores/view-store-context";
@@ -32,6 +40,7 @@ import { ProjectResourcesSection } from "./project-resources-section";
 import { IssuesHeader } from "../../issues/components/issues-header";
 import { BoardView } from "../../issues/components/board-view";
 import { ListView } from "../../issues/components/list-view";
+import { GanttView } from "../../issues/components/gantt-view";
 import { BatchActionToolbar } from "../../issues/components/batch-action-toolbar";
 import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { Button } from "@multicacan/ui/components/ui/button";
@@ -67,6 +76,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@multicacan/ui/components/ui/alert-dialog";
+import { useT } from "../../i18n";
+import { useProjectStatusLabels, useProjectPriorityLabels } from "./labels";
+import { matchesPinyin } from "../../editor/extensions/pinyin-match";
 
 // ---------------------------------------------------------------------------
 // Property row — sidebar property display
@@ -96,14 +108,25 @@ function PropRow({
 const projectViewStore = createIssueViewStore("project_issues_view");
 
 function ProjectIssuesContent({
+  projectId,
   projectIssues,
+  assigneeGroups,
+  assigneeGroupQueryKey,
+  assigneeGroupFilter,
   scope,
   filter,
+  ganttIssues,
 }: {
+  projectId: string;
   projectIssues: Issue[];
+  assigneeGroups?: IssueAssigneeGroup[];
+  assigneeGroupQueryKey?: QueryKey;
+  assigneeGroupFilter?: AssigneeGroupedIssuesFilter;
   scope: string;
   filter: MyIssuesFilter;
+  ganttIssues: Issue[];
 }) {
+  const { t } = useT("projects");
   const wsId = useWorkspaceId();
   const viewMode = useViewStore((s) => s.viewMode);
   const statusFilters = useViewStore((s) => s.statusFilters);
@@ -116,6 +139,14 @@ function ProjectIssuesContent({
   const issues = useMemo(
     () => filterIssues(projectIssues, { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters: [], includeNoProject: false, labelFilters }),
     [projectIssues, statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, labelFilters],
+  );
+
+  // Gantt rides its own dedicated query (scheduled-only) so it doesn't have
+  // to wait for every status bucket to paginate in. View-store filters still
+  // apply so toggling priority / assignee / label hides the same bars.
+  const filteredGanttIssues = useMemo(
+    () => filterIssues(ganttIssues, { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters: [], includeNoProject: false, labelFilters }),
+    [ganttIssues, statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, labelFilters],
   );
 
   const { data: childProgressMap = new Map() } = useQuery(childIssueProgressOptions(wsId));
@@ -133,49 +164,163 @@ function ProjectIssuesContent({
 
   const updateIssueMutation = useUpdateIssue();
   const handleMoveIssue = useCallback(
-    (issueId: string, newStatus: IssueStatus, newPosition?: number) => {
-      const updates: Partial<{ status: IssueStatus; position: number }> = { status: newStatus };
-      if (newPosition !== undefined) updates.position = newPosition;
+    (issueId: string, updates: Pick<UpdateIssueRequest, "status" | "assignee_type" | "assignee_id" | "position">) => {
       updateIssueMutation.mutate(
         { id: issueId, ...updates },
-        { onError: () => toast.error("Failed to move issue") },
+        {
+          onError: (err) =>
+            toast.error(
+              err instanceof Error && err.message
+                ? err.message
+                : t(($) => $.detail.toast_move_issue_failed),
+            ),
+        },
       );
     },
-    [updateIssueMutation],
+    [updateIssueMutation, t],
   );
 
-  if (projectIssues.length === 0) {
+  // Gantt has its own data source (scheduled-only) and its own empty axis —
+  // we never short-circuit it here, otherwise an unscheduled-but-non-empty
+  // project would surface a misleading "no issues" CTA. For Board/List the
+  // bucketed cache really is the ground truth, so an empty result means an
+  // empty project.
+  if (viewMode !== "gantt" && projectIssues.length === 0) {
     return (
-      <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
+      <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-3 text-muted-foreground">
         <ListTodo className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm">No issues linked</p>
-        <p className="text-xs">Assign issues to this project from the issue detail page.</p>
+        <p className="text-sm">{t(($) => $.detail.empty_issues_title)}</p>
+        <p className="text-xs">{t(($) => $.detail.empty_issues_hint)}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-1"
+          onClick={() =>
+            useModalStore.getState().open("create-issue", { project_id: projectId })
+          }
+        >
+          <Plus className="size-3.5 mr-1.5" />
+          {t(($) => $.detail.empty_issues_new_button)}
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {viewMode === "board" ? (
+      {viewMode === "board" && (
         <BoardView
-          issues={issues}
+          issues={assigneeGroups ? projectIssues : issues}
+          assigneeGroups={assigneeGroups}
+          assigneeGroupQueryKey={assigneeGroupQueryKey}
+          assigneeGroupFilter={assigneeGroupFilter}
           visibleStatuses={visibleStatuses}
           hiddenStatuses={hiddenStatuses}
           onMoveIssue={handleMoveIssue}
           childProgressMap={childProgressMap}
           myIssuesScope={scope}
           myIssuesFilter={filter}
+          projectId={projectId}
         />
-      ) : (
+      )}
+      {viewMode === "list" && (
         <ListView
           issues={issues}
           visibleStatuses={visibleStatuses}
           childProgressMap={childProgressMap}
           myIssuesScope={scope}
           myIssuesFilter={filter}
+          projectId={projectId}
         />
       )}
+      {viewMode === "gantt" && <GanttView issues={filteredGanttIssues} />}
     </div>
+  );
+}
+
+function ProjectIssuesSurface({
+  projectId,
+  scope,
+  filter,
+}: {
+  projectId: string;
+  scope: string;
+  filter: MyIssuesFilter;
+}) {
+  const wsId = useWorkspaceId();
+  const viewMode = useViewStore((s) => s.viewMode);
+  const grouping = useViewStore((s) => s.grouping);
+  const statusFilters = useViewStore((s) => s.statusFilters);
+  const priorityFilters = useViewStore((s) => s.priorityFilters);
+  const assigneeFilters = useViewStore((s) => s.assigneeFilters);
+  const includeNoAssignee = useViewStore((s) => s.includeNoAssignee);
+  const creatorFilters = useViewStore((s) => s.creatorFilters);
+  const labelFilters = useViewStore((s) => s.labelFilters);
+  const usesAssigneeBoard = viewMode === "board" && grouping === "assignee";
+  const usesGantt = viewMode === "gantt";
+  const assigneeGroupFilter = useMemo<AssigneeGroupedIssuesFilter>(
+    () => ({
+      ...filter,
+      statuses: statusFilters.length > 0 ? statusFilters : [...BOARD_STATUSES],
+      priorities: priorityFilters,
+      assignee_filters: assigneeFilters,
+      include_no_assignee: includeNoAssignee,
+      creator_filters: creatorFilters,
+      label_ids: labelFilters,
+    }),
+    [assigneeFilters, creatorFilters, filter, includeNoAssignee, labelFilters, priorityFilters, statusFilters],
+  );
+  const assigneeGroupsOptions = myIssueAssigneeGroupsOptions(
+    wsId,
+    scope,
+    assigneeGroupFilter,
+  );
+  // Each view owns exactly one data source. Board/List ride the bucketed
+  // `myIssueListOptions` cache; the assignee-grouped board uses the grouped
+  // endpoint; Gantt has its own scheduled-only fetch. We gate `enabled` on
+  // the current view so switching to Gantt doesn't re-trigger the full
+  // per-status fetch in the background.
+  const statusIssuesQuery = useQuery({
+    ...myIssueListOptions(wsId, scope, filter),
+    enabled: !usesAssigneeBoard && !usesGantt,
+  });
+  const assigneeGroupsQuery = useQuery({
+    ...assigneeGroupsOptions,
+    enabled: usesAssigneeBoard,
+  });
+  // Gantt has its own data source — a single (paginated) fetch of every
+  // scheduled issue in the project. Independent from the bucketed Board/List
+  // cache so it isn't bottlenecked by per-status pagination and reacts in
+  // isolation to WS updates that move issues into or out of the scheduled
+  // set.
+  const ganttIssuesQuery = useQuery({
+    ...projectGanttIssuesOptions(wsId, projectId),
+    enabled: usesGantt,
+  });
+  const bucketedIssues = usesAssigneeBoard
+    ? (assigneeGroupsQuery.data?.groups.flatMap((group) => group.issues) ?? [])
+    : (statusIssuesQuery.data ?? []);
+  const ganttIssues = ganttIssuesQuery.data ?? [];
+  // What the header empty-state check looks at depends on the view: Gantt
+  // would otherwise be blamed for an empty Board cache, even though it has
+  // its own (potentially non-empty) scheduled cache.
+  const projectIssues = usesGantt ? ganttIssues : bucketedIssues;
+
+  return (
+    <>
+      <IssuesHeader scopedIssues={projectIssues} allowGantt />
+      <ProjectIssuesContent
+        projectId={projectId}
+        projectIssues={projectIssues}
+        assigneeGroups={usesAssigneeBoard ? assigneeGroupsQuery.data?.groups : undefined}
+        assigneeGroupQueryKey={usesAssigneeBoard ? assigneeGroupsOptions.queryKey : undefined}
+        assigneeGroupFilter={usesAssigneeBoard ? assigneeGroupFilter : undefined}
+        scope={scope}
+        filter={filter}
+        ganttIssues={ganttIssues}
+      />
+      <BatchActionToolbar />
+    </>
   );
 }
 
@@ -184,6 +329,9 @@ function ProjectIssuesContent({
 // ---------------------------------------------------------------------------
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
+  const { t } = useT("projects");
+  const statusLabels = useProjectStatusLabels();
+  const priorityLabels = useProjectPriorityLabels();
   const wsId = useWorkspaceId();
   const wsPaths = useWorkspacePaths();
   const router = useNavigation();
@@ -195,9 +343,6 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   const projectFilter = useMemo<MyIssuesFilter>(
     () => ({ project_id: projectId }),
     [projectId],
-  );
-  const { data: projectIssues = [] } = useQuery(
-    myIssueListOptions(wsId, projectScope, projectFilter),
   );
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
@@ -221,15 +366,20 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
 
   // Sidebar panel
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multicacan_project_detail_layout",
+    id: "multica_project_detail_layout",
   });
   const sidebarRef = usePanelRef();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Desktop and mobile sidebar state must be separate. A single state defaulting
+  // to `true` made the mobile <Sheet> mount in the open position on first render
+  // (after `useIsMobile()` flipped from false→true), briefly covering the page
+  // with its modal backdrop and locking scroll — leaving the page unresponsive.
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const sidebarOpen = isMobile ? mobileSidebarOpen : desktopSidebarOpen;
 
   useEffect(() => {
     if (isMobile) {
-      setSidebarOpen(false);
-      sidebarRef.current?.collapse();
+      setMobileSidebarOpen(false);
     }
   }, [isMobile]);
 
@@ -237,8 +387,8 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadFilter, setLeadFilter] = useState("");
   const leadQuery = leadFilter.toLowerCase();
-  const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(leadQuery));
-  const filteredAgents = agents.filter((a) => !a.archived_at && a.name.toLowerCase().includes(leadQuery));
+  const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(leadQuery) || matchesPinyin(m.name, leadQuery));
+  const filteredAgents = agents.filter((a) => !a.archived_at && (a.name.toLowerCase().includes(leadQuery) || matchesPinyin(a.name, leadQuery)));
 
   const handleUpdateField = useCallback(
     (data: Parameters<typeof updateProject.mutate>[0] extends { id: string } & infer R ? R : never) => {
@@ -252,11 +402,11 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
     if (!project) return;
     deleteProject.mutate(project.id, {
       onSuccess: () => {
-        toast.success("Project deleted");
+        toast.success(t(($) => $.detail.toast_project_deleted));
         router.push(wsPaths.projects());
       },
     });
-  }, [project, deleteProject, router, wsPaths]);
+  }, [project, deleteProject, router, wsPaths, t]);
 
   if (isLoading) {
     return (
@@ -270,12 +420,11 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   }
 
   if (!project) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">Project not found</div>;
+    return <div className="flex items-center justify-center h-full text-muted-foreground">{t(($) => $.detail.not_found)}</div>;
   }
 
   const issueMetrics = getProjectIssueMetrics(project);
   const statusCfg = PROJECT_STATUS_CONFIG[project.status];
-  const priorityCfg = PROJECT_PRIORITY_CONFIG[project.priority];
 
   const sidebarContent = (
     <div className="space-y-5">
@@ -287,7 +436,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
               <button
                 type="button"
                 className="text-2xl cursor-pointer rounded-lg p-1 -ml-1 hover:bg-accent/60 transition-colors"
-                title="Change icon"
+                title={t(($) => $.detail.icon_tooltip)}
               >
                 {project.icon || "📁"}
               </button>
@@ -305,7 +454,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         <TitleEditor
           key={`title-${projectId}`}
           defaultValue={project.title}
-          placeholder="Project title"
+          placeholder={t(($) => $.detail.title_placeholder)}
           className="mt-2 w-full text-base font-semibold leading-snug tracking-tight"
           onBlur={(value) => {
             const trimmed = value.trim();
@@ -320,17 +469,17 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
           className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors mb-2 hover:bg-accent/70 ${propertiesOpen ? "" : "text-muted-foreground hover:text-foreground"}`}
           onClick={() => setPropertiesOpen(!propertiesOpen)}
         >
-          Properties
+          {t(($) => $.detail.section_properties)}
           <ChevronRight className={`!size-3 shrink-0 stroke-[2.5] text-muted-foreground transition-transform ${propertiesOpen ? "rotate-90" : ""}`} />
         </button>
         {propertiesOpen && <div className="space-y-0.5 pl-2">
-          <PropRow label="Status">
+          <PropRow label={t(($) => $.table.status)}>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <button type="button" className="inline-flex items-center gap-1.5 text-xs hover:text-foreground transition-colors">
                     <span className={cn("size-2 rounded-full", statusCfg.dotColor)} />
-                    <span>{statusCfg.label}</span>
+                    <span>{statusLabels[project.status]}</span>
                   </button>
                 }
               />
@@ -338,20 +487,20 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                 {PROJECT_STATUS_ORDER.map((s) => (
                   <DropdownMenuItem key={s} onClick={() => handleUpdateField({ status: s as ProjectStatus })}>
                     <span className={cn("size-2 rounded-full", PROJECT_STATUS_CONFIG[s].dotColor)} />
-                    <span>{PROJECT_STATUS_CONFIG[s].label}</span>
+                    <span>{statusLabels[s]}</span>
                     {s === project.status && <Check className="ml-auto h-3.5 w-3.5" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </PropRow>
-          <PropRow label="Priority">
+          <PropRow label={t(($) => $.table.priority)}>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <button type="button" className="inline-flex items-center gap-1.5 text-xs hover:text-foreground transition-colors">
                     <PriorityIcon priority={project.priority} />
-                    <span>{priorityCfg.label}</span>
+                    <span>{priorityLabels[project.priority]}</span>
                   </button>
                 }
               />
@@ -359,14 +508,14 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                 {PROJECT_PRIORITY_ORDER.map((p) => (
                   <DropdownMenuItem key={p} onClick={() => handleUpdateField({ priority: p as ProjectPriority })}>
                     <PriorityIcon priority={p} />
-                    <span>{PROJECT_PRIORITY_CONFIG[p].label}</span>
+                    <span>{priorityLabels[p]}</span>
                     {p === project.priority && <Check className="ml-auto h-3.5 w-3.5" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </PropRow>
-          <PropRow label="Lead">
+          <PropRow label={t(($) => $.table.lead)}>
             <Popover open={leadOpen} onOpenChange={(v) => { setLeadOpen(v); if (!v) setLeadFilter(""); }}>
               <PopoverTrigger
                 render={
@@ -377,7 +526,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                         <span className="cursor-pointer">{getActorName(project.lead_type, project.lead_id)}</span>
                       </>
                     ) : (
-                      <span className="text-muted-foreground">No lead</span>
+                      <span className="text-muted-foreground">{t(($) => $.lead.no_lead)}</span>
                     )}
                   </button>
                 }
@@ -388,7 +537,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     type="text"
                     value={leadFilter}
                     onChange={(e) => setLeadFilter(e.target.value)}
-                    placeholder="Assign lead..."
+                    placeholder={t(($) => $.lead.assign_placeholder)}
                     className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
                   />
                 </div>
@@ -399,11 +548,11 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
                   >
                     <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-muted-foreground">No lead</span>
+                    <span className="text-muted-foreground">{t(($) => $.lead.no_lead)}</span>
                   </button>
                   {filteredMembers.length > 0 && (
                     <>
-                      <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Members</div>
+                      <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t(($) => $.lead.members_group)}</div>
                       {filteredMembers.map((m) => (
                         <button
                           type="button"
@@ -419,7 +568,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                   )}
                   {filteredAgents.length > 0 && (
                     <>
-                      <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Agents</div>
+                      <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t(($) => $.lead.agents_group)}</div>
                       {filteredAgents.map((a) => (
                         <button
                           type="button"
@@ -434,7 +583,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     </>
                   )}
                   {filteredMembers.length === 0 && filteredAgents.length === 0 && leadFilter && (
-                    <div className="px-2 py-3 text-center text-sm text-muted-foreground">No results</div>
+                    <div className="px-2 py-3 text-center text-sm text-muted-foreground">{t(($) => $.lead.no_results)}</div>
                   )}
                 </div>
               </PopoverContent>
@@ -452,7 +601,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
               className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors mb-2 hover:bg-accent/70 ${progressOpen ? "" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => setProgressOpen(!progressOpen)}
             >
-              Progress
+              {t(($) => $.detail.section_progress)}
               <ChevronRight className={`!size-3 shrink-0 stroke-[2.5] text-muted-foreground transition-transform ${progressOpen ? "rotate-90" : ""}`} />
             </button>
             {progressOpen && <div className="pl-2 flex items-center gap-3">
@@ -476,7 +625,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
           className={`flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors mb-2 hover:bg-accent/70 ${descriptionOpen ? "" : "text-muted-foreground hover:text-foreground"}`}
           onClick={() => setDescriptionOpen(!descriptionOpen)}
         >
-          Description
+          {t(($) => $.detail.section_description)}
           <ChevronRight className={`!size-3 shrink-0 stroke-[2.5] text-muted-foreground transition-transform ${descriptionOpen ? "rotate-90" : ""}`} />
         </button>
         {descriptionOpen && <div className="pl-2">
@@ -484,7 +633,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
             ref={descEditorRef}
             key={projectId}
             defaultValue={project.description || ""}
-            placeholder="Add description..."
+            placeholder={t(($) => $.detail.description_placeholder)}
             onUpdate={(md) => handleUpdateField({ description: md || null })}
             debounceMs={1500}
           />
@@ -504,7 +653,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
           <PageHeader className="gap-2 bg-background text-sm">
             <div className="flex flex-1 items-center gap-1.5 min-w-0">
               <AppLink href={wsPaths.projects()} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-                {workspaceName ?? "Projects"}
+                {workspaceName ?? t(($) => $.detail.breadcrumb_fallback)}
               </AppLink>
               <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
               <span className="truncate">{project.title}</span>
@@ -514,7 +663,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                 variant="ghost"
                 size="icon-sm"
                 className={cn("text-muted-foreground", isPinned && "text-foreground")}
-                title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+                title={isPinned ? t(($) => $.detail.unpin_tooltip) : t(($) => $.detail.pin_tooltip)}
                 onClick={() => {
                   if (isPinned) {
                     deletePinMut.mutate({ itemType: "project", itemId: projectId });
@@ -536,10 +685,10 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                 <DropdownMenuContent align="end" className="w-auto">
                   <DropdownMenuItem onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
-                    toast.success("Link copied");
+                    toast.success(t(($) => $.detail.toast_link_copied));
                   }}>
                     <Link2 className="h-3.5 w-3.5" />
-                    Copy link
+                    {t(($) => $.detail.copy_link)}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -547,7 +696,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     onClick={() => setDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete project
+                    {t(($) => $.detail.delete_action)}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -560,7 +709,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                       className={sidebarOpen ? "" : "text-muted-foreground"}
                       onClick={() => {
                         if (isMobile) {
-                          setSidebarOpen(!sidebarOpen);
+                          setMobileSidebarOpen((open) => !open);
                         } else {
                           const panel = sidebarRef.current;
                           if (!panel) return;
@@ -573,19 +722,17 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     </Button>
                   }
                 />
-                <TooltipContent side="bottom">Toggle sidebar</TooltipContent>
+                <TooltipContent side="bottom">{t(($) => $.detail.sidebar_tooltip)}</TooltipContent>
               </Tooltip>
             </div>
           </PageHeader>
 
           <ViewStoreProvider store={projectViewStore}>
-              <IssuesHeader scopedIssues={projectIssues} />
-              <ProjectIssuesContent
-                projectIssues={projectIssues}
+              <ProjectIssuesSurface
+                projectId={projectId}
                 scope={projectScope}
                 filter={projectFilter}
               />
-              <BatchActionToolbar />
             </ViewStoreProvider>
           </div>
         </ResizablePanel>
@@ -593,13 +740,13 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         {!isMobile && (
         <ResizablePanel
           id="sidebar"
-          defaultSize={sidebarOpen ? 320 : 0}
+          defaultSize={desktopSidebarOpen ? 320 : 0}
           minSize={260}
           maxSize={420}
           collapsible
           groupResizeBehavior="preserve-pixel-size"
           panelRef={sidebarRef}
-          onResize={(size) => setSidebarOpen(size.inPixels > 0)}
+          onResize={(size) => setDesktopSidebarOpen(size.inPixels > 0)}
         >
           <div className="overflow-y-auto border-l h-full">
             <div className="p-4">
@@ -609,7 +756,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         </ResizablePanel>
         )}
         {isMobile && (
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
             <SheetContent side="right" showCloseButton={false} className="w-[320px] overflow-y-auto p-4">
               {sidebarContent}
             </SheetContent>
@@ -621,15 +768,15 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project</AlertDialogTitle>
+            <AlertDialogTitle>{t(($) => $.delete_dialog.title)}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the project. Issues will not be deleted but will be unlinked.
+              {t(($) => $.delete_dialog.description)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t(($) => $.delete_dialog.cancel)}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
-              Delete
+              {t(($) => $.delete_dialog.confirm)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

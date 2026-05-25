@@ -17,7 +17,7 @@ fi
 hash_value="$(printf '%s' "$PWD" | cksum | awk '{print $1}')"
 offset=$((hash_value % 1000))
 
-postgres_db="multicacan_${slug}_${offset}"
+postgres_db="multica_${slug}_${offset}"
 postgres_port=5432
 backend_port=$((18080 + offset))
 frontend_port=$((13000 + offset))
@@ -25,16 +25,16 @@ frontend_origin="http://localhost:${frontend_port}"
 
 cat > "$ENV_FILE" <<EOF
 POSTGRES_DB=${postgres_db}
-POSTGRES_USER=multicacan
-POSTGRES_PASSWORD=multicacan
+POSTGRES_USER=multica
+POSTGRES_PASSWORD=multica
 POSTGRES_PORT=${postgres_port}
-DATABASE_URL=postgres://multicacan:multicacan@localhost:${postgres_port}/${postgres_db}?sslmode=disable
+DATABASE_URL=postgres://multica:multica@localhost:${postgres_port}/${postgres_db}?sslmode=disable
 
 PORT=${backend_port}
 JWT_SECRET=change-me-in-production
-MULTICACAN_DEV_VERIFICATION_CODE=
-MULTICACAN_SERVER_URL=ws://localhost:${backend_port}/ws
-MULTICACAN_APP_URL=${frontend_origin}
+MULTICA_DEV_VERIFICATION_CODE=888888
+MULTICA_SERVER_URL=ws://localhost:${backend_port}/ws
+MULTICA_APP_URL=${frontend_origin}
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=

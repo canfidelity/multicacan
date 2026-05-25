@@ -1,1 +1,5 @@
-export { SettingsPage as default } from "@multicacan/views/settings";
+import { SettingsPage } from "@multicacan/views/settings";
+
+export default function Page() {
+  return <SettingsPage />;
+}

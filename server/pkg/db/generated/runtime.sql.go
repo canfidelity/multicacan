@@ -11,6 +11,79 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelAgentTasksByRuntimeOrAgent = `-- name: CancelAgentTasksByRuntimeOrAgent :many
+UPDATE agent_task_queue
+SET status = 'cancelled', completed_at = now()
+WHERE (runtime_id = ANY($1::uuid[]) OR agent_id = ANY($2::uuid[]))
+  AND status IN ('queued', 'dispatched', 'running')
+RETURNING id, agent_id, issue_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, trigger_comment_id, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, is_leader_task
+`
+
+type CancelAgentTasksByRuntimeOrAgentParams struct {
+	RuntimeIds []pgtype.UUID `json:"runtime_ids"`
+	AgentIds   []pgtype.UUID `json:"agent_ids"`
+}
+
+// Cancels every active task that either lives on one of the given runtimes
+// OR belongs to one of the given agents. Used by the member-revocation flow:
+// the runtime-side covers tasks queued against the leaving member's runtimes;
+// the agent-side covers tasks pinned to a different runtime that those agents
+// left behind from a prior UpdateAgent (agent.runtime_id can change, but
+// agent_task_queue.runtime_id does not get rewritten when it does, so a task
+// queued on runtime A by agent X — later moved to runtime B — survives the
+// runtime-only revoke and could still be claimed because ClaimAgentTask does
+// not gate on agent.archived_at).
+//
+// We use 'cancelled' rather than 'failed' so the daemon's per-task status
+// poller (watchTaskCancellation) interrupts the running agent gracefully.
+// Returns the affected rows so the caller can broadcast task:cancelled and
+// reconcile per-agent status.
+func (q *Queries) CancelAgentTasksByRuntimeOrAgent(ctx context.Context, arg CancelAgentTasksByRuntimeOrAgentParams) ([]AgentTaskQueue, error) {
+	rows, err := q.db.Query(ctx, cancelAgentTasksByRuntimeOrAgent, arg.RuntimeIds, arg.AgentIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AgentTaskQueue{}
+	for rows.Next() {
+		var i AgentTaskQueue
+		if err := rows.Scan(
+			&i.ID,
+			&i.AgentID,
+			&i.IssueID,
+			&i.Status,
+			&i.Priority,
+			&i.DispatchedAt,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.Result,
+			&i.Error,
+			&i.CreatedAt,
+			&i.Context,
+			&i.RuntimeID,
+			&i.SessionID,
+			&i.WorkDir,
+			&i.TriggerCommentID,
+			&i.ChatSessionID,
+			&i.AutopilotRunID,
+			&i.Attempt,
+			&i.MaxAttempts,
+			&i.ParentTaskID,
+			&i.FailureReason,
+			&i.TriggerSummary,
+			&i.ForceFreshSession,
+			&i.IsLeaderTask,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countActiveAgentsByRuntime = `-- name: CountActiveAgentsByRuntime :one
 SELECT count(*) FROM agent WHERE runtime_id = $1 AND archived_at IS NULL
 `
@@ -84,7 +157,7 @@ WHERE status IN ('dispatched', 'running')
   AND runtime_id IN (
     SELECT id FROM agent_runtime WHERE status = 'offline'
   )
-RETURNING id, agent_id, issue_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, trigger_comment_id, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, last_heartbeat_at, trigger_summary, force_fresh_session, handoff_context, handoff_depth
+RETURNING id, agent_id, issue_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, trigger_comment_id, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, is_leader_task
 `
 
 // Marks dispatched/running tasks as failed when their runtime is offline.
@@ -121,11 +194,9 @@ func (q *Queries) FailTasksForOfflineRuntimes(ctx context.Context) ([]AgentTaskQ
 			&i.MaxAttempts,
 			&i.ParentTaskID,
 			&i.FailureReason,
-			&i.LastHeartbeatAt,
 			&i.TriggerSummary,
 			&i.ForceFreshSession,
-			&i.HandoffContext,
-			&i.HandoffDepth,
+			&i.IsLeaderTask,
 		); err != nil {
 			return nil, err
 		}
@@ -138,7 +209,7 @@ func (q *Queries) FailTasksForOfflineRuntimes(ctx context.Context) ([]AgentTaskQ
 }
 
 const findLegacyRuntimesByDaemonID = `-- name: FindLegacyRuntimesByDaemonID :many
-SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id FROM agent_runtime
+SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility FROM agent_runtime
 WHERE workspace_id = $1
   AND provider = $2
   AND LOWER(daemon_id) = LOWER($3)
@@ -189,6 +260,54 @@ func (q *Queries) FindLegacyRuntimesByDaemonID(ctx context.Context, arg FindLega
 			&i.UpdatedAt,
 			&i.OwnerID,
 			&i.LegacyDaemonID,
+			&i.Visibility,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const forceOfflineRuntimesByIDs = `-- name: ForceOfflineRuntimesByIDs :many
+UPDATE agent_runtime
+SET status = 'offline', updated_at = now()
+WHERE id = ANY($1::uuid[]) AND status = 'online'
+RETURNING id, workspace_id, owner_id, daemon_id, provider
+`
+
+type ForceOfflineRuntimesByIDsRow struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	OwnerID     pgtype.UUID `json:"owner_id"`
+	DaemonID    pgtype.Text `json:"daemon_id"`
+	Provider    string      `json:"provider"`
+}
+
+// Unconditionally flips a known set of runtime IDs to offline. Distinct from
+// MarkRuntimesOfflineByIDs (which keeps a stale-window predicate so the
+// sweeper cannot demote a runtime that just heartbeated): this variant is
+// used by intentional revocation paths — e.g. removing a workspace member —
+// where the caller has already decided the runtime should be offline
+// regardless of recent liveness.
+func (q *Queries) ForceOfflineRuntimesByIDs(ctx context.Context, runtimeIds []pgtype.UUID) ([]ForceOfflineRuntimesByIDsRow, error) {
+	rows, err := q.db.Query(ctx, forceOfflineRuntimesByIDs, runtimeIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ForceOfflineRuntimesByIDsRow{}
+	for rows.Next() {
+		var i ForceOfflineRuntimesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.OwnerID,
+			&i.DaemonID,
+			&i.Provider,
 		); err != nil {
 			return nil, err
 		}
@@ -201,7 +320,7 @@ func (q *Queries) FindLegacyRuntimesByDaemonID(ctx context.Context, arg FindLega
 }
 
 const getAgentRuntime = `-- name: GetAgentRuntime :one
-SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id FROM agent_runtime
+SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility FROM agent_runtime
 WHERE id = $1
 `
 
@@ -223,12 +342,13 @@ func (q *Queries) GetAgentRuntime(ctx context.Context, id pgtype.UUID) (AgentRun
 		&i.UpdatedAt,
 		&i.OwnerID,
 		&i.LegacyDaemonID,
+		&i.Visibility,
 	)
 	return i, err
 }
 
 const getAgentRuntimeForWorkspace = `-- name: GetAgentRuntimeForWorkspace :one
-SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id FROM agent_runtime
+SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility FROM agent_runtime
 WHERE id = $1 AND workspace_id = $2
 `
 
@@ -255,12 +375,13 @@ func (q *Queries) GetAgentRuntimeForWorkspace(ctx context.Context, arg GetAgentR
 		&i.UpdatedAt,
 		&i.OwnerID,
 		&i.LegacyDaemonID,
+		&i.Visibility,
 	)
 	return i, err
 }
 
 const listAgentRuntimes = `-- name: ListAgentRuntimes :many
-SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id FROM agent_runtime
+SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility FROM agent_runtime
 WHERE workspace_id = $1
 ORDER BY created_at ASC
 `
@@ -289,6 +410,7 @@ func (q *Queries) ListAgentRuntimes(ctx context.Context, workspaceID pgtype.UUID
 			&i.UpdatedAt,
 			&i.OwnerID,
 			&i.LegacyDaemonID,
+			&i.Visibility,
 		); err != nil {
 			return nil, err
 		}
@@ -301,7 +423,7 @@ func (q *Queries) ListAgentRuntimes(ctx context.Context, workspaceID pgtype.UUID
 }
 
 const listAgentRuntimesByOwner = `-- name: ListAgentRuntimesByOwner :many
-SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id FROM agent_runtime
+SELECT id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility FROM agent_runtime
 WHERE workspace_id = $1 AND owner_id = $2
 ORDER BY created_at ASC
 `
@@ -335,6 +457,7 @@ func (q *Queries) ListAgentRuntimesByOwner(ctx context.Context, arg ListAgentRun
 			&i.UpdatedAt,
 			&i.OwnerID,
 			&i.LegacyDaemonID,
+			&i.Visibility,
 		); err != nil {
 			return nil, err
 		}
@@ -346,29 +469,115 @@ func (q *Queries) ListAgentRuntimesByOwner(ctx context.Context, arg ListAgentRun
 	return items, nil
 }
 
-const markStaleRuntimesOffline = `-- name: MarkStaleRuntimesOffline :many
-UPDATE agent_runtime
-SET status = 'offline', updated_at = now()
-WHERE status = 'online'
-  AND last_seen_at < now() - make_interval(secs => $1::double precision)
-RETURNING id, workspace_id
+const listArchivedAgentIDsByRuntime = `-- name: ListArchivedAgentIDsByRuntime :many
+SELECT id FROM agent WHERE runtime_id = $1 AND archived_at IS NOT NULL
 `
 
-type MarkStaleRuntimesOfflineRow struct {
-	ID          pgtype.UUID `json:"id"`
-	WorkspaceID pgtype.UUID `json:"workspace_id"`
-}
-
-func (q *Queries) MarkStaleRuntimesOffline(ctx context.Context, staleSeconds float64) ([]MarkStaleRuntimesOfflineRow, error) {
-	rows, err := q.db.Query(ctx, markStaleRuntimesOffline, staleSeconds)
+// Companion to DeleteArchivedAgentsByRuntime: enumerates the archived agents
+// about to be hard-deleted so the runtime teardown can pause autopilots that
+// still point at them. Returns ids only — the caller only needs the set.
+func (q *Queries) ListArchivedAgentIDsByRuntime(ctx context.Context, runtimeID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listArchivedAgentIDsByRuntime, runtimeID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []MarkStaleRuntimesOfflineRow{}
+	items := []pgtype.UUID{}
 	for rows.Next() {
-		var i MarkStaleRuntimesOfflineRow
-		if err := rows.Scan(&i.ID, &i.WorkspaceID); err != nil {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markAgentRuntimeOnline = `-- name: MarkAgentRuntimeOnline :one
+UPDATE agent_runtime
+SET status = 'online', last_seen_at = now(), updated_at = now()
+WHERE id = $1
+RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility
+`
+
+// Used on the offline→online transition (and on first heartbeat after
+// registration). Writes status, last_seen_at, and updated_at because the
+// status flip is a real state change and we want updated_at to reflect it.
+func (q *Queries) MarkAgentRuntimeOnline(ctx context.Context, id pgtype.UUID) (AgentRuntime, error) {
+	row := q.db.QueryRow(ctx, markAgentRuntimeOnline, id)
+	var i AgentRuntime
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.DaemonID,
+		&i.Name,
+		&i.RuntimeMode,
+		&i.Provider,
+		&i.Status,
+		&i.DeviceInfo,
+		&i.Metadata,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerID,
+		&i.LegacyDaemonID,
+		&i.Visibility,
+	)
+	return i, err
+}
+
+const markRuntimesOfflineByIDs = `-- name: MarkRuntimesOfflineByIDs :many
+UPDATE agent_runtime
+SET status = 'offline', updated_at = now()
+WHERE status = 'online'
+  AND id = ANY($1::uuid[])
+  AND last_seen_at < now() - make_interval(secs => $2::double precision)
+RETURNING id, workspace_id, owner_id, daemon_id, provider
+`
+
+type MarkRuntimesOfflineByIDsParams struct {
+	Ids          []pgtype.UUID `json:"ids"`
+	StaleSeconds float64       `json:"stale_seconds"`
+}
+
+type MarkRuntimesOfflineByIDsRow struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	OwnerID     pgtype.UUID `json:"owner_id"`
+	DaemonID    pgtype.Text `json:"daemon_id"`
+	Provider    string      `json:"provider"`
+}
+
+// Flips a known set of runtime IDs from online to offline. Paired with
+// SelectStaleOnlineRuntimes in the sweeper so the candidate selection and
+// the actual write are decoupled (the LivenessStore filter sits between).
+//
+// Re-checks the stale predicate inside the UPDATE so a concurrent heartbeat
+// between the SELECT (candidate gather), the LivenessStore filter, and this
+// UPDATE cannot demote a runtime that just refreshed last_seen_at. The
+// legacy MarkStaleRuntimesOffline UPDATE had this property implicitly
+// because the predicate and the write lived in one statement; here we
+// carry it forward explicitly so the SELECT/filter/UPDATE pipeline retains
+// the same race-freedom.
+func (q *Queries) MarkRuntimesOfflineByIDs(ctx context.Context, arg MarkRuntimesOfflineByIDsParams) ([]MarkRuntimesOfflineByIDsRow, error) {
+	rows, err := q.db.Query(ctx, markRuntimesOfflineByIDs, arg.Ids, arg.StaleSeconds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MarkRuntimesOfflineByIDsRow{}
+	for rows.Next() {
+		var i MarkRuntimesOfflineByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.OwnerID,
+			&i.DaemonID,
+			&i.Provider,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -377,6 +586,25 @@ func (q *Queries) MarkStaleRuntimesOffline(ctx context.Context, staleSeconds flo
 		return nil, err
 	}
 	return items, nil
+}
+
+const pauseAutopilotsByAgentAssignees = `-- name: PauseAutopilotsByAgentAssignees :exec
+UPDATE autopilot
+SET status = 'paused', updated_at = now()
+WHERE status = 'active'
+  AND assignee_type = 'agent'
+  AND assignee_id = ANY($1::uuid[])
+`
+
+// Pauses every active autopilot whose agent assignee is in the supplied list.
+// Called before hard-deleting archived agents on runtime teardown so the rows
+// do not become dangling (autopilot.assignee_id no longer has an agent FK
+// since migration 096). Status='paused' makes the breakage visible in the UI
+// — operators can re-point the autopilot at a live agent or delete it —
+// rather than silently piling skipped runs.
+func (q *Queries) PauseAutopilotsByAgentAssignees(ctx context.Context, assigneeIds []pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, pauseAutopilotsByAgentAssignees, assigneeIds)
+	return err
 }
 
 const reassignAgentsToRuntime = `-- name: ReassignAgentsToRuntime :execrows
@@ -441,6 +669,50 @@ func (q *Queries) RecordRuntimeLegacyDaemonID(ctx context.Context, arg RecordRun
 	return err
 }
 
+const selectStaleOnlineRuntimes = `-- name: SelectStaleOnlineRuntimes :many
+SELECT id, workspace_id, owner_id, daemon_id, provider FROM agent_runtime
+WHERE status = 'online'
+  AND last_seen_at < now() - make_interval(secs => $1::double precision)
+`
+
+type SelectStaleOnlineRuntimesRow struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	OwnerID     pgtype.UUID `json:"owner_id"`
+	DaemonID    pgtype.Text `json:"daemon_id"`
+	Provider    string      `json:"provider"`
+}
+
+// Lists online runtimes whose last_seen_at exceeds the stale window. The
+// sweeper uses this as a candidate set, then optionally filters via the
+// LivenessStore before flipping rows to offline (a fresh Redis liveness
+// record means the DB row is just lagging, not actually dead).
+func (q *Queries) SelectStaleOnlineRuntimes(ctx context.Context, staleSeconds float64) ([]SelectStaleOnlineRuntimesRow, error) {
+	rows, err := q.db.Query(ctx, selectStaleOnlineRuntimes, staleSeconds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SelectStaleOnlineRuntimesRow{}
+	for rows.Next() {
+		var i SelectStaleOnlineRuntimesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.OwnerID,
+			&i.DaemonID,
+			&i.Provider,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setAgentRuntimeOffline = `-- name: SetAgentRuntimeOffline :exec
 UPDATE agent_runtime
 SET status = 'offline', updated_at = now()
@@ -452,15 +724,73 @@ func (q *Queries) SetAgentRuntimeOffline(ctx context.Context, id pgtype.UUID) er
 	return err
 }
 
-const updateAgentRuntimeHeartbeat = `-- name: UpdateAgentRuntimeHeartbeat :one
+const touchAgentRuntimeLastSeen = `-- name: TouchAgentRuntimeLastSeen :execrows
 UPDATE agent_runtime
-SET status = 'online', last_seen_at = now(), updated_at = now()
-WHERE id = $1
-RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id
+SET last_seen_at = now()
+WHERE id = $1 AND status = 'online'
 `
 
-func (q *Queries) UpdateAgentRuntimeHeartbeat(ctx context.Context, id pgtype.UUID) (AgentRuntime, error) {
-	row := q.db.QueryRow(ctx, updateAgentRuntimeHeartbeat, id)
+// Bumps last_seen_at on an already-online runtime. Deliberately does NOT
+// touch status or updated_at: status is unchanged on the hot heartbeat path,
+// and avoiding updated_at keeps the row HOT-eligible (no index columns
+// change) and avoids invalidating any downstream consumer that watches
+// updated_at.
+//
+// The status='online' predicate is load-bearing: callers read rt.Status from
+// a prior SELECT and may race with the sweeper, which can flip the row to
+// offline between that SELECT and this UPDATE. Without the predicate this
+// query would silently leave a freshly-heartbeated runtime stuck in offline.
+// Returning affected rows lets callers detect that race and fall back to
+// MarkAgentRuntimeOnline to flip the row back online.
+func (q *Queries) TouchAgentRuntimeLastSeen(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, touchAgentRuntimeLastSeen, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const touchAgentRuntimesLastSeenBatch = `-- name: TouchAgentRuntimesLastSeenBatch :execrows
+UPDATE agent_runtime
+SET last_seen_at = now()
+WHERE id = ANY($1::uuid[]) AND status = 'online'
+`
+
+// Bulk variant of TouchAgentRuntimeLastSeen used by the BatchedHeartbeatScheduler:
+// coalesces N per-runtime "bump last_seen_at" requests into a single UPDATE so a
+// fleet beating every 15s costs ~1 DB transaction per batch tick instead of N.
+//
+// Same load-bearing predicate as the single-id form: status='online' avoids
+// silently un-deleting a sweeper-flipped offline row, and we deliberately do
+// NOT touch updated_at so the rows stay HOT-eligible. Affected-rows < len(ids)
+// means some IDs raced to offline between Schedule and flush; their next beat
+// will fall through the recordHeartbeat sync path and call MarkAgentRuntimeOnline.
+func (q *Queries) TouchAgentRuntimesLastSeenBatch(ctx context.Context, ids []pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, touchAgentRuntimesLastSeenBatch, ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateAgentRuntimeVisibility = `-- name: UpdateAgentRuntimeVisibility :one
+UPDATE agent_runtime
+SET visibility = $1, updated_at = now()
+WHERE id = $2
+RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility
+`
+
+type UpdateAgentRuntimeVisibilityParams struct {
+	Visibility string      `json:"visibility"`
+	ID         pgtype.UUID `json:"id"`
+}
+
+// Toggles a runtime between 'private' (only owner can bind agents) and
+// 'public' (any workspace member can). Default for new rows is 'private'
+// (see migration 083). Gated at the handler layer to owner / workspace
+// admin only.
+func (q *Queries) UpdateAgentRuntimeVisibility(ctx context.Context, arg UpdateAgentRuntimeVisibilityParams) (AgentRuntime, error) {
+	row := q.db.QueryRow(ctx, updateAgentRuntimeVisibility, arg.Visibility, arg.ID)
 	var i AgentRuntime
 	err := row.Scan(
 		&i.ID,
@@ -477,6 +807,7 @@ func (q *Queries) UpdateAgentRuntimeHeartbeat(ctx context.Context, id pgtype.UUI
 		&i.UpdatedAt,
 		&i.OwnerID,
 		&i.LegacyDaemonID,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -504,7 +835,7 @@ DO UPDATE SET
     owner_id = COALESCE(EXCLUDED.owner_id, agent_runtime.owner_id),
     last_seen_at = now(),
     updated_at = now()
-RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, (xmax = 0) AS inserted
+RETURNING id, workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, created_at, updated_at, owner_id, legacy_daemon_id, visibility, (xmax = 0) AS inserted
 `
 
 type UpsertAgentRuntimeParams struct {
@@ -534,12 +865,13 @@ type UpsertAgentRuntimeRow struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	OwnerID        pgtype.UUID        `json:"owner_id"`
 	LegacyDaemonID pgtype.Text        `json:"legacy_daemon_id"`
+	Visibility     string             `json:"visibility"`
 	Inserted       bool               `json:"inserted"`
 }
 
 // (xmax = 0) AS inserted distinguishes a fresh insert (true) from an upsert
-// that updated an existing row (false). Analytics reads this to fire the
-// runtime_registered event only on first-time registration.
+// that updated an existing row (false). Analytics reads this to fire
+// runtime_registered/runtime_ready only on first-time registration.
 func (q *Queries) UpsertAgentRuntime(ctx context.Context, arg UpsertAgentRuntimeParams) (UpsertAgentRuntimeRow, error) {
 	row := q.db.QueryRow(ctx, upsertAgentRuntime,
 		arg.WorkspaceID,
@@ -568,6 +900,7 @@ func (q *Queries) UpsertAgentRuntime(ctx context.Context, arg UpsertAgentRuntime
 		&i.UpdatedAt,
 		&i.OwnerID,
 		&i.LegacyDaemonID,
+		&i.Visibility,
 		&i.Inserted,
 	)
 	return i, err

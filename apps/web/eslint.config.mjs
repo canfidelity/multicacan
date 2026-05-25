@@ -2,7 +2,7 @@ import nextConfig from "@multicacan/eslint-config/next";
 
 export default [
   ...nextConfig,
-  { ignores: [".next/"] },
+  { ignores: [".next/", ".source/"] },
   {
     files: ["**/*.test.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
     rules: {

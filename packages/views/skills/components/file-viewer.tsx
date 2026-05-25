@@ -6,6 +6,7 @@ import { Button } from "@multicacan/ui/components/ui/button";
 import { Textarea } from "@multicacan/ui/components/ui/textarea";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
 import { Markdown } from "../../common/markdown";
+import { useT } from "../../i18n";
 
 function isMarkdown(path: string) {
   return path.endsWith(".md") || path.endsWith(".mdx");
@@ -87,6 +88,7 @@ export function FileViewer({
   content: string;
   onChange: (content: string) => void;
 }) {
+  const { t } = useT("skills");
   const [editing, setEditing] = useState(false);
   const isMd = isMarkdown(path);
 
@@ -98,7 +100,7 @@ export function FileViewer({
   return (
     <div className="flex h-full flex-col">
       {/* File header */}
-      <div className="flex h-10 items-center justify-between border-b px-4">
+      <div className="flex h-10 items-center justify-between gap-3 border-b px-4">
         <span className="text-xs font-mono text-muted-foreground truncate">
           {path}
         </span>
@@ -122,7 +124,9 @@ export function FileViewer({
                 }
               />
               <TooltipContent>
-                {editing ? "Preview" : "Edit"}
+                {editing
+                  ? t(($) => $.file_viewer.preview_tooltip)
+                  : t(($) => $.file_viewer.edit_tooltip)}
               </TooltipContent>
             </Tooltip>
           )}
@@ -132,10 +136,10 @@ export function FileViewer({
       {/* File content */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {isMd && !editing ? (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {frontmatter && <FrontmatterCard data={frontmatter} />}
             <Markdown mode="full">
-              {body || "*No content yet*"}
+              {body || t(($) => $.file_viewer.no_content)}
             </Markdown>
           </div>
         ) : (
@@ -144,8 +148,8 @@ export function FileViewer({
             onChange={(e) => onChange(e.target.value)}
             placeholder={
               isMd
-                ? "Write markdown content..."
-                : "File content..."
+                ? t(($) => $.file_viewer.markdown_placeholder)
+                : t(($) => $.file_viewer.raw_placeholder)
             }
             className="h-full min-h-full resize-none rounded-none border-0 font-mono text-sm leading-relaxed focus-visible:ring-0"
           />

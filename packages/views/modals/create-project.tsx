@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ChevronRight, Maximize2, Minimize2, X as XIcon, UserMinus } from "lucide-react";
+import { ChevronRight, Maximize2, Minimize2, Search, X as XIcon, UserMinus } from "lucide-react";
 
 /**
  * GitHub mark — lucide-react v1 dropped brand icons, so we inline the
@@ -27,7 +27,6 @@ import { useProjectDraftStore } from "@multicacan/core/projects";
 import {
   PROJECT_STATUS_CONFIG,
   PROJECT_STATUS_ORDER,
-  PROJECT_PRIORITY_CONFIG,
   PROJECT_PRIORITY_ORDER,
 } from "@multicacan/core/projects/config";
 import { useWorkspaceId } from "@multicacan/core/hooks";
@@ -52,6 +51,12 @@ import { ContentEditor, type ContentEditorRef, TitleEditor } from "../editor";
 import { PriorityIcon } from "../issues/components/priority-icon";
 import { ActorAvatar } from "../common/actor-avatar";
 import { useNavigation } from "../navigation";
+import { useT } from "../i18n";
+import { matchesPinyin } from "../editor/extensions/pinyin-match";
+import {
+  useProjectStatusLabels,
+  useProjectPriorityLabels,
+} from "../projects/components/labels";
 
 function PillButton({
   children,
@@ -73,7 +78,34 @@ function PillButton({
   );
 }
 
+function RepoUrlText({
+  url,
+  className,
+}: {
+  url: string;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            title={url}
+            className={cn("truncate flex-1 text-left", className)}
+          >
+            {url}
+          </span>
+        }
+      />
+      <TooltipContent side="top" align="start" className="max-w-sm break-all">
+        {url}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function CreateProjectModal({ onClose }: { onClose: () => void }) {
+  const { t } = useT("modals");
   const router = useNavigation();
   const workspace = useCurrentWorkspace();
   const workspaceName = workspace?.name;
@@ -82,6 +114,8 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { getActorName } = useActorName();
+  const projectStatusLabels = useProjectStatusLabels();
+  const projectPriorityLabels = useProjectPriorityLabels();
 
   const draft = useProjectDraftStore((s) => s.draft);
   const setDraft = useProjectDraftStore((s) => s.setDraft);
@@ -102,8 +136,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   // persisted until handleSubmit fires the createProjectResource calls.
   const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
+  const [repoSearch, setRepoSearch] = useState("");
   const [customRepoUrl, setCustomRepoUrl] = useState("");
   const workspaceRepos = workspace?.repos ?? [];
+  const repoQuery = repoSearch.trim().toLowerCase();
+  const filteredWorkspaceRepos = workspaceRepos.filter((repo) =>
+    repo.url.toLowerCase().includes(repoQuery),
+  );
 
   // Sync field changes to draft store
   const updateTitle = (v: string) => { setTitle(v); setDraft({ title: v }); };
@@ -119,12 +158,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [leadFilter, setLeadFilter] = useState("");
 
   const leadQuery = leadFilter.toLowerCase();
-  const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(leadQuery));
+  const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(leadQuery) || matchesPinyin(m.name, leadQuery));
   const filteredAgents = agents.filter(
-    (a) => !a.archived_at && a.name.toLowerCase().includes(leadQuery),
+    (a) => !a.archived_at && (a.name.toLowerCase().includes(leadQuery) || matchesPinyin(a.name, leadQuery)),
   );
 
-  const leadLabel = leadType && leadId ? getActorName(leadType, leadId) : "Lead";
+  const leadLabel =
+    leadType && leadId ? getActorName(leadType, leadId) : t(($) => $.create_project.lead);
 
   const createProject = useCreateProject();
 
@@ -151,10 +191,14 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       });
       clearDraft();
       onClose();
-      toast.success("Project created");
+      toast.success(t(($) => $.create_project.toast_created));
       router.push(wsPaths.projectDetail(project.id));
-    } catch {
-      toast.error("Failed to create project");
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : t(($) => $.create_project.toast_failed),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -186,13 +230,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             : "!max-w-2xl !w-full !h-96 !-translate-y-1/2",
         )}
       >
-        <DialogTitle className="sr-only">New Project</DialogTitle>
+        <DialogTitle className="sr-only">{t(($) => $.create_project.title)}</DialogTitle>
 
         <div className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0">
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">{workspaceName}</span>
             <ChevronRight className="size-3 text-muted-foreground/50" />
-            <span className="font-medium">New project</span>
+            <span className="font-medium">{t(($) => $.create_project.title_breadcrumb)}</span>
           </div>
           <div className="flex items-center gap-1">
             <Tooltip>
@@ -206,7 +250,11 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   </button>
                 }
               />
-              <TooltipContent side="bottom">{isExpanded ? "Collapse" : "Expand"}</TooltipContent>
+              <TooltipContent side="bottom">
+                {isExpanded
+                  ? t(($) => $.common.collapse_tooltip)
+                  : t(($) => $.common.expand_tooltip)}
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
@@ -219,7 +267,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   </button>
                 }
               />
-              <TooltipContent side="bottom">Close</TooltipContent>
+              <TooltipContent side="bottom">{t(($) => $.common.close)}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -231,7 +279,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   className="text-2xl cursor-pointer rounded-lg p-1 -ml-1 hover:bg-accent/60 transition-colors"
-                  title="Choose icon"
+                  title={t(($) => $.create_project.icon_tooltip)}
                 >
                   {icon || "📁"}
                 </button>
@@ -249,7 +297,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
           <TitleEditor
             autoFocus
             defaultValue={draft.title}
-            placeholder="Project title"
+            placeholder={t(($) => $.create_project.title_placeholder)}
             className="text-lg font-semibold"
             onChange={(v) => updateTitle(v)}
             onSubmit={handleSubmit}
@@ -260,7 +308,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
           <ContentEditor
             ref={descEditorRef}
             defaultValue={draft.description}
-            placeholder="Add description..."
+            placeholder={t(($) => $.create_project.description_placeholder)}
             onUpdate={(md) => setDraft({ description: md })}
             debounceMs={500}
           />
@@ -279,7 +327,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               render={
                 <PillButton>
                   <span className={cn("size-2 rounded-full", PROJECT_STATUS_CONFIG[status].dotColor)} />
-                  <span>{PROJECT_STATUS_CONFIG[status].label}</span>
+                  <span>{projectStatusLabels[status]}</span>
                 </PillButton>
               }
             />
@@ -287,7 +335,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               {PROJECT_STATUS_ORDER.map((s) => (
                 <DropdownMenuItem key={s} onClick={() => updateStatus(s)}>
                   <span className={cn("size-2 rounded-full", PROJECT_STATUS_CONFIG[s].dotColor)} />
-                  <span>{PROJECT_STATUS_CONFIG[s].label}</span>
+                  <span>{projectStatusLabels[s]}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -298,7 +346,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               render={
                 <PillButton>
                   <PriorityIcon priority={priority} />
-                  <span>{PROJECT_PRIORITY_CONFIG[priority].label}</span>
+                  <span>{projectPriorityLabels[priority]}</span>
                 </PillButton>
               }
             />
@@ -306,7 +354,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               {PROJECT_PRIORITY_ORDER.map((pr) => (
                 <DropdownMenuItem key={pr} onClick={() => updatePriority(pr)}>
                   <PriorityIcon priority={pr} />
-                  <span>{PROJECT_PRIORITY_CONFIG[pr].label}</span>
+                  <span>{projectPriorityLabels[pr]}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -328,7 +376,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                       <span>{leadLabel}</span>
                     </>
                   ) : (
-                    <span className="text-muted-foreground">Lead</span>
+                    <span className="text-muted-foreground">{t(($) => $.create_project.lead)}</span>
                   )}
                 </PillButton>
               }
@@ -339,7 +387,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={leadFilter}
                   onChange={(e) => setLeadFilter(e.target.value)}
-                  placeholder="Assign lead..."
+                  placeholder={t(($) => $.create_project.lead_placeholder)}
                   className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
                 />
               </div>
@@ -353,12 +401,12 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
                 >
                   <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">No lead</span>
+                  <span className="text-muted-foreground">{t(($) => $.create_project.no_lead)}</span>
                 </button>
                 {filteredMembers.length > 0 && (
                   <>
                     <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Members
+                      {t(($) => $.create_project.members_group)}
                     </div>
                     {filteredMembers.map((m) => (
                       <button
@@ -379,7 +427,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                 {filteredAgents.length > 0 && (
                   <>
                     <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Agents
+                      {t(($) => $.create_project.agents_group)}
                     </div>
                     {filteredAgents.map((a) => (
                       <button
@@ -401,60 +449,83 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   filteredAgents.length === 0 &&
                   leadFilter && (
                     <div className="px-2 py-3 text-center text-sm text-muted-foreground">
-                      No results
+                      {t(($) => $.create_project.no_results)}
                     </div>
                   )}
               </div>
             </PopoverContent>
           </Popover>
 
-          <Popover open={repoPopoverOpen} onOpenChange={setRepoPopoverOpen}>
+          <Popover
+            open={repoPopoverOpen}
+            onOpenChange={(v) => {
+              setRepoPopoverOpen(v);
+              if (!v) setRepoSearch("");
+            }}
+          >
             <PopoverTrigger
               render={
                 <PillButton>
                   <GithubIcon className="size-3" />
                   <span>
                     {selectedRepos.length === 0
-                      ? "Repos"
-                      : `${selectedRepos.length} repo${selectedRepos.length === 1 ? "" : "s"}`}
+                      ? t(($) => $.create_project.repos_pill)
+                      : t(($) => $.create_project.repos_pill_count, { count: selectedRepos.length })}
                   </span>
                 </PillButton>
               }
             />
             <PopoverContent align="start" className="w-72 p-2 space-y-2">
               <div className="text-xs font-medium text-muted-foreground">
-                Attach GitHub repos to this project
+                {t(($) => $.create_project.repos_heading)}
               </div>
               {workspaceRepos.length > 0 ? (
-                <div className="space-y-1">
-                  {workspaceRepos.map((repo) => {
-                    const checked = selectedRepos.includes(repo.url);
-                    return (
-                      <button
-                        type="button"
-                        key={repo.url}
-                        onClick={() => toggleRepo(repo.url)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent transition-colors",
-                          checked && "bg-accent",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          readOnly
-                          className="size-3.5"
-                        />
-                        <GithubIcon className="size-3.5" />
-                        <span className="truncate flex-1 text-left">{repo.url}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={repoSearch}
+                      onChange={(e) => setRepoSearch(e.target.value)}
+                      aria-label={t(($) => $.create_project.repos_search_placeholder)}
+                      placeholder={t(($) => $.create_project.repos_search_placeholder)}
+                      className="h-8 w-full rounded-md border bg-transparent pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {filteredWorkspaceRepos.length === 0 && repoQuery && (
+                      <p className="py-2 text-center text-xs text-muted-foreground">
+                        {t(($) => $.create_project.repos_search_empty)}
+                      </p>
+                    )}
+                    {filteredWorkspaceRepos.map((repo) => {
+                      const checked = selectedRepos.includes(repo.url);
+                      return (
+                        <button
+                          type="button"
+                          key={repo.url}
+                          onClick={() => toggleRepo(repo.url)}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent transition-colors",
+                            checked && "bg-accent",
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            readOnly
+                            className="size-3.5"
+                          />
+                          <GithubIcon className="size-3.5" />
+                          <RepoUrlText url={repo.url} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  No workspace-level repos yet. Paste a URL below to attach one
-                  ad-hoc.
+                  {t(($) => $.create_project.repos_empty)}
                 </p>
               )}
               <form
@@ -465,10 +536,10 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                 className="flex items-center gap-1.5 pt-1 border-t"
               >
                 <input
-                  type="url"
+                  type="text"
                   value={customRepoUrl}
                   onChange={(e) => setCustomRepoUrl(e.target.value)}
-                  placeholder="https://github.com/owner/repo"
+                  placeholder={t(($) => $.create_project.repos_url_placeholder)}
                   className="flex-1 bg-transparent text-xs px-2 py-1 outline-none placeholder:text-muted-foreground"
                 />
                 <Button
@@ -478,13 +549,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                   className="h-6 px-2 text-xs"
                   disabled={!customRepoUrl.trim()}
                 >
-                  Add
+                  {t(($) => $.create_project.repos_add)}
                 </Button>
               </form>
               {selectedRepos.length > 0 && (
                 <div className="space-y-1 pt-1 border-t">
                   <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Selected
+                    {t(($) => $.create_project.repos_selected)}
                   </div>
                   {selectedRepos.map((url) => (
                     <div
@@ -492,7 +563,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                       className="flex items-center gap-2 text-xs"
                     >
                       <GithubIcon className="size-3 text-muted-foreground" />
-                      <span className="truncate flex-1">{url}</span>
+                      <RepoUrlText url={url} />
                       <button
                         type="button"
                         onClick={() => toggleRepo(url)}
@@ -514,7 +585,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             disabled={!title.trim() || submitting}
             className="shrink-0"
           >
-            {submitting ? "Creating..." : "Create Project"}
+            {submitting ? t(($) => $.create_project.submitting) : t(($) => $.create_project.submit)}
           </Button>
         </div>
       </DialogContent>

@@ -11,24 +11,57 @@ import { ProjectDetailPage } from "./pages/project-detail-page";
 import { AutopilotDetailPage } from "./pages/autopilot-detail-page";
 import { SkillDetailPage } from "./pages/skill-detail-page";
 import { AgentDetailPage } from "./pages/agent-detail-page";
+import { MemberDetailPage } from "./pages/member-detail-page";
 import { RuntimeDetailPage } from "./pages/runtime-detail-page";
+import { AttachmentPreviewRoute } from "./pages/attachment-preview-page";
 import { IssuesPage } from "@multicacan/views/issues/components";
 import { ProjectsPage } from "@multicacan/views/projects/components";
+import { DashboardPage } from "@multicacan/views/dashboard";
 import { AutopilotsPage } from "@multicacan/views/autopilots/components";
 import { MyIssuesPage } from "@multicacan/views/my-issues";
 import { SkillsPage } from "@multicacan/views/skills";
 import { DesktopRuntimesPage } from "./components/desktop-runtimes-page";
 import { AgentsPage } from "@multicacan/views/agents";
+import { SquadsPage, SquadDetailPage as SquadDetailPageView } from "@multicacan/views/squads/components";
 import { InboxPage } from "@multicacan/views/inbox";
 import { SettingsPage } from "@multicacan/views/settings";
 import { SimulatorPage } from "@multicacan/views/simulator";
 import { WebPreviewPage } from "@multicacan/views/preview";
 import { NativeIDEPage } from "@multicacan/views/ide";
 import { AssetsPage } from "@multicacan/views/assets";
+import { useT } from "@multicacan/views/i18n";
+import { ErrorBoundary } from "@multicacan/ui/components/common/error-boundary";
 import { Download, Server } from "lucide-react";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
 import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
+
+/**
+ * Wraps `SettingsPage` so the desktop-only extra tabs can pull their labels
+ * from i18n. The route element has to be a component (not a literal JSX
+ * value) for `useT` to run.
+ */
+function DesktopSettingsRoute() {
+  const { t } = useT("settings");
+  return (
+    <SettingsPage
+      extraAccountTabs={[
+        {
+          value: "daemon",
+          label: "Daemon",
+          icon: Server,
+          content: <DaemonSettingsTab />,
+        },
+        {
+          value: "updates",
+          label: t(($) => $.desktop.tabs.updates),
+          icon: Download,
+          content: <UpdatesSettingsTab />,
+        },
+      ]}
+    />
+  );
+}
 
 /**
  * Sets document.title from the deepest matched route's handle.title.
@@ -87,7 +120,15 @@ export const appRoutes: RouteObject[] = [
         element: <WorkspaceRouteLayout />,
         children: [
           { index: true, element: <Navigate to="issues" replace /> },
-          { path: "issues", element: <IssuesPage />, handle: { title: "Issues" } },
+          {
+            path: "issues",
+            element: (
+              <ErrorBoundary>
+                <IssuesPage />
+              </ErrorBoundary>
+            ),
+            handle: { title: "Issues" },
+          },
           {
             path: "issues/:id",
             element: <IssueDetailPage />,
@@ -140,31 +181,35 @@ export const appRoutes: RouteObject[] = [
             element: <AgentDetailPage />,
             handle: { title: "Agent" },
           },
+          {
+            path: "members/:id",
+            element: <MemberDetailPage />,
+            handle: { title: "Member" },
+          },
+          { path: "squads", element: <SquadsPage />, handle: { title: "Squads" } },
+          {
+            path: "squads/:id",
+            element: <SquadDetailPageView />,
+            handle: { title: "Squad" },
+          },
           { path: "inbox", element: <InboxPage />, handle: { title: "Inbox" } },
           { path: "simulator", element: <SimulatorPage />, handle: { title: "Simulator" } },
           { path: "preview", element: <WebPreviewPage />, handle: { title: "Web Preview" } },
           { path: "ide", element: <NativeIDEPage />, handle: { title: "Code Editor" } },
           { path: "assets", element: <AssetsPage />, handle: { title: "Assets" } },
           {
+            path: "attachments/:id/preview",
+            element: <AttachmentPreviewRoute />,
+            handle: { title: "Attachment" },
+          },
+          {
+            path: "usage",
+            element: <DashboardPage />,
+            handle: { title: "Usage" },
+          },
+          {
             path: "settings",
-            element: (
-              <SettingsPage
-                extraAccountTabs={[
-                  {
-                    value: "daemon",
-                    label: "Daemon",
-                    icon: Server,
-                    content: <DaemonSettingsTab />,
-                  },
-                  {
-                    value: "updates",
-                    label: "Updates",
-                    icon: Download,
-                    content: <UpdatesSettingsTab />,
-                  },
-                ]}
-              />
-            ),
+            element: <DesktopSettingsRoute />,
             handle: { title: "Settings" },
           },
         ],

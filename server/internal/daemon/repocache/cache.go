@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+
 )
 
 // gitEnv returns an environment for git subprocesses that contact remotes.
@@ -50,6 +51,8 @@ func gitEnv() []string {
 	)
 }
 
+var agentGitExcludePatterns = []string{".agent_context", "CLAUDE.md", "AGENTS.md", ".claude", ".opencode"}
+
 // RepoInfo describes a repository to cache.
 type RepoInfo struct {
 	URL string
@@ -63,7 +66,7 @@ type CachedRepo struct {
 
 // Cache manages bare git clones for workspace repositories.
 type Cache struct {
-	root   string // base directory for all caches (e.g. ~/multicacan_workspaces/.repos)
+	root   string // base directory for all caches (e.g. ~/multica_workspaces/.repos)
 	logger *slog.Logger
 	// repoLocks maps bare repo path → dedicated mutex. Any mutating operation
 	// on a given bare repo (clone, fetch, worktree add, ref update) must
@@ -121,10 +124,6 @@ func (c *Cache) Sync(workspaceID string, repos []RepoInfo) error {
 					firstErr = err
 				}
 			}
-			// Backfill sentinel for repos cloned before this marker was introduced.
-			if !isCacheReady(barePath) {
-				_ = os.WriteFile(filepath.Join(barePath, cacheReadyMarker), nil, 0o644)
-			}
 		} else {
 			// Not cached — bare clone.
 			c.logger.Info("repo cache: cloning", "url", repo.URL, "path", barePath)
@@ -141,10 +140,10 @@ func (c *Cache) Sync(workspaceID string, repos []RepoInfo) error {
 }
 
 // Lookup returns the local bare clone path for a repo URL within a workspace.
-// Returns "" if not cached or if the clone is still in progress.
+// Returns "" if not cached.
 func (c *Cache) Lookup(workspaceID, url string) string {
 	barePath := filepath.Join(c.root, workspaceID, bareDirName(url))
-	if isCacheReady(barePath) {
+	if isBareRepo(barePath) {
 		return barePath
 	}
 	return ""
@@ -228,22 +227,10 @@ func splitHostAndPath(rawURL string) (host, path string) {
 	return "", s
 }
 
-// cacheReadyMarker is written by gitCloneBare after full initialization
-// (clone + ensureRemoteTrackingLayout) completes. Lookup checks for this
-// marker so it never returns a path mid-clone.
-const cacheReadyMarker = ".cache-ready"
-
 // isBareRepo checks if a path looks like a bare git repository.
-// Used internally by Sync to decide clone vs fetch — does not require the
-// cache-ready marker because Sync holds the per-repo lock.
 func isBareRepo(path string) bool {
+	// A bare repo has a HEAD file at the root.
 	_, err := os.Stat(filepath.Join(path, "HEAD"))
-	return err == nil
-}
-
-// isCacheReady checks if a bare repo has been fully initialized by gitCloneBare.
-func isCacheReady(path string) bool {
-	_, err := os.Stat(filepath.Join(path, cacheReadyMarker))
 	return err == nil
 }
 
@@ -257,6 +244,7 @@ const modernFetchRefspec = "+refs/heads/*:refs/remotes/origin/*"
 func gitCloneBare(url, dest string) error {
 	cmd := exec.Command("git", "clone", "--bare", url, dest)
 	cmd.Env = gitEnv()
+
 	if out, err := cmd.CombinedOutput(); err != nil {
 		// Clean up partial clone.
 		os.RemoveAll(dest)
@@ -270,9 +258,6 @@ func gitCloneBare(url, dest string) error {
 		os.RemoveAll(dest)
 		return fmt.Errorf("configure fetch refspec: %w", err)
 	}
-	// Write sentinel after full initialization so Lookup never returns a
-	// path that is still mid-clone.
-	_ = os.WriteFile(filepath.Join(dest, cacheReadyMarker), nil, 0o644)
 	return nil
 }
 
@@ -300,6 +285,7 @@ func gitFetch(barePath string) error {
 	// on this call.
 	cmd := exec.Command("git", "-C", barePath, "remote", "set-head", "origin", "--auto")
 	cmd.Env = gitEnv()
+
 	_ = cmd.Run()
 	return nil
 }
@@ -309,6 +295,7 @@ func gitFetch(barePath string) error {
 func runGitFetch(barePath string) error {
 	cmd := exec.Command("git", "-C", barePath, "fetch", "origin")
 	cmd.Env = gitEnv()
+
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git fetch: %s: %w", strings.TrimSpace(string(out)), err)
 	}
@@ -343,6 +330,7 @@ func ensureRemoteTrackingLayout(barePath string) error {
 	// Non-fatal: if this fails we fall back to origin/main, origin/master.
 	cmd := exec.Command("git", "-C", barePath, "remote", "set-head", "origin", "--auto")
 	cmd.Env = gitEnv()
+
 	_ = cmd.Run()
 	return nil
 }
@@ -351,7 +339,9 @@ func ensureRemoteTrackingLayout(barePath string) error {
 // the empty string if it's not set. Distinguishes "missing" (exit 1) from
 // real git errors.
 func readFetchRefspec(barePath string) (string, error) {
-	out, err := exec.Command("git", "-C", barePath, "config", "--get", "remote.origin.fetch").Output()
+	cmd := exec.Command("git", "-C", barePath, "config", "--get", "remote.origin.fetch")
+
+	out, err := cmd.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
 			return "", nil // key missing, not an error
@@ -362,7 +352,9 @@ func readFetchRefspec(barePath string) (string, error) {
 }
 
 func setFetchRefspec(barePath, refspec string) error {
-	out, err := exec.Command("git", "-C", barePath, "config", "remote.origin.fetch", refspec).CombinedOutput()
+	cmd := exec.Command("git", "-C", barePath, "config", "remote.origin.fetch", refspec)
+
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("set remote.origin.fetch: %s: %w", strings.TrimSpace(string(out)), err)
 	}
@@ -371,12 +363,13 @@ func setFetchRefspec(barePath, refspec string) error {
 
 // WorktreeParams holds inputs for creating a worktree from a cached bare clone.
 type WorktreeParams struct {
-	WorkspaceID        string // workspace that owns the repo
-	RepoURL            string // remote URL to look up in the cache
-	WorkDir            string // parent directory for the worktree (e.g. task workdir)
-	AgentName          string // for branch naming
-	TaskID             string // for branch naming uniqueness
-	CoAuthoredByEnabled bool  // install prepare-commit-msg hook for Co-authored-by trailer
+	WorkspaceID         string // workspace that owns the repo
+	RepoURL             string // remote URL to look up in the cache
+	WorkDir             string // parent directory for the worktree (e.g. task workdir)
+	Ref                 string // optional branch, tag, or commit to base the worktree on
+	AgentName           string // for branch naming
+	TaskID              string // for branch naming uniqueness
+	CoAuthoredByEnabled bool   // install prepare-commit-msg hook for Co-authored-by trailer
 }
 
 // WorktreeResult describes a successfully created worktree.
@@ -416,13 +409,24 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 		)
 	}
 
-	// Determine the default branch to base the worktree on. getRemoteDefaultBranch
-	// walks origin/HEAD → origin/main, origin/master → bare-HEAD hint into
-	// origin/<same> → single-entry scan of origin/* → bare HEAD (only if
-	// origin/* is empty). Reaching "" here means the cache is in a state we
-	// refuse to guess from (no origin/HEAD, no main/master, bare HEAD doesn't
-	// match any origin/* entry, and origin/* has multiple candidates).
-	baseRef := getRemoteDefaultBranch(barePath)
+	// Determine the ref to base the worktree on. By default this is the remote's
+	// default branch (resolved internally via getRemoteDefaultBranch, which walks
+	// origin/HEAD → origin/main, origin/master → bare-HEAD hint into origin/<same>
+	// → single-entry scan of origin/* → bare HEAD when origin/* is empty).
+	// Callers may request a specific branch, tag, or commit so review/QA agents
+	// can inspect the exact revision without trying to mutate the daemon-owned
+	// worktree metadata themselves.
+	baseRef, err := resolveBaseRef(barePath, params.Ref)
+	if err != nil {
+		return nil, err
+	}
+
+	// Empty here means params.Ref was unset and getRemoteDefaultBranch couldn't
+	// resolve a default — the cache is in a state we refuse to guess from (no
+	// origin/HEAD, no main/master, bare HEAD doesn't match any origin/* entry,
+	// and origin/* has multiple candidates). The requested-ref path returns an
+	// explicit error before reaching here, so this branch only fires for the
+	// default-branch case.
 	if baseRef == "" {
 		return nil, fmt.Errorf("cannot resolve default branch for %s: bare cache at %s has no usable refs (origin/* is empty or ambiguous and bare HEAD has no match). The cache may be corrupted; delete it and retry", params.RepoURL, barePath)
 	}
@@ -442,14 +446,22 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 			return nil, fmt.Errorf("update existing worktree: %w", err)
 		}
 
-		for _, pattern := range []string{".agent_context", "CLAUDE.md", "AGENTS.md", ".claude", ".config/opencode"} {
+		for _, pattern := range agentGitExcludePatterns {
 			_ = excludeFromGit(worktreePath, pattern)
 		}
 
-		// Install Co-authored-by hook for Multicacan Agent attribution (if enabled).
+		// Install or remove the Co-authored-by hook based on the workspace
+		// setting. The hook lives in the bare repo's shared hooks dir, so we
+		// must actively remove it when disabled — otherwise a previously
+		// installed hook keeps appending the trailer to every commit even
+		// after the user toggles the setting off.
 		if params.CoAuthoredByEnabled {
 			if err := installCoAuthoredByHook(worktreePath); err != nil {
 				c.logger.Warn("repo checkout: install co-authored-by hook failed (non-fatal)", "error", err)
+			}
+		} else {
+			if err := removeCoAuthoredByHook(worktreePath); err != nil {
+				c.logger.Warn("repo checkout: remove co-authored-by hook failed (non-fatal)", "error", err)
 			}
 		}
 
@@ -474,14 +486,20 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 	}
 
 	// Exclude agent context files from git tracking.
-	for _, pattern := range []string{".agent_context", "CLAUDE.md", "AGENTS.md", ".claude", ".config/opencode"} {
+	for _, pattern := range agentGitExcludePatterns {
 		_ = excludeFromGit(worktreePath, pattern)
 	}
 
-	// Install Co-authored-by hook for Multicacan Agent attribution (if enabled).
+	// Install or remove the Co-authored-by hook based on the workspace
+	// setting. See the existing-worktree branch above for why removal is
+	// required when the setting is disabled.
 	if params.CoAuthoredByEnabled {
 		if err := installCoAuthoredByHook(worktreePath); err != nil {
 			c.logger.Warn("repo checkout: install co-authored-by hook failed (non-fatal)", "error", err)
+		}
+	} else {
+		if err := removeCoAuthoredByHook(worktreePath); err != nil {
+			c.logger.Warn("repo checkout: remove co-authored-by hook failed (non-fatal)", "error", err)
 		}
 	}
 
@@ -496,6 +514,33 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 		Path:       worktreePath,
 		BranchName: actualBranch,
 	}, nil
+}
+
+func resolveBaseRef(barePath, requestedRef string) (string, error) {
+	ref := strings.TrimSpace(requestedRef)
+	if ref == "" {
+		return getRemoteDefaultBranch(barePath), nil
+	}
+
+	// Prefer remote-tracking branches for human branch names. Then allow full
+	// local refs, tags, and raw commits that exist in the fetched bare cache.
+	candidates := []string{
+		"refs/remotes/origin/" + ref,
+		"refs/tags/" + ref,
+		ref,
+	}
+	for _, candidate := range candidates {
+		if gitRefExists(barePath, candidate+"^{commit}") {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("cannot resolve requested ref %q in repo cache at %s", ref, barePath)
+}
+
+func gitRefExists(repoPath, ref string) bool {
+	cmd := exec.Command("git", "-C", repoPath, "rev-parse", "--verify", "--quiet", ref)
+
+	return cmd.Run() == nil
 }
 
 // createWorktree creates a git worktree at the given path with a new branch.
@@ -525,6 +570,7 @@ func createWorktree(gitRoot, worktreePath, branchName, baseRef string) (string, 
 
 func runWorktreeAdd(gitRoot, worktreePath, branchName, baseRef string) error {
 	cmd := exec.Command("git", "-C", gitRoot, "worktree", "add", "-b", branchName, worktreePath, baseRef)
+
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
 	}
@@ -624,17 +670,21 @@ func getRemoteDefaultBranch(barePath string) string {
 	//    repo can leave a symref pointing at a deleted ref, and returning
 	//    it here would later fail in `git worktree add` with a confusing
 	//    "invalid reference" error.
-	if out, err := exec.Command("git", "-C", barePath, "symbolic-ref", "refs/remotes/origin/HEAD").Output(); err == nil {
+	symrefCmd := exec.Command("git", "-C", barePath, "symbolic-ref", "refs/remotes/origin/HEAD")
+	if out, err := symrefCmd.Output(); err == nil {
 		ref := strings.TrimSpace(string(out))
 		if ref != "" {
-			if err := exec.Command("git", "-C", barePath, "rev-parse", "--verify", ref).Run(); err == nil {
+			verifyCmd := exec.Command("git", "-C", barePath, "rev-parse", "--verify", ref)
+			if err := verifyCmd.Run(); err == nil {
 				return ref
 			}
 		}
 	}
 	// 2) Common default branch names under the origin namespace.
 	for _, candidate := range []string{"refs/remotes/origin/main", "refs/remotes/origin/master"} {
-		if err := exec.Command("git", "-C", barePath, "rev-parse", "--verify", candidate).Run(); err == nil {
+		cmd := exec.Command("git", "-C", barePath, "rev-parse", "--verify", candidate)
+	
+		if err := cmd.Run(); err == nil {
 			return candidate
 		}
 	}
@@ -647,7 +697,9 @@ func getRemoteDefaultBranch(barePath string) string {
 	bareRef := bareHeadBranch(barePath)
 	if bareRef != "" {
 		originRef := "refs/remotes/origin/" + strings.TrimPrefix(bareRef, "refs/heads/")
-		if err := exec.Command("git", "-C", barePath, "rev-parse", "--verify", originRef).Run(); err == nil {
+		cmd := exec.Command("git", "-C", barePath, "rev-parse", "--verify", originRef)
+	
+		if err := cmd.Run(); err == nil {
 			return originRef
 		}
 	}
@@ -659,7 +711,8 @@ func getRemoteDefaultBranch(barePath string) string {
 	//    "legacy empty" apart from "ambiguous".
 	originCount := 0
 	var singleton string
-	if out, err := exec.Command("git", "-C", barePath, "for-each-ref", "--format=%(refname)", "refs/remotes/origin/").Output(); err == nil {
+	foreachCmd := exec.Command("git", "-C", barePath, "for-each-ref", "--format=%(refname)", "refs/remotes/origin/")
+	if out, err := foreachCmd.Output(); err == nil {
 		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			line = strings.TrimSpace(line)
 			if line == "" || line == "refs/remotes/origin/HEAD" {
@@ -695,7 +748,9 @@ func getRemoteDefaultBranch(barePath string) string {
 // modern caches should never reach this path because origin/* resolution
 // succeeds first.
 func bareHeadBranch(barePath string) string {
-	out, err := exec.Command("git", "-C", barePath, "symbolic-ref", "HEAD").Output()
+	cmd := exec.Command("git", "-C", barePath, "symbolic-ref", "HEAD")
+
+	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
@@ -703,17 +758,38 @@ func bareHeadBranch(barePath string) string {
 	if ref == "" {
 		return ""
 	}
-	if err := exec.Command("git", "-C", barePath, "rev-parse", "--verify", ref).Run(); err != nil {
+	verifyCmd := exec.Command("git", "-C", barePath, "rev-parse", "--verify", ref)
+	if err := verifyCmd.Run(); err != nil {
 		return ""
 	}
 	return ref
 }
 
+// multicaHookMarker is a sentinel comment embedded in every prepare-commit-msg
+// hook installed by the daemon. removeCoAuthoredByHook uses it to recognize
+// hooks it owns so it never deletes a hook installed by the user or another
+// tool. Do not change without bumping the recognition logic.
+const multicaHookMarker = "# multica:prepare-commit-msg:co-authored-by"
+
+// daemonInstalledHookSignatures lists substrings that identify a
+// prepare-commit-msg hook as one the daemon installed. removeCoAuthoredByHook
+// treats a hook as Multica-owned if its content contains ANY of these
+// substrings. The list deliberately includes the legacy comment that the
+// daemon used before multicaHookMarker existed, so disabling the toggle on
+// existing installations still cleans up old hooks seeded by previous daemon
+// versions. Add to this list — never remove from it — so future tweaks to
+// prepareCommitMsgHook keep recognizing every previously-shipped variant.
+var daemonInstalledHookSignatures = []string{
+	multicaHookMarker,
+	"# Installed by the Multica daemon.",
+}
+
 // prepareCommitMsgHook is the prepare-commit-msg hook script that appends a
-// Co-authored-by trailer for the Multicacan Agent to every commit message.
+// Co-authored-by trailer for the Multica Agent to every commit message.
 const prepareCommitMsgHook = `#!/bin/sh
-# Multicacan: add Co-authored-by trailer for the Multicacan Agent.
-# Installed by the Multicacan daemon. Do not edit — it will be overwritten.
+# multica:prepare-commit-msg:co-authored-by
+# Multica: add Co-authored-by trailer for the Multica Agent.
+# Installed by the Multica daemon. Do not edit — it will be overwritten.
 
 COMMIT_MSG_FILE="$1"
 COMMIT_SOURCE="$2"
@@ -723,7 +799,7 @@ case "$COMMIT_SOURCE" in
   merge|squash) exit 0 ;;
 esac
 
-TRAILER="Co-authored-by: multicacan-agent <github@multicacan.io>"
+TRAILER="Co-authored-by: multica-agent <github@multica.ai>"
 
 # Don't add if already present.
 if grep -qF "$TRAILER" "$COMMIT_MSG_FILE"; then
@@ -735,11 +811,12 @@ git interpret-trailers --in-place --trailer "$TRAILER" "$COMMIT_MSG_FILE"
 `
 
 // installCoAuthoredByHook installs a prepare-commit-msg git hook that appends
-// a Co-authored-by trailer for the Multicacan Agent. The hook is installed in the
+// a Co-authored-by trailer for the Multica Agent. The hook is installed in the
 // git common directory (the bare repo for worktrees) so it applies to all
 // worktrees created from this cache.
 func installCoAuthoredByHook(worktreePath string) error {
 	cmd := exec.Command("git", "-C", worktreePath, "rev-parse", "--git-common-dir")
+
 	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("resolve git common dir: %w", err)
@@ -761,9 +838,60 @@ func installCoAuthoredByHook(worktreePath string) error {
 	return nil
 }
 
+// isDaemonInstalledHook reports whether a prepare-commit-msg hook on disk was
+// installed by the Multica daemon (current or any previously released
+// version). It returns false for hooks that don't carry any known daemon
+// signature, so a user-installed hook at the same path is left alone.
+func isDaemonInstalledHook(contents []byte) bool {
+	body := string(contents)
+	for _, sig := range daemonInstalledHookSignatures {
+		if strings.Contains(body, sig) {
+			return true
+		}
+	}
+	return false
+}
+
+// removeCoAuthoredByHook removes the prepare-commit-msg hook installed by
+// installCoAuthoredByHook. It only deletes the file when the content matches
+// a known daemon signature (current marker or any previously released hook
+// content), so a user-installed prepare-commit-msg hook is never touched.
+// Returns nil when no hook is present or when an unrelated hook occupies
+// the path.
+func removeCoAuthoredByHook(worktreePath string) error {
+	cmd := exec.Command("git", "-C", worktreePath, "rev-parse", "--git-common-dir")
+
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("resolve git common dir: %w", err)
+	}
+	commonDir := strings.TrimSpace(string(out))
+	if !filepath.IsAbs(commonDir) {
+		commonDir = filepath.Join(worktreePath, commonDir)
+	}
+
+	hookPath := filepath.Join(commonDir, "hooks", "prepare-commit-msg")
+	contents, err := os.ReadFile(hookPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read prepare-commit-msg hook: %w", err)
+	}
+	if !isDaemonInstalledHook(contents) {
+		// Unrelated hook (user or third-party): leave it alone.
+		return nil
+	}
+	if err := os.Remove(hookPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove prepare-commit-msg hook: %w", err)
+	}
+	return nil
+}
+
 // excludeFromGit adds a pattern to the worktree's .git/info/exclude file.
 func excludeFromGit(worktreePath, pattern string) error {
 	cmd := exec.Command("git", "-C", worktreePath, "rev-parse", "--git-dir")
+
 	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("resolve git dir: %w", err)

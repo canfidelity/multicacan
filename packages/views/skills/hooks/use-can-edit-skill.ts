@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { MemberRole, Skill } from "@multicacan/core/types";
+import type { MemberRole, SkillSummary } from "@multicacan/core/types";
 import { useAuthStore } from "@multicacan/core/auth";
 import { memberListOptions } from "@multicacan/core/workspace/queries";
 
@@ -18,7 +18,7 @@ import { memberListOptions } from "@multicacan/core/workspace/queries";
  * the repo rule for workspace-aware hooks.
  */
 export function useCanEditSkill(
-  skill: Skill | null | undefined,
+  skill: SkillSummary | null | undefined,
   wsId: string,
 ): boolean {
   const userId = useAuthStore((s) => s.user?.id ?? null);
@@ -34,7 +34,7 @@ export function useCanEditSkill(
  * (e.g. list rows that compute role once for the whole page).
  */
 export function canEditSkill(
-  skill: Skill,
+  skill: SkillSummary,
   opts: { userId: string | null; role: MemberRole | null },
 ): boolean {
   if (opts.role === "admin" || opts.role === "owner") return true;

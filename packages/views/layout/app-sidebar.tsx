@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@multicacan/ui/lib/utils";
+import { useScrollFade } from "@multicacan/ui/hooks/use-scroll-fade";
 import { AppLink, useNavigation } from "../navigation";
 import { HelpLauncher } from "./help-launcher";
 import {
@@ -29,13 +30,10 @@ import {
   SquarePen,
   CircleUser,
   FolderKanban,
+  BarChart3,
   X,
   Zap,
-  Smartphone,
-  Globe,
-  Loader2,
-  Code2,
-  Images,
+  Users,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multicacan/ui/components/common/actor-avatar";
@@ -43,7 +41,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/componen
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@multicacan/ui/components/ui/collapsible";
 import { StatusIcon } from "../issues/components/status-icon";
 import { useIssueDraftStore } from "@multicacan/core/issues/stores/draft-store";
-import { useCreateModeStore } from "@multicacan/core/issues/stores/create-mode-store";
+import { openCreateIssueWithPreference } from "@multicacan/core/issues/stores/create-mode-store";
 import {
   Sidebar,
   SidebarContent,
@@ -71,17 +69,17 @@ import { useCurrentWorkspace, useWorkspacePaths, paths } from "@multicacan/core/
 import { workspaceListOptions, myInvitationListOptions, workspaceKeys } from "@multicacan/core/workspace/queries";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inboxKeys, deduplicateInboxItems } from "@multicacan/core/inbox/queries";
-import { api } from "@multicacan/core/api";
+import { api, ApiError } from "@multicacan/core/api";
 import { useModalStore } from "@multicacan/core/modals";
 import { useMyRuntimesNeedUpdate } from "@multicacan/core/runtimes/hooks";
 import { pinListOptions } from "@multicacan/core/pins/queries";
 import { useDeletePin, useReorderPins } from "@multicacan/core/pins/mutations";
 import { issueDetailOptions } from "@multicacan/core/issues/queries";
-import { projectDetailOptions, projectListOptions } from "@multicacan/core/projects/queries";
-import type { Project } from "@multicacan/core/types";
+import { projectDetailOptions } from "@multicacan/core/projects/queries";
 import type { PinnedItem } from "@multicacan/core/types";
 import { useLogout } from "../auth";
 import { ProjectIcon } from "../projects/components/project-icon";
+import { useT } from "../i18n";
 
 // Top-level nav items stay active when the user is on a child route
 // (e.g. "Projects" stays lit on /:slug/projects/:id). Pinned items keep
@@ -100,7 +98,6 @@ const EMPTY_PINS: PinnedItem[] = [];
 const EMPTY_WORKSPACES: Awaited<ReturnType<typeof api.listWorkspaces>> = [];
 const EMPTY_INVITATIONS: Awaited<ReturnType<typeof api.listMyInvitations>> = [];
 const EMPTY_INBOX: Awaited<ReturnType<typeof api.listInbox>> = [];
-const EMPTY_PROJECTS: Project[] = [];
 
 // Nav items reference WorkspacePaths method names so they can be resolved
 // against the current workspace slug at render time (see AppSidebar body).
@@ -112,37 +109,44 @@ type NavKey =
   | "projects"
   | "autopilots"
   | "agents"
+  | "squads"
+  | "usage"
   | "runtimes"
-  | "simulator"
-  | "preview"
-  | "ide"
   | "skills"
-  | "assets"
   | "settings";
 
-const personalNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "myIssues", label: "My Issues", icon: CircleUser },
+// Static schema (key + icon) — labels resolved at render via useT("layout").
+type NavLabelKey =
+  | "inbox"
+  | "my_issues"
+  | "issues"
+  | "projects"
+  | "autopilots"
+  | "agents"
+  | "squads"
+  | "usage"
+  | "runtimes"
+  | "skills"
+  | "settings";
+
+const personalNav: { key: NavKey; labelKey: NavLabelKey; icon: typeof Inbox }[] = [
+  { key: "inbox", labelKey: "inbox", icon: Inbox },
+  { key: "myIssues", labelKey: "my_issues", icon: CircleUser },
 ];
 
-const workspaceNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
-  { key: "issues", label: "Issues", icon: ListTodo },
-  { key: "projects", label: "Projects", icon: FolderKanban },
-  { key: "assets", label: "Assets", icon: Images },
+const workspaceNav: { key: NavKey; labelKey: NavLabelKey; icon: typeof Inbox }[] = [
+  { key: "issues", labelKey: "issues", icon: ListTodo },
+  { key: "projects", labelKey: "projects", icon: FolderKanban },
+  { key: "autopilots", labelKey: "autopilots", icon: Zap },
+  { key: "agents", labelKey: "agents", icon: Bot },
+  { key: "squads", labelKey: "squads", icon: Users },
+  { key: "usage", labelKey: "usage", icon: BarChart3 },
 ];
 
-const appsNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
-  { key: "autopilots", label: "Autopilot", icon: Zap },
-  { key: "simulator", label: "Simulator", icon: Smartphone },
-  { key: "preview", label: "Web Preview", icon: Globe },
-  { key: "ide", label: "Code Editor", icon: Code2 },
-];
-
-const configureNav: { key: NavKey; label: string; icon: typeof Inbox }[] = [
-  { key: "agents", label: "Agents", icon: Bot },
-  { key: "runtimes", label: "Runtimes", icon: Monitor },
-  { key: "skills", label: "Skills", icon: BookOpenText },
-  { key: "settings", label: "Settings", icon: Settings },
+const configureNav: { key: NavKey; labelKey: NavLabelKey; icon: typeof Inbox }[] = [
+  { key: "runtimes", labelKey: "runtimes", icon: Monitor },
+  { key: "skills", labelKey: "skills", icon: BookOpenText },
+  { key: "settings", labelKey: "settings", icon: Settings },
 ];
 
 function DraftDot() {
@@ -172,6 +176,7 @@ function SortablePinItem({
   label: string;
   iconNode: React.ReactNode;
 }) {
+  const { t } = useT("layout");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pin.id });
   const wasDragged = useRef(false);
 
@@ -226,7 +231,7 @@ function SortablePinItem({
           >
             <X className="size-1" />
           </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={4}>Unpin</TooltipContent>
+          <TooltipContent side="top" sideOffset={4}>{t(($) => $.sidebar.unpin_tooltip)}</TooltipContent>
         </Tooltip>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -265,6 +270,15 @@ function PinRow({
     ...projectDetailOptions(wsId, pin.item_id),
     enabled: !isIssue,
   });
+
+  const triggeredRef = useRef(false);
+  useEffect(() => {
+    const err = isIssue ? issueQuery.error : projectQuery.error;
+    if (err instanceof ApiError && err.status === 404 && !triggeredRef.current) {
+      triggeredRef.current = true;
+      onUnpin();
+    }
+  }, [isIssue, issueQuery.error, onUnpin, projectQuery.error]);
 
   if (isIssue) {
     if (issueQuery.isPending) return <PinSkeleton />;
@@ -326,6 +340,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }: AppSidebarProps = {}) {
+  const { t } = useT("layout");
   const { pathname, push } = useNavigation();
   const user = useAuthStore((s) => s.user);
   const userId = useAuthStore((s) => s.user?.id);
@@ -341,17 +356,6 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
     queryFn: () => api.listInbox(),
     enabled: !!wsId,
   });
-  const { data: inProgressIssues = [] } = useQuery({
-    queryKey: wsId ? ["issues", wsId, "sidebar-progress"] : ["issues", "disabled"],
-    queryFn: () => api.listIssues({ status: "in_progress", limit: 10 }),
-    select: (data) => data.issues,
-    enabled: !!wsId,
-    refetchInterval: 10_000,
-  });
-  const { data: projects = EMPTY_PROJECTS } = useQuery({
-    ...projectListOptions(wsId ?? ""),
-    enabled: !!wsId,
-  });
   const unreadCount = React.useMemo(
     () => deduplicateInboxItems(inboxItems).filter((i) => !i.read).length,
     [inboxItems],
@@ -364,6 +368,8 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   const deletePin = useDeletePin();
   const reorderPins = useReorderPins();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
+  const sidebarFadeStyle = useScrollFade(sidebarScrollRef, 24);
 
   // Local presentational copy of pinnedItems for drop-animation stability.
   // Follows TQ at rest; frozen during a drag gesture so a mid-drag cache
@@ -442,16 +448,12 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
       if (isEditable) return;
       if (useModalStore.getState().modal) return;
       e.preventDefault();
-      const lastMode = useCreateModeStore.getState().lastMode;
-      if (lastMode === "manual") {
-        // Auto-fill project when on a project detail page (manual form only —
-        // agent mode lets the agent infer project from the prompt).
-        const projectMatch = pathname.match(/^\/[^/]+\/projects\/([^/]+)$/);
-        const data = projectMatch ? { project_id: projectMatch[1] } : undefined;
-        useModalStore.getState().open("create-issue", data);
-      } else {
-        useModalStore.getState().open("quick-create-issue");
-      }
+      // Auto-fill project when on a project detail page. The manual form
+      // consumes `project_id`; quick-create also honours it as a seed for
+      // its project picker, so passing it through is safe for both modes.
+      const projectMatch = pathname.match(/^\/[^/]+\/projects\/([^/]+)$/);
+      const data = projectMatch ? { project_id: projectMatch[1] } : undefined;
+      openCreateIssueWithPreference(data);
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -475,7 +477,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         )}
                       </span>
                       <span className="flex-1 truncate font-medium">
-                        {workspace?.name ?? "Multicacan"}
+                        {workspace?.name ?? "Multica"}
                       </span>
                       <ChevronDown className="size-3 text-muted-foreground" />
                     </SidebarMenuButton>
@@ -506,7 +508,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuLabel className="text-xs text-muted-foreground">
-                      Workspaces
+                      {t(($) => $.sidebar.workspaces_label)}
                     </DropdownMenuLabel>
                     {workspaces.map((ws) => (
                       <DropdownMenuItem
@@ -528,7 +530,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       }
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      Create workspace
+                      {t(($) => $.sidebar.create_workspace)}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   {myInvitations.length > 0 && (
@@ -536,12 +538,12 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
                         <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Pending invitations
+                          {t(($) => $.sidebar.pending_invitations_label)}
                         </DropdownMenuLabel>
                         {myInvitations.map((inv) => (
                           <div key={inv.id} className="flex items-center gap-2 px-2 py-1.5">
                             <WorkspaceAvatar name={inv.workspace_name ?? "W"} size="sm" />
-                            <span className="flex-1 truncate text-sm">{inv.workspace_name ?? "Workspace"}</span>
+                            <span className="flex-1 truncate text-sm">{inv.workspace_name ?? t(($) => $.sidebar.invitation_workspace_fallback)}</span>
                             <button
                               type="button"
                               className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
@@ -551,7 +553,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                                 acceptInvitationMut.mutate(inv.id);
                               }}
                             >
-                              Join
+                              {t(($) => $.sidebar.invitation_join)}
                             </button>
                             <button
                               type="button"
@@ -562,7 +564,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                                 declineInvitationMut.mutate(inv.id);
                               }}
                             >
-                              Decline
+                              {t(($) => $.sidebar.invitation_decline)}
                             </button>
                           </div>
                         ))}
@@ -573,7 +575,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                   <DropdownMenuGroup>
                     <DropdownMenuItem variant="destructive" onClick={logout}>
                       <LogOut className="h-3.5 w-3.5" />
-                      Log out
+                      {t(($) => $.sidebar.log_out)}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -589,21 +591,21 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             <SidebarMenuItem>
               <SidebarMenuButton
                 className="text-muted-foreground"
-                onClick={() => useModalStore.getState().open("quick-create-issue")}
+                onClick={() => openCreateIssueWithPreference()}
               >
                 <span className="relative">
                   <SquarePen />
                   <DraftDot />
                 </span>
-                <span>New Issue</span>
-                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">C</kbd>
+                <span>{t(($) => $.sidebar.new_issue)}</span>
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">{t(($) => $.sidebar.new_issue_shortcut)}</kbd>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
 
         {/* Navigation */}
-        <SidebarContent>
+        <SidebarContent ref={sidebarScrollRef} style={sidebarFadeStyle}>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
@@ -618,8 +620,8 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
-                        {item.label === "Inbox" && unreadCount > 0 && (
+                        <span>{t(($) => $.nav[item.labelKey])}</span>
+                        {item.key === "inbox" && unreadCount > 0 && (
                           <span className="ml-auto text-xs">
                             {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
@@ -639,7 +641,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                   render={<CollapsibleTrigger />}
                   className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
                 >
-                  <span>Pinned</span>
+                  <span>{t(($) => $.sidebar.pinned_label)}</span>
                   <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
                   <span className="ml-auto text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/pinned:opacity-100">{localPinned.length}</span>
                 </SidebarGroupLabel>
@@ -668,7 +670,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
           )}
 
           <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+            <SidebarGroupLabel>{t(($) => $.sidebar.workspace_group)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {workspaceNav.map((item) => {
@@ -682,140 +684,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          {wsId && inProgressIssues.length > 0 && (
-            <Collapsible defaultOpen>
-              <SidebarGroup>
-                <SidebarGroupLabel
-                  render={<CollapsibleTrigger />}
-                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
-                >
-                  <span>Progress</span>
-                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
-                  <span className="ml-auto text-[10px] text-muted-foreground">{inProgressIssues.length}</span>
-                </SidebarGroupLabel>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu className="gap-0.5">
-                      {inProgressIssues.map((issue) => {
-                        const href = p.issueDetail(issue.id);
-                        const isActive = pathname === href;
-                        return (
-                          <SidebarMenuItem key={issue.id}>
-                            <SidebarMenuButton
-                              size="sm"
-                              isActive={isActive}
-                              render={<AppLink href={href} />}
-                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-                            >
-                              {issue.assignee_type === "agent" ? (
-                                <Loader2 className="!size-3.5 shrink-0 animate-spin text-primary" />
-                              ) : (
-                                <span className="size-3.5 shrink-0 rounded-full border-2 border-muted-foreground/50" />
-                              )}
-                              <span
-                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
-                                style={{
-                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                                }}
-                              >
-                                {issue.identifier ? `${issue.identifier} ${issue.title}` : issue.title}
-                              </span>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-          )}
-
-          {wsId && (
-            <Collapsible defaultOpen>
-              <SidebarGroup className="group/projects">
-                <SidebarGroupLabel
-                  render={<CollapsibleTrigger />}
-                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
-                >
-                  <span>Projects</span>
-                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={<span role="button" />}
-                      className="ml-auto flex size-4 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity group-hover/projects:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        useModalStore.getState().open("create-project");
-                      }}
-                    >
-                      <Plus className="size-3" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right" sideOffset={4}>New project</TooltipContent>
-                  </Tooltip>
-                </SidebarGroupLabel>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu className="gap-0.5">
-                      {projects.map((project) => {
-                        const href = p.projectDetail(project.id);
-                        const isActive = isNavActive(pathname, href);
-                        return (
-                          <SidebarMenuItem key={project.id}>
-                            <SidebarMenuButton
-                              size="sm"
-                              isActive={isActive}
-                              render={<AppLink href={href} />}
-                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-                            >
-                              <ProjectIcon project={project} size="sm" />
-                              <span
-                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
-                                style={{
-                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
-                                }}
-                              >
-                                {project.title}
-                              </span>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-          )}
-
-          <SidebarGroup>
-            <SidebarGroupLabel>Apps</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
-                {appsNav.map((item) => {
-                  const href = p[item.key]();
-                  const isActive = isNavActive(pathname, href);
-                  return (
-                    <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        render={<AppLink href={href} />}
-                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
+                        <span>{t(($) => $.nav[item.labelKey])}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -825,7 +694,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>Configure</SidebarGroupLabel>
+            <SidebarGroupLabel>{t(($) => $.sidebar.configure_group)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {configureNav.map((item) => {
@@ -839,8 +708,8 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                         className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
-                        <span>{item.label}</span>
-                        {item.label === "Runtimes" && hasRuntimeUpdates && (
+                        <span>{t(($) => $.nav[item.labelKey])}</span>
+                        {item.key === "runtimes" && hasRuntimeUpdates && (
                           <span className="ml-auto size-1.5 rounded-full bg-destructive" />
                         )}
                       </SidebarMenuButton>

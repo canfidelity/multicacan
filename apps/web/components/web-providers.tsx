@@ -2,6 +2,9 @@
 
 import { Suspense, useMemo } from "react";
 import { CoreProvider } from "@multicacan/core/platform";
+import { createBrowserCookieLocaleAdapter } from "@multicacan/core/i18n/browser";
+import type { LocaleResources, SupportedLocale } from "@multicacan/core/i18n";
+import { useWelcomeStore } from "@multicacan/core/onboarding";
 import packageJson from "../package.json";
 import { WebNavigationProvider } from "@/platform/navigation";
 import {
@@ -12,14 +15,14 @@ import { PageviewTracker } from "./pageview-tracker";
 
 // Legacy token in localStorage → keep this session in token mode so users who
 // logged in before the cookie-auth migration stay authed. They migrate to
-// cookie mode on their next logout/login cycle (logout clears multicacan_token).
-// Sunset: once telemetry shows <1% of sessions still carry multicacan_token,
+// cookie mode on their next logout/login cycle (logout clears multica_token).
+// Sunset: once telemetry shows <1% of sessions still carry multica_token,
 // delete this branch and hard-code `cookieAuth` — the localStorage token is
 // XSS-exposed and is the exact thing the cookie migration exists to remove.
 function hasLegacyToken(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return Boolean(window.localStorage.getItem("multicacan_token"));
+    return Boolean(window.localStorage.getItem("multica_token"));
   } catch {
     return false;
   }
@@ -41,7 +44,15 @@ function deriveWsUrl(): string | undefined {
 const WEB_VERSION =
   process.env.NEXT_PUBLIC_APP_VERSION || packageJson.version || "dev";
 
-export function WebProviders({ children }: { children: React.ReactNode }) {
+export function WebProviders({
+  children,
+  locale,
+  resources,
+}: {
+  children: React.ReactNode;
+  locale: SupportedLocale;
+  resources: Record<string, LocaleResources>;
+}) {
   const cookieAuth = !hasLegacyToken();
   // Stable identity reference so downstream effects keyed on it don't see a
   // new object on every parent render.
@@ -49,14 +60,27 @@ export function WebProviders({ children }: { children: React.ReactNode }) {
     () => ({ platform: "web", version: WEB_VERSION }),
     [],
   );
+  const localeAdapter = useMemo(() => createBrowserCookieLocaleAdapter(), []);
   return (
     <CoreProvider
       apiBaseUrl={process.env.NEXT_PUBLIC_API_URL}
       wsUrl={deriveWsUrl()}
       cookieAuth={cookieAuth}
       onLogin={setLoggedInCookie}
-      onLogout={clearLoggedInCookie}
+      onLogout={() => {
+        // welcome-store holds the transient post-onboarding signal. Must
+        // clear on logout so user B logging into the same browser doesn't
+        // inherit user A's signal and have <WelcomeAfterOnboarding /> fire
+        // listAgents / createIssue against a workspace user B doesn't even
+        // belong to. The store's own docstring promises this reset; this
+        // is where it gets wired.
+        useWelcomeStore.getState().reset();
+        clearLoggedInCookie();
+      }}
       identity={identity}
+      locale={locale}
+      resources={resources}
+      localeAdapter={localeAdapter}
     >
       {/* Suspense boundary is required by Next.js for useSearchParams in
           a client component mounted this high in the tree. */}

@@ -1,10 +1,10 @@
-# Multicacan installer for Windows — one command to get started.
+# Multica installer for Windows — one command to get started.
 #
-# Install CLI (default): connects to multicacan.io
+# Install CLI (default): connects to multica.ai
 #   irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex
 #
-# Self-host: starts a local Multicacan server + installs CLI + configures
-#   $env:MULTICACAN_MODE="local"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex
+# Self-host: starts a local Multica server + installs CLI + configures
+#   $env:MULTICA_MODE="local"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex
 #
 
 $ErrorActionPreference = "Stop"
@@ -14,8 +14,8 @@ $ErrorActionPreference = "Stop"
 # ---------------------------------------------------------------------------
 $RepoUrl       = "https://github.com/canfidelity/multicacan.git"
 $RepoWebUrl    = "https://github.com/canfidelity/multicacan"
-$DefaultInstallDir = Join-Path $env:USERPROFILE ".multicacan\server"
-$InstallDir    = if ($env:MULTICACAN_INSTALL_DIR) { $env:MULTICACAN_INSTALL_DIR } else { $DefaultInstallDir }
+$DefaultInstallDir = Join-Path $env:USERPROFILE ".multica\server"
+$InstallDir    = if ($env:MULTICA_INSTALL_DIR) { $env:MULTICA_INSTALL_DIR } else { $DefaultInstallDir }
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -30,6 +30,46 @@ function Test-CommandExists {
     $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Get-EnvFileValue {
+    param(
+        [string]$Path,
+        [string]$Name,
+        [string]$Default
+    )
+
+    if (-not (Test-Path $Path)) {
+        return $Default
+    }
+
+    $prefix = "$Name="
+    $line = Get-Content $Path |
+        Where-Object { $_.StartsWith($prefix) } |
+        Select-Object -Last 1
+    if (-not $line) {
+        return $Default
+    }
+
+    $value = $line.Substring($prefix.Length).Trim().Trim('"').Trim("'")
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $Default
+    }
+    return $value
+}
+
+function Get-SelfHostBackendPort {
+    foreach ($name in @("BACKEND_PORT", "API_PORT", "SERVER_PORT", "PORT")) {
+        $value = Get-EnvFileValue -Path (Join-Path $InstallDir ".env") -Name $name -Default ""
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            return $value
+        }
+    }
+    return "8080"
+}
+
+function Get-SelfHostFrontendPort {
+    return Get-EnvFileValue -Path (Join-Path $InstallDir ".env") -Name "FRONTEND_PORT" -Default "3000"
+}
+
 function Get-LatestVersion {
     try {
         $release = Invoke-RestMethod -Uri "https://api.github.com/repos/canfidelity/multicacan/releases/latest" -ErrorAction Stop
@@ -40,8 +80,8 @@ function Get-LatestVersion {
 }
 
 function Get-SelfHostRef {
-    if ($env:MULTICACAN_SELFHOST_REF) {
-        return $env:MULTICACAN_SELFHOST_REF
+    if ($env:MULTICA_SELFHOST_REF) {
+        return $env:MULTICA_SELFHOST_REF
     }
 
     $latest = Get-LatestVersion
@@ -160,14 +200,29 @@ function Get-WindowsCliArch {
     Write-Fail "Unsupported Windows architecture ($details). Only x64 and ARM64 are supported."
 }
 
+function Get-InstalledCliVersion {
+    try {
+        $firstLine = multica version 2>$null | Select-Object -First 1
+        if ("$firstLine" -match '\b(v?\d+(?:\.\d+)+)\b') {
+            $version = $Matches[1]
+            if ($version -notlike 'v*') {
+                $version = "v$version"
+            }
+            return $version
+        }
+    } catch {}
+
+    return $null
+}
+
 # ---------------------------------------------------------------------------
 # CLI Installation
 # ---------------------------------------------------------------------------
 function Install-CliBinary {
-    Write-Info "Installing Multicacan CLI from GitHub Releases..."
+    Write-Info "Installing Multica CLI from GitHub Releases..."
 
     if (-not [Environment]::Is64BitOperatingSystem) {
-        Write-Fail "Multicacan requires a 64-bit Windows installation."
+        Write-Fail "Multica requires a 64-bit Windows installation."
     }
 
     $arch = Get-WindowsCliArch
@@ -178,15 +233,15 @@ function Install-CliBinary {
     }
 
     $version = $latest.TrimStart('v')
-    $url = "https://github.com/canfidelity/multicacan/releases/download/$latest/multicacan-cli-$version-windows-$arch.zip"
-    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "multicacan-install"
+    $url = "https://github.com/canfidelity/multicacan/releases/download/$latest/multica-cli-$version-windows-$arch.zip"
+    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "multica-install"
 
     if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
     New-Item -ItemType Directory -Path $tmpDir | Out-Null
 
     Write-Info "Downloading $url ..."
     try {
-        Invoke-WebRequest -Uri $url -OutFile (Join-Path $tmpDir "multicacan.zip") -UseBasicParsing
+        Invoke-WebRequest -Uri $url -OutFile (Join-Path $tmpDir "multica.zip") -UseBasicParsing
     } catch {
         Remove-Item $tmpDir -Recurse -Force
         Write-Fail "Failed to download CLI binary: $_"
@@ -196,9 +251,21 @@ function Install-CliBinary {
     $checksumUrl = "https://github.com/canfidelity/multicacan/releases/download/$latest/checksums.txt"
     try {
         $checksums = Invoke-WebRequest -Uri $checksumUrl -UseBasicParsing -ErrorAction Stop
-        $zipFile = Join-Path $tmpDir "multicacan.zip"
+        $checksumContent = if ($checksums.Content -is [byte[]]) {
+            [System.Text.Encoding]::UTF8.GetString($checksums.Content)
+        } else {
+            [string]$checksums.Content
+        }
+        $zipFile = Join-Path $tmpDir "multica.zip"
         $actualHash = (Get-FileHash -Path $zipFile -Algorithm SHA256).Hash.ToLower()
-        $expectedLine = ($checksums.Content -split "`n") | Where-Object { $_ -match "multicacan-cli-$version-windows-$arch\.zip" } | Select-Object -First 1
+        $releaseAsset = "multica-cli-$version-windows-$arch.zip"
+        $legacyAsset = "multica_windows_$arch.zip"
+        $expectedLine = ($checksumContent -split "`r?`n") |
+            Where-Object {
+                $_ -match [regex]::Escape($releaseAsset) -or
+                $_ -match [regex]::Escape($legacyAsset)
+            } |
+            Select-Object -First 1
         if ($expectedLine) {
             $expectedHash = ($expectedLine -split "\s+")[0].ToLower()
             if ($actualHash -ne $expectedHash) {
@@ -207,33 +274,33 @@ function Install-CliBinary {
             }
             Write-Ok "Checksum verified"
         } else {
-            Write-Warn "Could not find checksum entry for windows_$arch — skipping verification."
+            Write-Warn "Could not find checksum entry for $releaseAsset — skipping verification."
         }
     } catch {
         Write-Warn "Could not download checksums.txt — skipping verification."
     }
 
-    Expand-Archive -Path (Join-Path $tmpDir "multicacan.zip") -DestinationPath $tmpDir -Force
+    Expand-Archive -Path (Join-Path $tmpDir "multica.zip") -DestinationPath $tmpDir -Force
 
-    $binDir = Join-Path $env:USERPROFILE ".multicacan\bin"
+    $binDir = Join-Path $env:USERPROFILE ".multica\bin"
     if (-not (Test-Path $binDir)) {
         New-Item -ItemType Directory -Path $binDir -Force | Out-Null
     }
 
-    $exeSrc = Join-Path $tmpDir "multicacan.exe"
+    $exeSrc = Join-Path $tmpDir "multica.exe"
     if (-not (Test-Path $exeSrc)) {
-        $exeSrc = Get-ChildItem -Path $tmpDir -Filter "multicacan.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+        $exeSrc = Get-ChildItem -Path $tmpDir -Filter "multica.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
     }
     if (-not $exeSrc -or -not (Test-Path $exeSrc)) {
         Remove-Item $tmpDir -Recurse -Force
-        Write-Fail "multicacan.exe not found in downloaded archive."
+        Write-Fail "multica.exe not found in downloaded archive."
     }
 
-    Copy-Item $exeSrc (Join-Path $binDir "multicacan.exe") -Force
+    Copy-Item $exeSrc (Join-Path $binDir "multica.exe") -Force
     Remove-Item $tmpDir -Recurse -Force
 
     Add-ToUserPath $binDir
-    Write-Ok "Multicacan CLI installed to $binDir\multicacan.exe"
+    Write-Ok "Multica CLI installed to $binDir\multica.exe"
 }
 
 function Add-ToUserPath {
@@ -253,31 +320,31 @@ function Add-ToUserPath {
 
 function Install-Cli {
     if (Test-CommandExists "multicacan") {
-        $currentVer = (multicacan version 2>$null) -replace '.*?(v[\d.]+).*','$1'
+        $currentVer = Get-InstalledCliVersion
         $latestVer = Get-LatestVersion
 
-        $currentCmp = $currentVer -replace '^v',''
+        $currentCmp = if ($currentVer) { $currentVer -replace '^v','' } else { $null }
         $latestCmp = if ($latestVer) { $latestVer -replace '^v','' } else { $null }
 
-        $isUpToDate = -not $latestCmp
+        $isUpToDate = $currentCmp -and -not $latestCmp
         if (-not $isUpToDate) {
             try {
-                $isUpToDate = [System.Version]$currentCmp -ge [System.Version]$latestCmp
+                $isUpToDate = $currentCmp -and $latestCmp -and ([System.Version]$currentCmp -ge [System.Version]$latestCmp)
             } catch {
-                $isUpToDate = $currentCmp -eq $latestCmp
+                $isUpToDate = $currentCmp -and $latestCmp -and ($currentCmp -eq $latestCmp)
             }
         }
 
         if ($isUpToDate) {
-            Write-Ok "Multicacan CLI is up to date ($currentVer)"
+            Write-Ok "Multica CLI is up to date ($currentVer)"
             return
         }
 
-        Write-Info "Multicacan CLI $currentVer installed, latest is $latestVer - upgrading..."
+        Write-Info "Multica CLI $currentVer installed, latest is $latestVer - upgrading..."
         Install-CliBinary
 
-        $newVer = (multicacan version 2>$null) -replace '.*?(v[\d.]+).*','$1'
-        Write-Ok "Multicacan CLI upgraded ($currentVer -> $newVer)"
+        $newVer = Get-InstalledCliVersion
+        Write-Ok "Multica CLI upgraded ($currentVer -> $newVer)"
         return
     }
 
@@ -294,12 +361,12 @@ function Install-Cli {
 function Test-Docker {
     if (-not (Test-CommandExists "docker")) {
         Write-Fail @"
-Docker is not installed. Multicacan self-hosting requires Docker and Docker Compose.
+Docker is not installed. Multica self-hosting requires Docker and Docker Compose.
 
 Install Docker Desktop for Windows:
   https://docs.docker.com/desktop/install/windows-install/
 
-After installing Docker, re-run this script with `$env:MULTICACAN_MODE="local"`.
+After installing Docker, re-run this script with `$env:MULTICA_MODE="local"`.
 "@
     }
 
@@ -316,7 +383,7 @@ After installing Docker, re-run this script with `$env:MULTICACAN_MODE="local"`.
 # Server setup (self-host / local)
 # ---------------------------------------------------------------------------
 function Install-Server {
-    Write-Info "Setting up Multicacan server..."
+    Write-Info "Setting up Multica server..."
     $serverRef = Get-SelfHostRef
     Write-Info "Using self-host assets from $serverRef..."
 
@@ -324,7 +391,7 @@ function Install-Server {
         Write-Info "Updating existing installation at $InstallDir..."
         Write-Warn "Any local changes in $InstallDir will be overwritten."
     } else {
-        Write-Info "Cloning Multicacan repository..."
+        Write-Info "Cloning Multica repository..."
         if (-not (Test-CommandExists "git")) {
             Write-Fail "Git is not installed. Please install git and re-run."
         }
@@ -353,16 +420,17 @@ function Install-Server {
         Write-Ok "Using existing .env"
     }
 
-    Write-Info "Pulling official Multicacan images..."
+    Write-Info "Pulling official Multica images..."
     Pull-OfficialSelfHostImages
-    Write-Info "Starting Multicacan services (this may take a few minutes on first run)..."
+    Write-Info "Starting Multica services (this may take a few minutes on first run)..."
     docker compose -f docker-compose.selfhost.yml up -d
 
     Write-Info "Waiting for backend to be ready..."
+    $backendPort = Get-SelfHostBackendPort
     $ready = $false
     for ($i = 1; $i -le 45; $i++) {
         try {
-            $null = Invoke-WebRequest -Uri "http://localhost:8080/health" -UseBasicParsing -TimeoutSec 2
+            $null = Invoke-WebRequest -Uri "http://localhost:$backendPort/health" -UseBasicParsing -TimeoutSec 2
             $ready = $true
             break
         } catch {
@@ -371,7 +439,7 @@ function Install-Server {
     }
 
     if ($ready) {
-        Write-Ok "Multicacan server is running"
+        Write-Ok "Multica server is running"
     } else {
         Write-Warn "Server is still starting. Check logs with:"
         Write-Host "  cd $InstallDir; docker compose -f docker-compose.selfhost.yml logs"
@@ -386,23 +454,23 @@ function Install-Server {
 # ---------------------------------------------------------------------------
 function Start-DefaultInstall {
     Write-Host ""
-    Write-Host "  Multicacan - Installer" -ForegroundColor White
+    Write-Host "  Multica - Installer" -ForegroundColor White
     Write-Host ""
 
     Install-Cli
 
     Write-Host ""
     Write-Host "  ============================================" -ForegroundColor Green
-    Write-Host "  [OK] Multicacan CLI is ready!" -ForegroundColor Green
+    Write-Host "  [OK] Multica CLI is ready!" -ForegroundColor Green
     Write-Host "  ============================================" -ForegroundColor Green
     Write-Host ""
     Write-Host "  Next: configure your environment"
     Write-Host ""
-    Write-Host "     multicacan setup               " -NoNewline; Write-Host "# Connect to Multicacan Cloud (multicacan.io)" -ForegroundColor DarkGray
-    Write-Host "     multicacan setup self-host      " -NoNewline; Write-Host "# Connect to a self-hosted server" -ForegroundColor DarkGray
+    Write-Host "     multica setup               " -NoNewline; Write-Host "# Connect to Multica Cloud (multica.ai)" -ForegroundColor DarkGray
+    Write-Host "     multica setup self-host      " -NoNewline; Write-Host "# Connect to a self-hosted server" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Self-hosting? Install the server first:"
-    Write-Host '     $env:MULTICACAN_MODE="with-server"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex'
+    Write-Host '     $env:MULTICA_MODE="with-server"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex'
     Write-Host ""
 }
 
@@ -411,7 +479,7 @@ function Start-DefaultInstall {
 # ---------------------------------------------------------------------------
 function Start-LocalInstall {
     Write-Host ""
-    Write-Host "  Multicacan - Self-Host Installer" -ForegroundColor White
+    Write-Host "  Multica - Self-Host Installer" -ForegroundColor White
     Write-Host "  Provisioning server infrastructure + installing CLI"
     Write-Host ""
 
@@ -421,22 +489,24 @@ function Start-LocalInstall {
 
     Write-Host ""
     Write-Host "  ============================================" -ForegroundColor Green
-    Write-Host "  [OK] Multicacan server is running and CLI is ready!" -ForegroundColor Green
+    Write-Host "  [OK] Multica server is running and CLI is ready!" -ForegroundColor Green
     Write-Host "  ============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  Frontend:  http://localhost:3000"
-    Write-Host "  Backend:   http://localhost:8080"
+    $frontendPort = Get-SelfHostFrontendPort
+    $backendPort = Get-SelfHostBackendPort
+    Write-Host "  Frontend:  http://localhost:$frontendPort"
+    Write-Host "  Backend:   http://localhost:$backendPort"
     Write-Host "  Server at: $InstallDir"
     Write-Host ""
     Write-Host "  Next: configure your CLI to connect"
     Write-Host ""
-    Write-Host "     multicacan setup self-host  " -NoNewline; Write-Host "# Configure + authenticate + start daemon" -ForegroundColor DarkGray
+    Write-Host "     multica setup self-host  " -NoNewline; Write-Host "# Configure + authenticate + start daemon" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Login: configure RESEND_API_KEY in .env for email codes,"
     Write-Host "  or read the generated code from backend logs when Resend is unset."
     Write-Host ""
     Write-Host "  To stop all services:"
-    Write-Host '     $env:MULTICACAN_MODE="stop"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex'
+    Write-Host '     $env:MULTICA_MODE="stop"; irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex'
     Write-Host ""
 }
 
@@ -445,7 +515,7 @@ function Start-LocalInstall {
 # ---------------------------------------------------------------------------
 function Start-Stop {
     Write-Host ""
-    Write-Info "Stopping Multicacan services..."
+    Write-Info "Stopping Multica services..."
 
     if (Test-Path $InstallDir) {
         Push-Location $InstallDir
@@ -457,12 +527,12 @@ function Start-Stop {
         }
         Pop-Location
     } else {
-        Write-Warn "No Multicacan installation found at $InstallDir"
+        Write-Warn "No Multica installation found at $InstallDir"
     }
 
     if (Test-CommandExists "multicacan") {
         try {
-            multicacan daemon stop 2>$null
+            multica daemon stop 2>$null
             Write-Ok "Daemon stopped"
         } catch {}
     }
@@ -473,7 +543,7 @@ function Start-Stop {
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-$mode = if ($env:MULTICACAN_MODE) { $env:MULTICACAN_MODE.ToLower() } else { "default" }
+$mode = if ($env:MULTICA_MODE) { $env:MULTICA_MODE.ToLower() } else { "default" }
 
 switch ($mode) {
     "with-server" { Start-LocalInstall }

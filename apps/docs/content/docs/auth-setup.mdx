@@ -6,15 +6,17 @@ description: Configure email + verification code sign-in, Google OAuth, signup a
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mermaid";
 
-Multicacan supports two sign-in methods: **email + verification code** (default) and **Google OAuth** (optional). On successful sign-in, the server issues a JWT cookie with a 30-day lifetime. This page covers how to configure each method, how to restrict who can sign up, and the single biggest trap for self-hosted deployments.
+Multica supports two sign-in methods: **email + verification code** (default) and **Google OAuth** (optional). On successful sign-in, the server issues a JWT cookie with a 30-day lifetime. This page covers how to configure each method, how to restrict who can sign up, and the single biggest trap for self-hosted deployments.
 
 For the list of environment variables referenced below, see [Environment variables](/environment-variables); for token usage and lifecycle details, see [Authentication and tokens](/auth-tokens).
 
 ## How email + verification code sign-in works
 
-The user enters an email on the sign-in page → the server sends a 6-digit code → the user enters it → the server verifies it → a JWT cookie is issued. Standard flow. It requires [Resend](https://resend.com/) as the email provider:
+The user enters an email on the sign-in page → the server sends a 6-digit code → the user enters it → the server verifies it → a JWT cookie is issued. Standard flow. Two delivery backends are supported — pick whichever fits your deployment:
 
-1. Create a Resend account and verify your domain
+### Option A: Resend (recommended for cloud / public-internet deployments)
+
+1. Create a [Resend](https://resend.com/) account and verify your domain
 2. Create an API key
 3. Set the environment variables:
 
@@ -25,7 +27,22 @@ The user enters an email on the sign-in page → the server sends a 6-digit code
 
 4. Restart the server
 
-**What happens if you don't set `RESEND_API_KEY`**: the server doesn't error, but **every email that should have been sent is written to the server's stdout only**. Handy for local development (copy the code from the logs); in production it's a black hole.
+### Option B: SMTP relay (for self-hosted / on-premise deployments)
+
+Use this when the deployment can't reach `api.resend.com` or you already have an internal mail relay (Exchange, Postfix, on-prem SendGrid, etc.). `SMTP_HOST` takes priority over `RESEND_API_KEY` when both are set.
+
+```bash
+SMTP_HOST=smtp.internal.example.com
+SMTP_PORT=587                  # default 25; use 587 for STARTTLS submission
+SMTP_USERNAME=multica          # leave empty for unauthenticated relay
+SMTP_PASSWORD=...
+SMTP_TLS_INSECURE=false        # set true only for self-signed / private CA
+RESEND_FROM_EMAIL=noreply@yourdomain.com  # reused as the From: header
+```
+
+STARTTLS is upgraded automatically when the server advertises it. Port 465 (SMTPS / implicit TLS) is **not** currently supported — use port 25 or 587.
+
+**What happens if you set neither**: the server doesn't error, but **every email that should have been sent is written to the server's stdout only**. Handy for local development (copy the code from the logs); in production it's a black hole.
 
 ## Fixed local testing codes
 
@@ -34,27 +51,27 @@ The user enters an email on the sign-in page → the server sends a 6-digit code
 
 The old behavior where non-production instances accepted `888888` by default has been removed. Unless you explicitly configure it, typing `888888` is treated like any other wrong code.
 
-Local development without Resend should use the generated code printed in server logs. If you need deterministic local/private automation, set `MULTICACAN_DEV_VERIFICATION_CODE` to a 6-digit value such as `888888`, and keep `APP_ENV` non-production:
+Local development without any email backend configured (no Resend, no SMTP) should use the generated code printed in server logs. If you need deterministic local/private automation, set `MULTICA_DEV_VERIFICATION_CODE` to a 6-digit value such as `888888`, and keep `APP_ENV` non-production:
 
 ```bash
 APP_ENV=development
-MULTICACAN_DEV_VERIFICATION_CODE=888888
+MULTICA_DEV_VERIFICATION_CODE=888888
 ```
 
 This shortcut is ignored when `APP_ENV=production`.
 </Callout>
 
-Production deployments should leave `MULTICACAN_DEV_VERIFICATION_CODE` empty and set `APP_ENV=production`. If you deploy via `make selfhost` / `docker-compose.selfhost.yml`, `APP_ENV` defaults to `production`.
+Production deployments should leave `MULTICA_DEV_VERIFICATION_CODE` empty and set `APP_ENV=production`. If you deploy via `make selfhost` / `docker-compose.selfhost.yml`, `APP_ENV` defaults to `production`.
 
 ## Google OAuth configuration
 
 Optional. Without it, only email + verification code is available; with it, the sign-in page gets a "Sign in with Google" button.
 
 1. Create an OAuth 2.0 client in the [Google Cloud Console](https://console.cloud.google.com/)
-2. Set the **Authorized redirect URIs** to your Multicacan frontend address plus `/auth/callback`, for example:
+2. Set the **Authorized redirect URIs** to your Multica frontend address plus `/auth/callback`, for example:
 
     ```text
-    https://multicacan.yourdomain.com/auth/callback
+    https://multica.yourdomain.com/auth/callback
     ```
 
 3. Once you have the client ID and client secret, set three environment variables:
@@ -62,7 +79,7 @@ Optional. Without it, only email + verification code is available; with it, the 
     ```bash
     GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
     GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxx
-    GOOGLE_REDIRECT_URI=https://multicacan.yourdomain.com/auth/callback
+    GOOGLE_REDIRECT_URI=https://multica.yourdomain.com/auth/callback
     ```
 
 4. Restart the server.
@@ -113,7 +130,7 @@ To actually "allow everyone," leave all three variables empty (or keep `ALLOW_SI
 
 ## Can you still invite people when signup is disabled?
 
-**Only people who already have a Multicacan account.** Accepting an invite doesn't check the signup allowlist — if the invitee has signed up already (for example in another workspace), clicking the invite link and signing in lets them accept.
+**Only people who already have a Multica account.** Accepting an invite doesn't check the signup allowlist — if the invitee has signed up already (for example in another workspace), clicking the invite link and signing in lets them accept.
 
 **But people who have never signed up cannot be rescued by an invite.** Before accepting, they must sign in, and the first step of sign-in (requesting the verification code) passes through the signup allowlist check. If `ALLOW_SIGNUP=false`, or their email isn't in `ALLOWED_EMAILS` / `ALLOWED_EMAIL_DOMAINS`, they **cannot complete signup**, and therefore cannot accept the invite.
 

@@ -14,6 +14,7 @@ import (
 	"github.com/canfidelity/multicacan/server/internal/analytics"
 	"github.com/canfidelity/multicacan/server/internal/daemonws"
 	"github.com/canfidelity/multicacan/server/internal/events"
+	"github.com/canfidelity/multicacan/server/internal/handler"
 	"github.com/canfidelity/multicacan/server/internal/logger"
 	obsmetrics "github.com/canfidelity/multicacan/server/internal/metrics"
 	"github.com/canfidelity/multicacan/server/internal/realtime"
@@ -40,7 +41,7 @@ func redisClientName(existing, suffix string) string {
 	if existing != "" {
 		return existing + ":" + suffix
 	}
-	return "multicacan-api:" + suffix
+	return "multica-api:" + suffix
 }
 
 func closeRedisClient(label string, client *redis.Client) {
@@ -122,14 +123,14 @@ func main() {
 	if os.Getenv("JWT_SECRET") == "" {
 		slog.Warn("JWT_SECRET is not set — using insecure default. Set JWT_SECRET for production use.")
 	}
-	if os.Getenv("RESEND_API_KEY") == "" {
-		slog.Warn("RESEND_API_KEY is not set — email verification codes will be printed to the log instead of emailed.")
+	if os.Getenv("RESEND_API_KEY") == "" && strings.TrimSpace(os.Getenv("SMTP_HOST")) == "" {
+		slog.Warn("no email backend configured (RESEND_API_KEY and SMTP_HOST both empty) — verification codes will be printed to the log instead of emailed.")
 	}
-	if os.Getenv("MULTICACAN_DEV_VERIFICATION_CODE") != "" {
+	if os.Getenv("MULTICA_DEV_VERIFICATION_CODE") != "" {
 		if strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production") {
-			slog.Warn("MULTICACAN_DEV_VERIFICATION_CODE is set but ignored because APP_ENV=production.")
+			slog.Warn("MULTICA_DEV_VERIFICATION_CODE is set but ignored because APP_ENV=production.")
 		} else {
-			slog.Warn("MULTICACAN_DEV_VERIFICATION_CODE is enabled. Use it only for local development or private test instances.")
+			slog.Warn("MULTICA_DEV_VERIFICATION_CODE is enabled. Use it only for local development or private test instances.")
 		}
 	}
 
@@ -140,7 +141,7 @@ func main() {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://multicacan:multicacan@localhost:5432/multicacan?sslmode=disable"
+		dbURL = "postgres://multica:multica@localhost:5432/multica?sslmode=disable"
 	}
 
 	// Connect to database
@@ -276,10 +277,17 @@ func main() {
 		}
 	}
 
+	// Construct the BatchedHeartbeatScheduler before the router so it can
+	// be injected into the Handler. The Run goroutine starts below
+	// alongside the sweeper, and Stop is called explicitly during graceful
+	// shutdown so any pending bumps are flushed before we exit.
+	heartbeatScheduler := handler.NewBatchedHeartbeatScheduler(queries, handler.DefaultHeartbeatBatchInterval)
+
 	r := NewRouterWithOptions(pool, hub, bus, analyticsClient, storeRedis, RouterOptions{
-		HTTPMetrics:  httpMetrics,
-		DaemonHub:    daemonHub,
-		DaemonWakeup: daemonWakeup,
+		HTTPMetrics:        httpMetrics,
+		DaemonHub:          daemonHub,
+		DaemonWakeup:       daemonWakeup,
+		HeartbeatScheduler: heartbeatScheduler,
 	})
 
 	srv := &http.Server{
@@ -291,12 +299,24 @@ func main() {
 	sweepCtx, sweepCancel := context.WithCancel(context.Background())
 	autopilotCtx, autopilotCancel := context.WithCancel(context.Background())
 	taskSvc := service.NewTaskService(queries, pool, hub, bus, daemonWakeup)
+	taskSvc.Analytics = analyticsClient
 	autopilotSvc := service.NewAutopilotService(queries, pool, bus, taskSvc)
 	registerAutopilotListeners(bus, autopilotSvc)
 
+	// Construct a LivenessStore that mirrors the one wired into the HTTP
+	// handler. Both the heartbeat write path (handler) and the sweeper read
+	// path (here) must agree on the same Redis-or-Noop choice; if they
+	// disagree, online runtimes get falsely marked offline.
+	var liveness handler.LivenessStore = handler.NewNoopLivenessStore()
+	if storeRedis != nil {
+		liveness = handler.NewRedisLivenessStore(storeRedis)
+	}
+
 	// Start background sweeper to mark stale runtimes as offline.
-	go runRuntimeSweeper(sweepCtx, queries, taskSvc, bus)
+	go runRuntimeSweeper(sweepCtx, queries, liveness, taskSvc, bus)
+	go heartbeatScheduler.Run(sweepCtx)
 	go runAutopilotScheduler(autopilotCtx, queries, autopilotSvc)
+	go runAutopilotFailureMonitor(autopilotCtx, queries, bus, envFailureMonitorConfig())
 	go runDBStatsLogger(sweepCtx, pool)
 
 	if metricsServer != nil {
@@ -316,17 +336,17 @@ func main() {
 		}
 	}()
 
-	// Ignore SIGPIPE so broken pipe from proxied streams doesn't kill the server.
-	signal.Ignore(syscall.SIGPIPE)
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	slog.Info("shutting down server")
-	sweepCancel()
 	autopilotCancel()
 
+	// Order matters: drain in-flight HTTP first so any heartbeat handlers
+	// finish calling Schedule() before we stop the scheduler. Otherwise a
+	// late heartbeat could enqueue a pending ID after Run has already
+	// drained and exited, and Stop() would not flush it.
 	apiShutdownCtx, apiShutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	if err := srv.Shutdown(apiShutdownCtx); err != nil {
 		apiShutdownCancel()
@@ -334,6 +354,11 @@ func main() {
 		os.Exit(1)
 	}
 	apiShutdownCancel()
+
+	// HTTP is fully drained — safe to stop the sweeper and flush the
+	// final batch of queued heartbeat bumps.
+	sweepCancel()
+	heartbeatScheduler.Stop()
 
 	if metricsServer != nil {
 		metricsShutdownCtx, metricsShutdownCancel := context.WithTimeout(context.Background(), 3*time.Second)

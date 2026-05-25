@@ -12,6 +12,7 @@ import type {
   AgentRuntime,
   MemberWithUser,
   Skill,
+  SkillSummary,
 } from "@multicacan/core/types";
 import { useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -39,20 +40,12 @@ import { PageHeader } from "../../layout/page-header";
 import { canEditSkill } from "../hooks/use-can-edit-skill";
 import { readOrigin } from "../lib/origin";
 import { CreateSkillDialog } from "./create-skill-dialog";
-import { type SkillRow, createSkillColumns } from "./skill-columns";
+import { type SkillRow, useSkillColumns } from "./skill-columns";
+import { useT } from "../../i18n";
 
 type FilterKey = "all" | "used" | "unused" | "mine";
 
-// ---------------------------------------------------------------------------
-// Scope tab — matches Issues/MyIssues header pattern
-// ---------------------------------------------------------------------------
-
-const SCOPES: { value: FilterKey; label: string; description: string }[] = [
-  { value: "all", label: "All", description: "All skills in this workspace" },
-  { value: "used", label: "In use", description: "Skills assigned to at least one agent" },
-  { value: "unused", label: "Unused", description: "Skills not assigned to any agent" },
-  { value: "mine", label: "Created by me", description: "Skills you created" },
-];
+const SCOPE_KEYS: FilterKey[] = ["all", "used", "unused", "mine"];
 
 // ---------------------------------------------------------------------------
 // Page header bar — uses shared PageHeader so the mobile sidebar trigger and
@@ -66,42 +59,39 @@ function PageHeaderBar({
   totalCount: number;
   onCreate: () => void;
 }) {
+  const { t } = useT("skills");
   return (
     <PageHeader className="justify-between px-5">
       <div className="flex items-center gap-2">
         <BookOpen className="h-4 w-4 text-muted-foreground" />
-        <h1 className="text-sm font-medium">Skills</h1>
+        <h1 className="text-sm font-medium">{t(($) => $.page.title)}</h1>
         {totalCount > 0 && (
           <span className="font-mono text-xs tabular-nums text-muted-foreground/70">
             {totalCount}
           </span>
         )}
-        {/* Tagline next to the title — single sentence + docs link. Hidden
-            below md so it never collides with the title on narrow screens. */}
         <p className="ml-2 hidden text-xs text-muted-foreground md:block">
-          Instructions any agent in this workspace can use.{" "}
+          {t(($) => $.page.tagline)}{" "}
           <a
-            href="https://github.com/canfidelity/multicacan/skills"
+            href="https://multica.ai/docs/skills"
             target="_blank"
             rel="noopener noreferrer"
             className="underline decoration-muted-foreground/30 underline-offset-4 transition-colors hover:text-foreground"
           >
-            Learn more →
+            {t(($) => $.page.learn_more)}
           </a>
         </p>
       </div>
       <Button type="button" size="sm" onClick={onCreate}>
         <Plus className="h-3 w-3" />
-        New skill
+        {t(($) => $.page.new_skill)}
       </Button>
     </PageHeader>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Card toolbar — search + scope filters, kept inside the card because they
-// operate on the table content. Page-level actions (New skill) live in the
-// PageHeader instead.
+// Card toolbar — search + scope filters
 // ---------------------------------------------------------------------------
 
 function CardToolbar({
@@ -115,38 +105,43 @@ function CardToolbar({
   filter: FilterKey;
   setFilter: (v: FilterKey) => void;
 }) {
+  const { t } = useT("skills");
   return (
-    <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-      <div className="relative">
+    <div className="flex h-auto shrink-0 flex-col gap-2 border-b px-3 py-3 sm:h-12 sm:flex-row sm:items-center sm:px-4 sm:py-0">
+      <div className="relative w-full sm:w-auto">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search skills…"
-          className="h-8 w-64 pl-8 text-sm"
+          placeholder={t(($) => $.page.search_placeholder)}
+          className="h-8 w-full pl-8 text-sm sm:w-64"
         />
       </div>
-      {SCOPES.map((s) => (
-        <Tooltip key={s.value}>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className={
-                  filter === s.value
-                    ? "bg-accent text-accent-foreground hover:bg-accent/80"
-                    : "text-muted-foreground"
-                }
-                onClick={() => setFilter(s.value)}
-              >
-                {s.label}
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{s.description}</TooltipContent>
-        </Tooltip>
-      ))}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+        {SCOPE_KEYS.map((scope) => (
+          <Tooltip key={scope}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={
+                    filter === scope
+                      ? "shrink-0 bg-accent text-accent-foreground hover:bg-accent/80"
+                      : "shrink-0 text-muted-foreground"
+                  }
+                  onClick={() => setFilter(scope)}
+                >
+                  {t(($) => $.page.scopes[scope].label)}
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">
+              {t(($) => $.page.scopes[scope].description)}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
     </div>
   );
 }
@@ -156,19 +151,19 @@ function CardToolbar({
 // ---------------------------------------------------------------------------
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+  const { t } = useT("skills");
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <BookOpen className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h2 className="mt-4 text-base font-semibold">No skills yet</h2>
+      <h2 className="mt-4 text-base font-semibold">{t(($) => $.page.empty.title)}</h2>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">
-        Create your first skill, import one from a URL, or copy one from a
-        connected runtime — and every agent in the workspace can use it.
+        {t(($) => $.page.empty.description)}
       </p>
       <Button type="button" onClick={onCreate} size="sm" className="mt-5">
         <Plus className="h-3 w-3" />
-        New skill
+        {t(($) => $.page.new_skill)}
       </Button>
     </div>
   );
@@ -179,6 +174,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 // ---------------------------------------------------------------------------
 
 export default function SkillsPage() {
+  const { t } = useT("skills");
   const wsId = useWorkspaceId();
   const paths = useWorkspacePaths();
   const navigation = useNavigation();
@@ -204,8 +200,6 @@ export default function SkillsPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Derive assignments ONCE per agents-identity. Stable reference across
-  // unrelated agent refetches — see selectSkillAssignments' doc.
   const assignments = useMemo(
     () => selectSkillAssignments(agents),
     [agents],
@@ -228,7 +222,7 @@ export default function SkillsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const byAssignment = (s: Skill) =>
+    const byAssignment = (s: SkillSummary) =>
       (assignments.get(s.id)?.length ?? 0) > 0;
 
     return skills.filter((s) => {
@@ -250,9 +244,6 @@ export default function SkillsPage() {
     navigation.push(paths.skillDetail(skill.id));
   };
 
-  // Assemble per-row data once per render — skill + agents + creator +
-  // origin-runtime + permission flag. The table's column cells read off
-  // `row.original` and never pull their own queries.
   const skillRows = useMemo<SkillRow[]>(() => {
     return filtered.map((skill) => {
       const origin = readOrigin(skill);
@@ -282,7 +273,7 @@ export default function SkillsPage() {
     myRole,
   ]);
 
-  const columns = useMemo(() => createSkillColumns(), []);
+  const columns = useSkillColumns();
 
   const table = useReactTable({
     data: skillRows,
@@ -296,14 +287,14 @@ export default function SkillsPage() {
     return (
       <div className="flex flex-1 min-h-0 flex-col">
         <PageHeaderBar totalCount={0} onCreate={() => setCreateOpen(true)} />
-        <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
+        <div className="flex flex-1 min-h-0 flex-col gap-4 p-3 sm:p-6">
           <div className="space-y-3 pl-4">
             <Skeleton className="h-5 w-full max-w-2xl rounded-md" />
             <Skeleton className="h-14 w-full max-w-3xl rounded-md" />
           </div>
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border">
-            <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-              <Skeleton className="h-8 w-64 rounded-md" />
+            <div className="flex h-auto shrink-0 flex-col gap-2 border-b px-3 py-3 sm:h-12 sm:flex-row sm:items-center sm:px-4 sm:py-0">
+              <Skeleton className="h-8 w-full rounded-md sm:w-64" />
               <Skeleton className="h-7 w-12 rounded-md" />
               <Skeleton className="h-7 w-14 rounded-md" />
               <Skeleton className="h-7 w-16 rounded-md" />
@@ -327,11 +318,13 @@ export default function SkillsPage() {
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <AlertCircle className="h-8 w-8 text-destructive" />
           <div>
-            <p className="text-sm font-medium">Couldn&rsquo;t load skills</p>
+            <p className="text-sm font-medium">
+              {t(($) => $.page.list_error.title)}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {listError instanceof Error
                 ? listError.message
-                : "Something went wrong fetching the skill list."}
+                : t(($) => $.page.list_error.fallback)}
             </p>
           </div>
           <Button
@@ -340,7 +333,7 @@ export default function SkillsPage() {
             size="sm"
             onClick={() => refetchList()}
           >
-            Try again
+            {t(($) => $.page.list_error.retry)}
           </Button>
         </div>
       </div>
@@ -359,37 +352,25 @@ export default function SkillsPage() {
         onCreate={() => setCreateOpen(true)}
       />
 
-      {/* Non-blocking banner when supporting queries fail — list still renders
-          but creator/runtime/permission attribution is incomplete. */}
       {supportingQueryDown && (
         <div
           role="status"
           className="flex shrink-0 items-start gap-2 border-b bg-warning/10 px-6 py-2 text-xs text-muted-foreground"
         >
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-          <span>
-            Some workspace data failed to load. Creator attribution, runtime
-            names, or edit permissions may appear incomplete.
-          </span>
+          <span>{t(($) => $.page.supporting_data_warning)}</span>
         </div>
       )}
 
-      {/* Page body — padding here keeps the card from touching the chrome,
-          and `gap-4` separates the intro banner from the table card. */}
-      <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
+      <div className="flex flex-1 min-h-0 flex-col gap-4 p-3 sm:p-6">
         {!showEmpty && (
-          // Brand-coloured intro banner — explains the sharing model
-          // for skills (workspace-wide vs. local runtime). Pre-#1794
-          // this lived in the body; #1794 dropped it without a clear
-          // reason. Restored intentionally.
           <div className="max-w-3xl rounded-r-md border-l-2 border-l-brand bg-brand/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             <span className="font-medium text-foreground">
-              Shared with your workspace.
+              {t(($) => $.page.intro_banner.title)}
             </span>{" "}
-            Anyone can create a skill, import one from a URL, or copy one
-            from their local runtime — and every agent can use it.{" "}
+            {t(($) => $.page.intro_banner.body)}{" "}
             <span className="font-semibold text-brand">
-              Local runtime skills stay private until you copy one here.
+              {t(($) => $.page.intro_banner.highlight)}
             </span>
           </div>
         )}
@@ -408,12 +389,18 @@ export default function SkillsPage() {
             {filtered.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center text-muted-foreground">
                 <Search className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm">No matches</p>
+                <p className="text-sm">{t(($) => $.page.no_matches.title)}</p>
                 <p className="max-w-xs text-xs">
                   {search
-                    ? `No skills match "${search}"${filter !== "all" ? " in this filter" : ""}.`
-                    : "No skills match this filter."}{" "}
-                  Try a different query.
+                    ? t(($) => $.page.no_matches.with_query, {
+                        query: search,
+                        filterSuffix:
+                          filter !== "all"
+                            ? t(($) => $.page.no_matches.with_query_filter_suffix)
+                            : "",
+                      })
+                    : t(($) => $.page.no_matches.filter_only)}
+                  {t(($) => $.page.no_matches.try_different)}
                 </p>
               </div>
             ) : (

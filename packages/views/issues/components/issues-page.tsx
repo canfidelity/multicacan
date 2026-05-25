@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { ChevronRight, ListTodo } from "lucide-react";
-import type { IssueStatus } from "@multicacan/core/types";
+import type { UpdateIssueRequest } from "@multicacan/core/types";
 import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useIssueViewStore, useClearFiltersOnWorkspaceChange } from "@multicacan/core/issues/stores/view-store";
@@ -14,7 +14,8 @@ import { BOARD_STATUSES } from "@multicacan/core/issues/config";
 import { useCurrentWorkspace } from "@multicacan/core/paths";
 import { WorkspaceAvatar } from "../../workspace/workspace-avatar";
 import { useWorkspaceId } from "@multicacan/core/hooks";
-import { issueListOptions, childIssueProgressOptions } from "@multicacan/core/issues/queries";
+import { issueAssigneeGroupsOptions, issueListOptions, childIssueProgressOptions, type AssigneeGroupedIssuesFilter } from "@multicacan/core/issues/queries";
+import { agentTaskSnapshotOptions } from "@multicacan/core/agents";
 import { useUpdateIssue } from "@multicacan/core/issues/mutations";
 import { useIssueSelectionStore } from "@multicacan/core/issues/stores/selection-store";
 import { PageHeader } from "../../layout/page-header";
@@ -22,14 +23,16 @@ import { IssuesHeader } from "./issues-header";
 import { BoardView } from "./board-view";
 import { ListView } from "./list-view";
 import { BatchActionToolbar } from "./batch-action-toolbar";
+import { useT } from "../../i18n";
 
 export function IssuesPage() {
+  const { t } = useT("issues");
   const wsId = useWorkspaceId();
-  const { data: allIssues = [], isLoading: loading } = useQuery(issueListOptions(wsId));
 
   const workspace = useCurrentWorkspace();
   const scope = useIssuesScopeStore((s) => s.scope);
   const viewMode = useIssueViewStore((s) => s.viewMode);
+  const grouping = useIssueViewStore((s) => s.grouping);
   const statusFilters = useIssueViewStore((s) => s.statusFilters);
   const priorityFilters = useIssueViewStore((s) => s.priorityFilters);
   const assigneeFilters = useIssueViewStore((s) => s.assigneeFilters);
@@ -38,6 +41,60 @@ export function IssuesPage() {
   const projectFilters = useIssueViewStore((s) => s.projectFilters);
   const includeNoProject = useIssueViewStore((s) => s.includeNoProject);
   const labelFilters = useIssueViewStore((s) => s.labelFilters);
+  const agentRunningFilter = useIssueViewStore((s) => s.agentRunningFilter);
+  const usesAssigneeBoard = viewMode === "board" && grouping === "assignee";
+
+  // Derive the set of issue ids that currently have at least one
+  // `running` agent task. Used by the workspace agents-working filter
+  // chip. Subscribing the page here (not deep in filter.ts) keeps the
+  // filter pure and lets the snapshot stay cached at one workspace-
+  // scoped place — every issue card already subscribes for its own
+  // indicator, so this is a no-op extra fetch.
+  const { data: snapshot = [] } = useQuery(agentTaskSnapshotOptions(wsId));
+  const runningIssueIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of snapshot) {
+      if (t.status === "running" && t.issue_id) ids.add(t.issue_id);
+    }
+    return ids;
+  }, [snapshot]);
+
+  const assigneeGroupFilter = useMemo<AssigneeGroupedIssuesFilter>(() => {
+    const filter: AssigneeGroupedIssuesFilter = {
+      statuses: statusFilters.length > 0 ? statusFilters : [...BOARD_STATUSES],
+      priorities: priorityFilters,
+      assignee_filters: assigneeFilters,
+      include_no_assignee: includeNoAssignee,
+      creator_filters: creatorFilters,
+      project_ids: projectFilters,
+      include_no_project: includeNoProject,
+      label_ids: labelFilters,
+    };
+    if (scope === "members") filter.assignee_types = ["member"];
+    if (scope === "agents") filter.assignee_types = ["agent", "squad"];
+    return filter;
+  }, [assigneeFilters, creatorFilters, includeNoAssignee, includeNoProject, labelFilters, priorityFilters, projectFilters, scope, statusFilters]);
+
+  const assigneeGroupsOptions = issueAssigneeGroupsOptions(wsId, assigneeGroupFilter);
+  const statusIssuesQuery = useQuery({
+    ...issueListOptions(wsId),
+    enabled: !usesAssigneeBoard,
+  });
+  const assigneeGroupsQuery = useQuery({
+    ...assigneeGroupsOptions,
+    enabled: usesAssigneeBoard,
+  });
+  const allIssues = useMemo(
+    () => statusIssuesQuery.data ?? [],
+    [statusIssuesQuery.data],
+  );
+  const assigneeIssues = useMemo(
+    () => assigneeGroupsQuery.data?.groups.flatMap((group) => group.issues) ?? [],
+    [assigneeGroupsQuery.data],
+  );
+  const loading = usesAssigneeBoard
+    ? assigneeGroupsQuery.isLoading
+    : statusIssuesQuery.isLoading;
 
   // Clear filter state when switching between workspaces (URL-driven).
   useClearFiltersOnWorkspaceChange(useIssueViewStore, wsId);
@@ -51,13 +108,15 @@ export function IssuesPage() {
     if (scope === "members")
       return allIssues.filter((i) => i.assignee_type === "member");
     if (scope === "agents")
-      return allIssues.filter((i) => i.assignee_type === "agent");
+      return allIssues.filter((i) => i.assignee_type === "agent" || i.assignee_type === "squad");
     return allIssues;
   }, [allIssues, scope]);
 
+  const headerIssues = usesAssigneeBoard ? assigneeIssues : scopedIssues;
+
   const issues = useMemo(
-    () => filterIssues(scopedIssues, { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject, labelFilters }),
-    [scopedIssues, statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject, labelFilters],
+    () => filterIssues(scopedIssues, { statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject, labelFilters, agentRunningFilter, runningIssueIds }),
+    [scopedIssues, statusFilters, priorityFilters, assigneeFilters, includeNoAssignee, creatorFilters, projectFilters, includeNoProject, labelFilters, agentRunningFilter, runningIssueIds],
   );
 
   // Fetch sub-issue progress from the backend so counts are accurate
@@ -76,18 +135,20 @@ export function IssuesPage() {
 
   const updateIssueMutation = useUpdateIssue();
   const handleMoveIssue = useCallback(
-    (issueId: string, newStatus: IssueStatus, newPosition?: number) => {
-      const updates: Partial<{ status: IssueStatus; position: number }> = {
-        status: newStatus,
-      };
-      if (newPosition !== undefined) updates.position = newPosition;
-
+    (issueId: string, updates: Pick<UpdateIssueRequest, "status" | "assignee_type" | "assignee_id" | "position">) => {
       updateIssueMutation.mutate(
         { id: issueId, ...updates },
-        { onError: () => toast.error("Failed to move issue") },
+        {
+          onError: (err) =>
+            toast.error(
+              err instanceof Error && err.message
+                ? err.message
+                : t(($) => $.page.move_failed),
+            ),
+        },
       );
     },
-    [updateIssueMutation],
+    [updateIssueMutation, t],
   );
 
   if (loading) {
@@ -136,28 +197,31 @@ export function IssuesPage() {
       <PageHeader className="gap-1.5">
         <WorkspaceAvatar name={workspace?.name ?? "W"} size="sm" />
         <span className="text-sm text-muted-foreground">
-          {workspace?.name ?? "Workspace"}
+          {workspace?.name ?? t(($) => $.page.breadcrumb_workspace_fallback)}
         </span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm font-medium">Issues</span>
+        <span className="text-sm font-medium">{t(($) => $.page.breadcrumb_title)}</span>
       </PageHeader>
 
       <ViewStoreProvider store={useIssueViewStore}>
         {/* Header 2: Scope tabs + filters */}
-        <IssuesHeader scopedIssues={scopedIssues} />
+        <IssuesHeader scopedIssues={headerIssues} />
 
         {/* Content: scrollable */}
-        {scopedIssues.length === 0 ? (
+        {headerIssues.length === 0 ? (
           <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
             <ListTodo className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm">No issues yet</p>
-            <p className="text-xs">Create an issue to get started.</p>
+            <p className="text-sm">{t(($) => $.page.empty_title)}</p>
+            <p className="text-xs">{t(($) => $.page.empty_hint)}</p>
           </div>
         ) : (
           <div className="flex flex-col flex-1 min-h-0">
             {viewMode === "board" ? (
               <BoardView
-                issues={issues}
+                issues={usesAssigneeBoard ? assigneeIssues : issues}
+                assigneeGroups={usesAssigneeBoard ? assigneeGroupsQuery.data?.groups : undefined}
+                assigneeGroupQueryKey={usesAssigneeBoard ? assigneeGroupsOptions.queryKey : undefined}
+                assigneeGroupFilter={usesAssigneeBoard ? assigneeGroupFilter : undefined}
                 visibleStatuses={visibleStatuses}
                 hiddenStatuses={hiddenStatuses}
                 onMoveIssue={handleMoveIssue}

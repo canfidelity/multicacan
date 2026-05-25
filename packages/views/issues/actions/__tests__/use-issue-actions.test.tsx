@@ -27,20 +27,6 @@ vi.mock("@multicacan/core/auth", () => ({
   registerAuthStore: vi.fn(),
 }));
 
-vi.mock("@multicacan/core/workspace/queries", () => ({
-  memberListOptions: () => ({
-    queryKey: ["workspaces", "ws-1", "members"],
-    queryFn: () =>
-      Promise.resolve([
-        { user_id: "user-1", name: "Test User", email: "t@t.com", role: "admin" },
-      ]),
-  }),
-  agentListOptions: () => ({
-    queryKey: ["workspaces", "ws-1", "agents"],
-    queryFn: () => Promise.resolve([]),
-  }),
-}));
-
 // Mutable so individual tests can seed the pin list.
 const pinListRef: { value: Array<{ item_type: string; item_id: string }> } = {
   value: [],
@@ -79,7 +65,7 @@ vi.mock("../../../navigation", () => ({
     searchParams: new URLSearchParams(),
     back: vi.fn(),
     replace: vi.fn(),
-    getShareableUrl: (p: string) => `https://app.multicacan.com${p}`,
+    getShareableUrl: (p: string) => `https://app.multica.com${p}`,
   }),
 }));
 
@@ -104,6 +90,7 @@ const mockIssue: Issue = {
   creator_type: "member",
   creator_id: "user-1",
   parent_issue_id: null,
+  start_date: null,
   due_date: null,
   project_id: null,
   created_at: "2026-01-01T00:00:00Z",
@@ -161,7 +148,7 @@ describe("useIssueActions", () => {
   });
 
   it("does not re-open backlog-hint when the user has dismissed it", () => {
-    localStorage.setItem("multicacan:backlog-agent-hint-dismissed", "true");
+    localStorage.setItem("multica:backlog-agent-hint-dismissed", "true");
     const backlogIssue = { ...mockIssue, status: "backlog" } as Issue;
     const { result } = renderHook(() => useIssueActions(backlogIssue), { wrapper });
 
@@ -183,7 +170,7 @@ describe("useIssueActions", () => {
     });
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      "https://app.multicacan.com/test/issues/issue-1",
+      "https://app.multica.com/test/issues/issue-1",
     );
   });
 
@@ -267,12 +254,4 @@ describe("useIssueActions", () => {
     expect(mockOpenModal).not.toHaveBeenCalled();
   });
 
-  it("members and filtered agents are exposed on the result", async () => {
-    const { result } = renderHook(() => useIssueActions(mockIssue), { wrapper });
-    await waitFor(() => {
-      expect(result.current.members.length).toBe(1);
-    });
-    expect(result.current.members[0]!.user_id).toBe("user-1");
-    expect(result.current.agents).toEqual([]);
-  });
 });

@@ -6,6 +6,7 @@ import {
   Trash2,
   ChevronRight,
   Cpu,
+  Globe,
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ import type { AgentRuntime, Agent, MemberWithUser } from "@multicacan/core/types
 import { useAuthStore } from "@multicacan/core/auth";
 import { useWorkspaceId } from "@multicacan/core/hooks";
 import { memberListOptions, agentListOptions } from "@multicacan/core/workspace/queries";
-import { useDeleteRuntime } from "@multicacan/core/runtimes/mutations";
+import { useDeleteRuntime, useUpdateRuntime } from "@multicacan/core/runtimes/mutations";
 import { deriveRuntimeHealth } from "@multicacan/core/runtimes";
 import {
   type AgentPresenceDetail,
@@ -38,13 +39,14 @@ import {
   TooltipTrigger,
 } from "@multicacan/ui/components/ui/tooltip";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { AppLink } from "../../navigation";
+import { AppLink, useNavigation } from "../../navigation";
 import { availabilityConfig, workloadConfig } from "../../agents/presence";
-import { formatLastSeen } from "../utils";
+import { formatLastSeen, isSelfHealingRuntime } from "../utils";
 import { HealthBadge } from "./shared";
 import { ProviderLogo } from "./provider-logo";
 import { UpdateSection } from "./update-section";
 import { UsageSection } from "./usage-section";
+import { useT } from "../../i18n";
 
 function getCliVersion(metadata: Record<string, unknown>): string | null {
   if (
@@ -89,6 +91,7 @@ function useNowTick(intervalMs = 30_000): number {
 }
 
 export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
+  const { t } = useT("runtimes");
   const cliVersion =
     runtime.runtime_mode === "local" ? getCliVersion(runtime.metadata) : null;
   const launchedBy =
@@ -97,6 +100,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
   const user = useAuthStore((s) => s.user);
   const wsId = useWorkspaceId();
   const paths = useWorkspacePaths();
+  const navigation = useNavigation();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { byAgent: presenceMap } = useWorkspacePresenceMap(wsId);
@@ -119,16 +123,19 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
   const isRuntimeOwner = user && runtime.owner_id === user.id;
   const canDelete = isAdmin || isRuntimeOwner;
 
-  const servingAgents = agents.filter((a) => a.runtime_id === runtime.id);
+  const servingAgents = agents.filter(
+    (a) => a.runtime_id === runtime.id && !a.archived_at,
+  );
 
   const handleDelete = () => {
     deleteMutation.mutate(runtime.id, {
       onSuccess: () => {
-        toast.success("Runtime deleted");
         setDeleteOpen(false);
+        navigation.replace(paths.runtimes());
+        toast.success(t(($) => $.detail.toast_deleted));
       },
       onError: (e) => {
-        toast.error(e instanceof Error ? e.message : "Failed to delete runtime");
+        toast.error(e instanceof Error ? e.message : t(($) => $.detail.toast_delete_failed));
       },
     });
   };
@@ -148,7 +155,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
           render={<AppLink href={paths.runtimes()} />}
         >
           <ArrowLeft className="h-3 w-3" />
-          All runtimes
+          {t(($) => $.detail.all_runtimes)}
         </Button>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
         <span className="truncate font-mono text-xs text-foreground">
@@ -158,26 +165,8 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
           {!canDelete && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" />
-              Read-only
+              {t(($) => $.detail.read_only)}
             </span>
-          )}
-          {canDelete && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setDeleteOpen(true)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Delete runtime"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                }
-              />
-              <TooltipContent>Delete runtime</TooltipContent>
-            </Tooltip>
           )}
         </div>
       </div>
@@ -198,7 +187,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
               cliVersion={cliVersion}
               daemonShort={daemonShort}
             />
-            <UsageSection runtimeId={runtime.id} />
+            <UsageSection runtime={runtime} />
           </div>
 
           {/* Right rail: serving agents + diagnostics */}
@@ -223,19 +212,19 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
       <AlertDialog open={deleteOpen} onOpenChange={(v) => { if (!v) setDeleteOpen(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Runtime</AlertDialogTitle>
+            <AlertDialogTitle>{t(($) => $.detail.delete_dialog.title)}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &ldquo;{runtime.name}&rdquo;? This action cannot be undone.
+              {t(($) => $.detail.delete_dialog.description, { name: runtime.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t(($) => $.detail.delete_dialog.cancel)}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? t(($) => $.detail.delete_dialog.deleting) : t(($) => $.detail.delete_dialog.confirm)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -273,6 +262,7 @@ function HeroCard({
   cliVersion: string | null;
   daemonShort: string | null;
 }) {
+  const { t } = useT("runtimes");
   const [showDetails, setShowDetails] = useState(false);
   const device = runtime.device_info ? parseDeviceInfo(runtime.device_info) : null;
   const hasTechDetails = !!cliVersion || !!daemonShort;
@@ -291,7 +281,7 @@ function HeroCard({
             </h2>
             <HealthBadge health={health} />
             <span className="text-xs text-muted-foreground">
-              last seen {lastSeen}
+              {t(($) => $.detail.last_seen, { when: lastSeen })}
             </span>
           </div>
         </div>
@@ -341,7 +331,7 @@ function HeroCard({
         </Fact>
       </dl>
 
-      {/* Diagnostic IDs — multicacan CLI git hash + truncated daemon UUID.
+      {/* Diagnostic IDs — multica CLI git hash + truncated daemon UUID.
           Only useful when filing an issue or reading logs; folded by
           default so they don't compete with the user-visible facts above. */}
       {hasTechDetails && (
@@ -356,7 +346,7 @@ function HeroCard({
                 showDetails ? "rotate-90" : ""
               }`}
             />
-            Technical details
+            {t(($) => $.detail.technical_details)}
           </button>
           {showDetails && (
             <dl className="grid grid-cols-1 gap-y-2 border-t bg-muted/30 px-4 py-3 sm:grid-cols-2">
@@ -408,19 +398,21 @@ function ServingAgentsCard({
   presenceMap: Map<string, AgentPresenceDetail>;
   agentHref: (agentId: string) => string;
 }) {
+  const { t } = useT("runtimes");
+  const { t: tAgents } = useT("agents");
   return (
     <div className="rounded-lg border">
       <div className="flex items-center justify-between border-b px-4 py-2.5">
-        <span className="text-xs font-semibold">Serving</span>
+        <span className="text-xs font-semibold">{t(($) => $.detail.serving_title)}</span>
         <span className="text-xs text-muted-foreground">
-          {agents.length} agent{agents.length === 1 ? "" : "s"}
+          {t(($) => $.detail.serving_count, { count: agents.length })}
         </span>
       </div>
       {agents.length === 0 ? (
         <div className="flex flex-col items-center px-4 py-6 text-center">
           <Cpu className="h-5 w-5 text-muted-foreground/40" />
           <p className="mt-2 text-xs text-muted-foreground">
-            No agents are bound to this runtime yet.
+            {t(($) => $.detail.no_agents)}
           </p>
         </div>
       ) : (
@@ -430,6 +422,7 @@ function ServingAgentsCard({
             const av = detail
               ? availabilityConfig[detail.availability]
               : availabilityConfig.offline;
+            const avLabel = tAgents(($) => $.availability[detail?.availability ?? "offline"]);
             const wl = detail ? workloadConfig[detail.workload] : null;
             const running = detail?.runningCount ?? 0;
             const queued = detail?.queuedCount ?? 0;
@@ -447,7 +440,7 @@ function ServingAgentsCard({
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
                     <span className="inline-flex items-center gap-1.5">
                       <span className={`h-1.5 w-1.5 rounded-full ${av.dotClass}`} />
-                      <span className={av.textClass}>{av.label}</span>
+                      <span className={av.textClass}>{avLabel}</span>
                     </span>
                     {wl && detail && detail.workload !== "idle" && (
                       <span className={`inline-flex items-center gap-1 ${wl.textClass}`}>
@@ -455,12 +448,12 @@ function ServingAgentsCard({
                         <wl.icon
                           className={`h-3 w-3 ${detail.workload === "working" ? "animate-spin" : ""}`}
                         />
-                        {wl.label}
+                        {tAgents(($) => $.workload[detail.workload])}
                         {running > 0 && (
-                          <span className="text-muted-foreground">· {running} running</span>
+                          <span className="text-muted-foreground">{t(($) => $.detail.running_chip, { count: running })}</span>
                         )}
                         {queued > 0 && (
-                          <span className="text-muted-foreground">· {queued} queued</span>
+                          <span className="text-muted-foreground">{t(($) => $.detail.queued_chip, { count: queued })}</span>
                         )}
                       </span>
                     )}
@@ -489,17 +482,32 @@ function DiagnosticsCard({
   canDelete: boolean;
   onDelete: () => void;
 }) {
+  const { t } = useT("runtimes");
   const isLocal = runtime.runtime_mode === "local";
+  const selfHealing = isSelfHealingRuntime(runtime);
+  // canDelete here doubles as the "can edit runtime" predicate — it already
+  // means "workspace owner/admin OR runtime owner", which is the same gate
+  // the server enforces for the visibility PATCH.
   return (
     <div className="rounded-lg border">
       <div className="border-b px-4 py-2.5">
-        <span className="text-xs font-semibold">Diagnostics</span>
+        <span className="text-xs font-semibold">{t(($) => $.detail.diagnostics_title)}</span>
       </div>
       <div className="space-y-3 p-4">
+        <div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+            {t(($) => $.detail.diagnostics_visibility)}
+          </div>
+          {canDelete ? (
+            <VisibilityEditor runtime={runtime} />
+          ) : (
+            <VisibilityReadout runtime={runtime} />
+          )}
+        </div>
         {isLocal && (
-          <div>
+          <div className="border-t pt-3">
             <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-              CLI
+              {t(($) => $.detail.diagnostics_cli)}
             </div>
             <UpdateSection
               runtimeId={runtime.id}
@@ -510,19 +518,166 @@ function DiagnosticsCard({
           </div>
         )}
         {canDelete && (
-          <div className={isLocal ? "border-t pt-3" : ""}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete runtime
-            </Button>
+          <div className="border-t pt-3">
+            {selfHealing ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    // Wrapping span keeps the trigger hoverable — a disabled
+                    // <button> swallows pointer events, so the tooltip would
+                    // never open if it were the trigger itself.
+                    <span className="block w-full">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="h-8 w-full justify-start gap-2 text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t(($) => $.detail.delete_button)}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t(($) => $.detail.delete_disabled_tooltip)}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {t(($) => $.detail.delete_button)}
+              </Button>
+            )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// VisibilityReadout renders a static "Private" / "Public" pill for users
+// who can't edit the runtime. The description used to sit under the chip;
+// it now lives in the hover tooltip so the Diagnostics column stays compact
+// and matches the surrounding sections. Older backends that omit the field
+// render as "Private" to match the strict default.
+function VisibilityReadout({ runtime }: { runtime: AgentRuntime }) {
+  const { t } = useT("runtimes");
+  const visibility = runtime.visibility === "public" ? "public" : "private";
+  const Icon = visibility === "public" ? Globe : Lock;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
+            <Icon className="h-3 w-3 text-muted-foreground" />
+            <span className="font-medium">
+              {t(($) => $.detail.visibility_label[visibility])}
+            </span>
+          </span>
+        }
+      />
+      <TooltipContent>
+        {t(($) => $.detail.visibility_hint[visibility])}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// VisibilityEditor lets the runtime owner (or workspace admin) flip
+// public↔private. The PATCH endpoint also re-checks; this is a UI gate, not
+// a security boundary. Per-choice description text lives in the hover
+// tooltip so the two buttons stay a tight icon+label pair instead of the
+// previous two-line block that competed with the surrounding cards.
+function VisibilityEditor({ runtime }: { runtime: AgentRuntime }) {
+  const { t } = useT("runtimes");
+  const wsId = useWorkspaceId();
+  const updateRuntime = useUpdateRuntime(wsId);
+  const current = runtime.visibility === "public" ? "public" : "private";
+
+  const flip = (next: "private" | "public") => {
+    if (next === current) return;
+    updateRuntime.mutate(
+      { runtimeId: runtime.id, patch: { visibility: next } },
+      {
+        onSuccess: () =>
+          toast.success(
+            t(($) => $.detail.visibility_toast_updated, {
+              visibility: t(($) => $.detail.visibility_label[next]),
+            }),
+          ),
+        onError: (err) =>
+          toast.error(
+            err instanceof Error && err.message
+              ? err.message
+              : t(($) => $.detail.visibility_toast_failed),
+          ),
+      },
+    );
+  };
+
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-md bg-muted p-0.5">
+      <VisibilityChoice
+        active={current === "private"}
+        icon={<Lock className="h-3 w-3" />}
+        label={t(($) => $.detail.visibility_label.private)}
+        tooltip={t(($) => $.detail.visibility_hint.private)}
+        disabled={updateRuntime.isPending}
+        onClick={() => flip("private")}
+      />
+      <VisibilityChoice
+        active={current === "public"}
+        icon={<Globe className="h-3 w-3" />}
+        label={t(($) => $.detail.visibility_label.public)}
+        tooltip={t(($) => $.detail.visibility_hint.public)}
+        disabled={updateRuntime.isPending}
+        onClick={() => flip("public")}
+      />
+    </div>
+  );
+}
+
+function VisibilityChoice({
+  active,
+  icon,
+  label,
+  tooltip,
+  disabled,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  tooltip: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-colors ${
+              active
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            <span className="shrink-0">{icon}</span>
+            <span>{label}</span>
+          </button>
+        }
+      />
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -4,9 +4,11 @@ import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "../navigation";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  CalendarClock,
   Check,
   ChevronRight,
   Maximize2,
@@ -28,11 +30,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@multicacan/ui/components/ui/dropdown-menu";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multicacan/ui/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@multicacan/ui/components/ui/tooltip";
 import { Button } from "@multicacan/ui/components/ui/button";
 import { Switch } from "@multicacan/ui/components/ui/switch";
 import { ContentEditor, type ContentEditorRef, TitleEditor, useFileDropZone, FileDropOverlay } from "../editor";
-import { StatusIcon, StatusPicker, PriorityPicker, AssigneePicker, DueDatePicker } from "../issues/components";
+import { StatusIcon, StatusPicker, PriorityPicker, AssigneePicker, StartDatePicker, DueDatePicker } from "../issues/components";
 import { BacklogAgentHintContent } from "../issues/components/backlog-agent-hint-dialog";
 import { ProjectPicker } from "../projects/components/project-picker";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
@@ -43,10 +45,17 @@ import { useQuickCreateStore } from "@multicacan/core/issues/stores/quick-create
 import { issueDetailOptions } from "@multicacan/core/issues/queries";
 import { useCreateIssue, useUpdateIssue } from "@multicacan/core/issues/mutations";
 import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
-import { api } from "@multicacan/core/api";
+import {
+  api,
+  ApiError,
+  DuplicateIssueErrorBodySchema,
+  type DuplicateIssueErrorBody,
+  parseWithFallback,
+} from "@multicacan/core/api";
 import { FileUploadButton } from "@multicacan/ui/components/common/file-upload-button";
 import { PillButton } from "../common/pill-button";
 import { IssuePickerModal } from "./issue-picker-modal";
+import { useT } from "../i18n";
 
 // ---------------------------------------------------------------------------
 // ManualCreatePanel — manual-mode body of the create-issue dialog. Renders
@@ -77,6 +86,7 @@ export function ManualCreatePanel({
   backlogHintIssueId: string | null;
   setBacklogHintIssueId: (id: string | null) => void;
 }) {
+  const { t } = useT("modals");
   const router = useNavigation();
   const p = useWorkspacePaths();
   const workspaceName = useCurrentWorkspace()?.name;
@@ -98,8 +108,19 @@ export function ManualCreatePanel({
   const [status, setStatus] = useState<IssueStatus>((data?.status as IssueStatus) || draft.status);
   const [priority, setPriority] = useState<IssuePriority>(draft.priority);
   const [submitting, setSubmitting] = useState(false);
-  const [assigneeType, setAssigneeType] = useState<IssueAssigneeType | undefined>(draft.assigneeType);
-  const [assigneeId, setAssigneeId] = useState<string | undefined>(draft.assigneeId);
+  const [assigneeType, setAssigneeType] = useState<IssueAssigneeType | undefined>(() => {
+    if (data && "assignee_type" in data) {
+      return (data.assignee_type as IssueAssigneeType | null) ?? undefined;
+    }
+    return draft.assigneeType;
+  });
+  const [assigneeId, setAssigneeId] = useState<string | undefined>(() => {
+    if (data && "assignee_id" in data) {
+      return (data.assignee_id as string | null) ?? undefined;
+    }
+    return draft.assigneeId;
+  });
+  const [startDate, setStartDate] = useState<string | null>(draft.startDate);
   const [dueDate, setDueDate] = useState<string | null>(draft.dueDate);
   const [projectId, setProjectId] = useState<string | undefined>(
     (data?.project_id as string) || undefined,
@@ -108,6 +129,11 @@ export function ManualCreatePanel({
     (data?.parent_issue_id as string) || undefined,
   );
   const [parentPickerOpen, setParentPickerOpen] = useState(false);
+  // Start date is a low-frequency field — by default it lives in the
+  // overflow ⋯ menu. Clicking the menu item flips this open, which both
+  // mounts the inline pill (the popover's anchor) AND opens the calendar.
+  // When the popover closes without a value set, the pill unmounts again.
+  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   // Children live as full Issue objects — the picker always returns the whole
   // object, and we never need to hydrate from an ID the way we do for parent.
   const [childIssues, setChildIssues] = useState<Issue[]>([]);
@@ -139,6 +165,7 @@ export function ManualCreatePanel({
     setAssigneeType(type); setAssigneeId(id);
     setDraft({ assigneeType: type, assigneeId: id });
   };
+  const updateStartDate = (v: string | null) => { setStartDate(v); setDraft({ startDate: v }); };
   const updateDueDate = (v: string | null) => { setDueDate(v); setDraft({ dueDate: v }); };
 
   const createIssueMutation = useCreateIssue();
@@ -147,6 +174,7 @@ export function ManualCreatePanel({
     setTitle("");
     setStatus("todo");
     setPriority("none");
+    setStartDate(null);
     setDueDate(null);
     setProjectId(undefined);
     setParentIssueId(undefined);
@@ -159,6 +187,7 @@ export function ManualCreatePanel({
       priority: "none",
       assigneeType,
       assigneeId,
+      startDate: null,
       dueDate: null,
     });
     descEditorRef.current?.clearContent();
@@ -176,6 +205,7 @@ export function ManualCreatePanel({
         priority,
         assignee_type: assigneeType,
         assignee_id: assigneeId,
+        start_date: startDate || undefined,
         due_date: dueDate || undefined,
         attachment_ids: attachmentIds.length > 0 ? attachmentIds : undefined,
         parent_issue_id: parentIssueId,
@@ -194,12 +224,24 @@ export function ManualCreatePanel({
             }),
           ),
         );
+        // Aggregate fan-out: N independent requests can fail for N different
+        // reasons. The user-facing toast stays count-based (any single
+        // err.message would mislead), but log each rejection so developers
+        // still have signal in dev-tools / Sentry.
+        for (const result of results) {
+          if (result.status === "rejected") {
+            console.error("[create-issue] sub-issue link failed", result.reason);
+          }
+        }
         const failed = results.filter((r) => r.status === "rejected").length;
         if (failed > 0) {
           toast.error(
             failed === childIssues.length
-              ? "Failed to link sub-issues"
-              : `Failed to link ${failed} of ${childIssues.length} sub-issues`,
+              ? t(($) => $.create_issue.toast_link_subissues_all_failed)
+              : t(($) => $.create_issue.toast_link_subissues_partial, {
+                  failed,
+                  total: childIssues.length,
+                }),
           );
         }
       }
@@ -209,7 +251,7 @@ export function ManualCreatePanel({
       clearDraft();
       const shouldShowBacklogHint =
         status === "backlog" && assigneeType === "agent" && assigneeId &&
-        localStorage.getItem("multicacan:backlog-agent-hint-dismissed") !== "true";
+        localStorage.getItem("multica:backlog-agent-hint-dismissed") !== "true";
 
       if (shouldShowBacklogHint) {
         setBacklogHintIssueId(issue.id);
@@ -220,13 +262,13 @@ export function ManualCreatePanel({
       }
 
       if (!shouldShowBacklogHint) {
-        toast.custom((t) => (
+        toast.custom((toastId) => (
           <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-4 w-[360px]">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex items-center justify-center size-5 rounded-full bg-emerald-500/15 text-emerald-500">
                 <Check className="size-3" />
               </div>
-              <span className="text-sm font-medium">Issue created</span>
+              <span className="text-sm font-medium">{t(($) => $.create_issue.toast_created)}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground ml-7">
               <StatusIcon status={issue.status} className="size-3.5 shrink-0" />
@@ -237,16 +279,63 @@ export function ManualCreatePanel({
               className="ml-7 mt-2 text-sm text-primary hover:underline cursor-pointer"
               onClick={() => {
                 router.push(p.issueDetail(issue.id));
-                toast.dismiss(t);
+                toast.dismiss(toastId);
               }}
             >
-              View issue
+              {t(($) => $.create_issue.view_issue)}
             </button>
           </div>
         ), { duration: 5000 });
       }
-    } catch {
-      toast.error("Failed to create issue");
+    } catch (err) {
+      // Duplicate-issue is the only structured 409 the create endpoint
+      // returns. We schema-guard the body (ApiError.body is `unknown`) so a
+      // future server-side rename / drop of `code` / `issue` degrades to the
+      // normal error toast instead of throwing inside the toast renderer.
+      if (err instanceof ApiError && err.status === 409) {
+        const dup = parseWithFallback<DuplicateIssueErrorBody | null>(
+          err.body,
+          DuplicateIssueErrorBodySchema,
+          null,
+          { endpoint: "POST /api/workspaces/:wsId/issues (active_duplicate_issue)" },
+        );
+        if (dup) {
+          toast.custom(
+            (toastId) => (
+              <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-4 w-[360px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center justify-center size-5 rounded-full bg-amber-500/15 text-amber-500">
+                    <AlertTriangle className="size-3" />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {t(($) => $.create_issue.toast_duplicate_title)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground ml-7">
+                  <span className="truncate">{dup.issue.identifier} – {dup.issue.title}</span>
+                </div>
+                <button
+                  type="button"
+                  className="ml-7 mt-2 text-sm text-primary hover:underline cursor-pointer"
+                  onClick={() => {
+                    router.push(p.issueDetail(dup.issue.id));
+                    toast.dismiss(toastId);
+                  }}
+                >
+                  {t(($) => $.create_issue.toast_duplicate_view)}
+                </button>
+              </div>
+            ),
+            { duration: 5000 },
+          );
+          return;
+        }
+      }
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : t(($) => $.create_issue.toast_failed),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -257,15 +346,29 @@ export function ManualCreatePanel({
   // panel reads `data.prompt` on mount. Concatenate title + description so
   // nothing the user typed is lost — the agent derives a fresh title from
   // the combined text. Persist the mode flip so the next `c` lands in agent.
+  // Also forward the picked project so the agent panel pins the new issue
+  // to it; without this the agent panel would fall back to its persisted
+  // `lastProjectId`, silently routing the issue to the wrong project.
+  // Forward squad picks alongside agent picks so the agent panel honors
+  // the actor the user already chose — otherwise a squad selection silently
+  // falls back to the persisted actor / first visible agent on flip.
   const switchToAgent = () => {
     const desc = descEditorRef.current?.getMarkdown()?.trim() ?? "";
     const prompt = [title.trim(), desc].filter(Boolean).join("\n\n");
+    // Title + description have been packed into the agent prompt — clear them
+    // from the shared draft so a later agent→manual switch doesn't surface
+    // stale manual state on top of the prompt-as-description, which would
+    // duplicate content on every round-trip.
+    setDraft({ title: "", description: "" });
     setLastMode("agent");
     onSwitchMode?.({
       prompt,
-      ...(assigneeType === "agent" && assigneeId
+      ...(assigneeId && assigneeType === "agent"
         ? { agent_id: assigneeId }
-        : {}),
+        : assigneeId && assigneeType === "squad"
+          ? { squad_id: assigneeId }
+          : {}),
+      ...(projectId ? { project_id: projectId } : {}),
     });
   };
 
@@ -278,12 +381,19 @@ export function ManualCreatePanel({
               onClose();
             }}
             onDismissPermanently={() => {
-              localStorage.setItem("multicacan:backlog-agent-hint-dismissed", "true");
+              localStorage.setItem("multica:backlog-agent-hint-dismissed", "true");
             }}
             onMoveToTodo={() => {
               updateIssueMutation.mutate(
                 { id: backlogHintIssueId, status: "todo" },
-                { onError: () => toast.error("Failed to update status") },
+                {
+                  onError: (err) =>
+                    toast.error(
+                      err instanceof Error && err.message
+                        ? err.message
+                        : t(($) => $.backlog_hint.toast_status_failed),
+                    ),
+                },
               );
               setBacklogHintIssueId(null);
               onClose();
@@ -291,14 +401,14 @@ export function ManualCreatePanel({
           />
         ) : (
           <>
-            <DialogTitle className="sr-only">New Issue</DialogTitle>
+            <DialogTitle className="sr-only">{t(($) => $.create_issue.sr_manual)}</DialogTitle>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0">
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-muted-foreground">{workspaceName}</span>
                 <ChevronRight className="size-3 text-muted-foreground/50" />
-                <span className="font-medium">Create manually</span>
+                <span className="font-medium">{t(($) => $.create_issue.manual_breadcrumb)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Tooltip>
@@ -312,7 +422,11 @@ export function ManualCreatePanel({
                       </button>
                     }
                   />
-                  <TooltipContent side="bottom">{isExpanded ? "Collapse" : "Expand"}</TooltipContent>
+                  <TooltipContent side="bottom">
+                    {isExpanded
+                      ? t(($) => $.common.collapse_tooltip)
+                      : t(($) => $.common.expand_tooltip)}
+                  </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger
@@ -325,7 +439,7 @@ export function ManualCreatePanel({
                       </button>
                     }
                   />
-                  <TooltipContent side="bottom">Close</TooltipContent>
+                  <TooltipContent side="bottom">{t(($) => $.common.close)}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -336,7 +450,7 @@ export function ManualCreatePanel({
                 key={formResetKey}
                 autoFocus
                 defaultValue={draft.title}
-                placeholder="Issue title"
+                placeholder={t(($) => $.create_issue.title_placeholder)}
                 className="text-lg font-semibold"
                 onChange={(v) => updateTitle(v)}
                 onSubmit={handleSubmit}
@@ -344,11 +458,11 @@ export function ManualCreatePanel({
             </div>
 
             {/* Description — takes remaining space */}
-            <div {...descDropZoneProps} className="relative flex-1 min-h-0 overflow-y-auto px-5">
+            <div {...descDropZoneProps} className="relative flex flex-1 min-h-0 overflow-y-auto px-5">
               <ContentEditor
                 ref={descEditorRef}
                 defaultValue={draft.description}
-                placeholder="Add description..."
+                placeholder={t(($) => $.create_issue.description_placeholder)}
                 onUpdate={(md) => setDraft({ description: md })}
                 onUploadFile={handleUpload}
                 debounceMs={500}
@@ -402,6 +516,22 @@ export function ManualCreatePanel({
                 align="start"
               />
 
+              {/* Start date — collapsed into the ⋯ menu by default since it's
+                  a low-frequency field. Renders inline only when the field
+                  has a value OR the user just opened it from the overflow
+                  menu (the picker's calendar popover needs the inline pill
+                  as its anchor). */}
+              {(startDate || startDatePickerOpen) && (
+                <StartDatePicker
+                  startDate={startDate}
+                  onUpdate={(u) => updateStartDate(u.start_date ?? null)}
+                  triggerRender={<PillButton />}
+                  align="start"
+                  open={startDatePickerOpen}
+                  onOpenChange={setStartDatePickerOpen}
+                />
+              )}
+
               {/* Parent chip — appears when parent is set.
                   Placed before the ⋯ so it wraps to a new line with ⋯ if
                   space is tight, but ⋯ always stays last in DOM order. */}
@@ -413,13 +543,15 @@ export function ManualCreatePanel({
                     className="flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer"
                   >
                     <ArrowUp className="size-3 text-muted-foreground" />
-                    <span>Sub-issue of {parentIssue.identifier}</span>
+                    <span>
+                      {t(($) => $.create_issue.subissue_of, { identifier: parentIssue.identifier })}
+                    </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setParentIssueId(undefined)}
                     className="p-1 pr-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    aria-label="Remove parent"
+                    aria-label={t(($) => $.create_issue.remove_parent_aria)}
                   >
                     <XIcon className="size-3" />
                   </button>
@@ -435,7 +567,7 @@ export function ManualCreatePanel({
                 >
                   <div className="flex items-center gap-1.5 py-1 pl-2.5">
                     <ArrowDown className="size-3 text-muted-foreground" />
-                    <span>Sub-issue: {c.identifier}</span>
+                    <span>{t(($) => $.create_issue.subissue_chip, { identifier: c.identifier })}</span>
                   </div>
                   <button
                     type="button"
@@ -443,7 +575,7 @@ export function ManualCreatePanel({
                       setChildIssues((prev) => prev.filter((x) => x.id !== c.id))
                     }
                     className="p-1 pr-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    aria-label={`Remove sub-issue ${c.identifier}`}
+                    aria-label={t(($) => $.create_issue.remove_subissue_aria, { identifier: c.identifier })}
                   >
                     <XIcon className="size-3" />
                   </button>
@@ -455,26 +587,32 @@ export function ManualCreatePanel({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <PillButton aria-label="More options">
+                    <PillButton aria-label={t(($) => $.create_issue.more_options_aria)}>
                       <MoreHorizontal className="size-3.5" />
                     </PillButton>
                   }
                 />
                 <DropdownMenuContent align="start" className="w-auto">
+                  {!startDate && (
+                    <DropdownMenuItem onClick={() => setStartDatePickerOpen(true)}>
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {t(($) => $.create_issue.set_start_date)}
+                    </DropdownMenuItem>
+                  )}
                   {parentIssueId && parentIssue ? (
                     <DropdownMenuItem onClick={() => setParentPickerOpen(true)}>
                       <ArrowUp className="h-3.5 w-3.5" />
-                      Parent: {parentIssue.identifier}
+                      {t(($) => $.create_issue.parent_with_id, { identifier: parentIssue.identifier })}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem onClick={() => setParentPickerOpen(true)}>
                       <ArrowUp className="h-3.5 w-3.5" />
-                      Set parent issue...
+                      {t(($) => $.create_issue.set_parent)}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => setChildPickerOpen(true)}>
                     <ArrowDown className="h-3.5 w-3.5" />
-                    Add sub-issue...
+                    {t(($) => $.create_issue.add_subissue)}
                   </DropdownMenuItem>
                   {parentIssueId && parentIssue && (
                     <>
@@ -484,7 +622,7 @@ export function ManualCreatePanel({
                         onClick={() => setParentIssueId(undefined)}
                       >
                         <XIcon className="h-3.5 w-3.5" />
-                        Remove parent
+                        {t(($) => $.create_issue.remove_parent)}
                       </DropdownMenuItem>
                     </>
                   )}
@@ -497,8 +635,8 @@ export function ManualCreatePanel({
             <IssuePickerModal
               open={parentPickerOpen}
               onOpenChange={setParentPickerOpen}
-              title="Set parent issue"
-              description="Search for an issue to set as the parent of the new issue"
+              title={t(($) => $.create_issue.set_parent_picker.title)}
+              description={t(($) => $.create_issue.set_parent_picker.description)}
               excludeIds={[
                 ...childIssues.map((c) => c.id),
                 ...(parentIssueId ? [parentIssueId] : []),
@@ -510,8 +648,8 @@ export function ManualCreatePanel({
             <IssuePickerModal
               open={childPickerOpen}
               onOpenChange={setChildPickerOpen}
-              title="Add sub-issue"
-              description="Search for an issue to add as a sub-issue of the new issue"
+              title={t(($) => $.create_issue.add_subissue_picker.title)}
+              description={t(($) => $.create_issue.add_subissue_picker.description)}
               excludeIds={[
                 ...childIssues.map((c) => c.id),
                 ...(parentIssueId ? [parentIssueId] : []),
@@ -534,11 +672,11 @@ export function ManualCreatePanel({
                 <button
                   type="button"
                   onClick={switchToAgent}
-                  title="Switch to create with agent — describe in one line and let the agent file it"
-                  className="flex shrink-0 items-center gap-1.5 text-xs px-2 py-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors cursor-pointer"
+                  title={t(($) => $.create_issue.switch_to_agent_tooltip)}
+                  className="border-beam group flex shrink-0 items-center gap-1.5 text-xs px-2 py-1 rounded-sm text-muted-foreground bg-brand/5 hover:bg-brand/10 hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <ArrowLeftRight className="size-3.5" />
-                  Switch to Agent
+                  <ArrowLeftRight className="size-3.5 text-brand/80 transition-transform duration-300 group-hover:rotate-180" />
+                  {t(($) => $.create_issue.switch_to_agent)}
                 </button>
                 <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
                   <Switch
@@ -546,11 +684,20 @@ export function ManualCreatePanel({
                     checked={keepOpen}
                     onCheckedChange={setKeepOpen}
                   />
-                  Create another
+                  {t(($) => $.create_issue.create_another)}
                 </label>
-                <Button size="sm" onClick={handleSubmit} disabled={!title.trim() || submitting}>
-                  {submitting ? "Creating..." : "Create Issue"}
-                </Button>
+                {!title.trim() ? (
+                  <TooltipProvider delay={200}>
+                    <Tooltip>
+                      <TooltipTrigger render={<span><Button size="sm" onClick={handleSubmit} disabled>{t(($) => $.create_issue.submit)}</Button></span>} />
+                      <TooltipContent side="top">{t(($) => $.create_issue.title_required)}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button size="sm" onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? t(($) => $.create_issue.submitting) : t(($) => $.create_issue.submit)}
+                  </Button>
+                )}
               </div>
             </div>
           </>

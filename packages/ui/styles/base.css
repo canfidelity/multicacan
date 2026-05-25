@@ -25,17 +25,38 @@
   animation: entrance-spin 0.6s ease-out forwards;
 }
 
-/* Onboarding: step / phase entry — 400ms fade + 4px rise.
- * Matches the design prototype's .fade-in. Applied on mount so every new
- * step (and intra-step phase switch, via key=phase remount) plays once.
- * `both` fill-mode commits the `from` styles pre-animation to avoid a
- * single-frame flash at natural state before the animation grabs. */
+/* Onboarding: step / phase entry — 400ms fade.
+ * Applied on mount so every new step (and intra-step phase switch, via
+ * key=phase remount) plays once. `both` fill-mode commits the `from`
+ * styles pre-animation to avoid a single-frame flash at natural state
+ * before the animation grabs.
+ *
+ * Earlier iteration also included a 4px translateY rise. Removed because
+ * the transform on h-full step roots was getting counted into the
+ * parent's scrollable overflow (web onboarding page + desktop
+ * WindowOverlay both wrap with overflow-y-auto), producing a brief
+ * scrollbar flash on each step entry. Pure opacity has no such side
+ * effect. */
 @keyframes onboarding-enter {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; }
 }
 
 .animate-onboarding-enter {
   animation: onboarding-enter 0.4s ease both;
+}
+
+/* Welcome-after-onboarding Modal: emoji pops in with two quick scale
+ * bounces so the celebration registers visually without being
+ * disruptive. ~700ms total. */
+@keyframes welcome-emoji-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  35%  { transform: scale(1.25); opacity: 1; }
+  55%  { transform: scale(0.92); }
+  75%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.animate-welcome-emoji-pop {
+  animation: welcome-emoji-pop 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 /* Onboarding completion: success badge spring-pop.
@@ -112,6 +133,83 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
   animation: chat-text-shimmer 2.5s linear infinite;
+}
+
+/* Navigation progress bar: 2px brand-colored indeterminate sweep with a
+ * right-edge glow that shows across the top of the dashboard while a
+ * transition-wrapped push/replace is committing. Driven by useIsNavigating();
+ * independent of the actual network, so it disappears the moment React commits
+ * the new route. */
+@keyframes nav-progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-nav-progress-sweep {
+  animation: nav-progress-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Border beam: a brand-tinted highlight sweeps continuously around the
+ * element's rounded border, drawing the eye to a CTA that would otherwise
+ * blend into the chrome (e.g. the "switch to agent" affordance in manual
+ * create). Built with a conic-gradient on a ::before whose mask carves out a
+ * 1px ring; an animated @property angle drives the rotation so only the
+ * gradient repaints, not layout. The ring respects `border-radius: inherit`,
+ * so any rounded host picks up the right curvature for free. Pair with a
+ * subtle background tint on the host so the highlight has something to ride
+ * on at low contrast. */
+@property --border-beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-beam-rotate {
+  to { --border-beam-angle: 360deg; }
+}
+
+.border-beam {
+  position: relative;
+}
+
+.border-beam::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--border-beam-angle),
+    transparent 0deg,
+    transparent 220deg,
+    #ffbe7b 245deg,
+    #ff777f 270deg,
+    #ff8ab4 295deg,
+    #a07cfe 320deg,
+    #5b9dff 345deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: border-beam-rotate 3.2s linear infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-beam::before {
+    animation: none;
+    background: linear-gradient(
+      90deg,
+      #ffbe7b,
+      #ff777f,
+      #ff8ab4,
+      #a07cfe,
+      #5b9dff
+    );
+  }
 }
 
 /* Sidebar: open triggers (dropdown/popover) get active background */

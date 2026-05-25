@@ -15,7 +15,7 @@ import (
 // tryResolveAppURL returns the app URL if configured, or "" if not available.
 // Unlike resolveAppURL, it never calls os.Exit.
 func tryResolveAppURL(cmd *cobra.Command) string {
-	for _, key := range []string{"MULTICACAN_APP_URL", "FRONTEND_ORIGIN"} {
+	for _, key := range []string{"MULTICA_APP_URL", "FRONTEND_ORIGIN"} {
 		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
 			return strings.TrimRight(val, "/")
 		}
@@ -31,12 +31,24 @@ func tryResolveAppURL(cmd *cobra.Command) string {
 var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Authenticate and set up workspaces",
-	Long:  "Log in to Multicacan, then automatically discover and watch all your workspaces.",
-	RunE:  runLogin,
+	Long:  "Log in to Multica, then automatically discover and watch all your workspaces.",
+	// Up to one positional is accepted so `--token mul_...` (space form) can
+	// recover the token in runAuthLogin even though pflag won't bind it.
+	Args: cobra.MaximumNArgs(1),
+	RunE: runLogin,
 }
 
+// tokenPromptSentinel is the value pflag assigns to `--token` when the flag
+// is supplied without an explicit value. runAuthLoginToken treats it as
+// "prompt me interactively", preserving the legacy `multica login --token`
+// no-value form alongside the documented `--token mul_...` value form.
+const tokenPromptSentinel = "\x00prompt"
+
 func init() {
-	loginCmd.Flags().Bool("token", false, "Authenticate by pasting a personal access token")
+	loginCmd.Flags().String("token", "", "Authenticate using a personal access token. Pass `--token mul_...` to supply it inline, or `--token` alone to be prompted interactively.")
+	// NoOptDefVal lets `--token` (no value) keep its old prompt-mode behavior
+	// while `--token mul_...` and `--token=mul_...` consume the value normally.
+	loginCmd.Flags().Lookup("token").NoOptDefVal = tokenPromptSentinel
 	loginCmd.Flags().String(callbackHostFlag, "", "Host the OAuth callback URL points at (auto-detected from the server's route when empty). Use this for reverse-proxy / FQDN setups where auto-detection picks the wrong interface.")
 }
 
@@ -49,11 +61,11 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	// Auto-discover and watch all workspaces.
 	if err := autoWatchWorkspaces(cmd); err != nil {
 		fmt.Fprintf(os.Stderr, "\nCould not auto-configure workspaces: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Run 'multicacan workspace list' and 'multicacan workspace watch <id>' to set up manually.\n")
+		fmt.Fprintf(os.Stderr, "Run 'multica workspace list' and 'multica workspace watch <id>' to set up manually.\n")
 		return nil
 	}
 
-	fmt.Fprintf(os.Stderr, "\n→ Run 'multicacan daemon start' to start your local agent runtime.\n")
+	fmt.Fprintf(os.Stderr, "\n→ Run 'multica daemon start' to start your local agent runtime.\n")
 	return nil
 }
 
@@ -105,7 +117,14 @@ func autoWatchWorkspaces(cmd *cobra.Command) error {
 
 	fmt.Fprintf(os.Stderr, "\nFound %d workspace(s):\n", len(workspaces))
 	for _, ws := range workspaces {
-		fmt.Fprintf(os.Stderr, "  • %s (%s)\n", ws.Name, ws.ID)
+		marker := "  "
+		if ws.ID == cfg.WorkspaceID {
+			marker = "* "
+		}
+		fmt.Fprintf(os.Stderr, "%s%s (%s)\n", marker, ws.Name, ws.ID)
+	}
+	if len(workspaces) > 1 {
+		fmt.Fprintln(os.Stderr, "\nUse 'multica workspace switch <id|slug>' to change the default workspace.")
 	}
 
 	return nil
@@ -122,7 +141,7 @@ func waitForWorkspaceCreation(cmd *cobra.Command, client *cli.APIClient) ([]stru
 		// No app URL available (e.g. token login without prior setup).
 		// Can't open the browser — tell the user to create a workspace manually.
 		fmt.Fprintln(os.Stderr, "\nNo workspaces found.")
-		fmt.Fprintln(os.Stderr, "Create a workspace in the web dashboard, then run 'multicacan login' again.")
+		fmt.Fprintln(os.Stderr, "Create a workspace in the web dashboard, then run 'multica login' again.")
 		return nil, nil
 	}
 

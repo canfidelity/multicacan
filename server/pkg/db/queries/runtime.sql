@@ -13,8 +13,8 @@ WHERE id = $1 AND workspace_id = $2;
 
 -- name: UpsertAgentRuntime :one
 -- (xmax = 0) AS inserted distinguishes a fresh insert (true) from an upsert
--- that updated an existing row (false). Analytics reads this to fire the
--- runtime_registered event only on first-time registration.
+-- that updated an existing row (false). Analytics reads this to fire
+-- runtime_registered/runtime_ready only on first-time registration.
 INSERT INTO agent_runtime (
     workspace_id,
     daemon_id,
@@ -39,7 +39,52 @@ DO UPDATE SET
     updated_at = now()
 RETURNING *, (xmax = 0) AS inserted;
 
--- name: UpdateAgentRuntimeHeartbeat :one
+-- name: UpdateAgentRuntimeVisibility :one
+-- Toggles a runtime between 'private' (only owner can bind agents) and
+-- 'public' (any workspace member can). Default for new rows is 'private'
+-- (see migration 083). Gated at the handler layer to owner / workspace
+-- admin only.
+UPDATE agent_runtime
+SET visibility = @visibility, updated_at = now()
+WHERE id = @id
+RETURNING *;
+
+
+-- name: TouchAgentRuntimeLastSeen :execrows
+-- Bumps last_seen_at on an already-online runtime. Deliberately does NOT
+-- touch status or updated_at: status is unchanged on the hot heartbeat path,
+-- and avoiding updated_at keeps the row HOT-eligible (no index columns
+-- change) and avoids invalidating any downstream consumer that watches
+-- updated_at.
+--
+-- The status='online' predicate is load-bearing: callers read rt.Status from
+-- a prior SELECT and may race with the sweeper, which can flip the row to
+-- offline between that SELECT and this UPDATE. Without the predicate this
+-- query would silently leave a freshly-heartbeated runtime stuck in offline.
+-- Returning affected rows lets callers detect that race and fall back to
+-- MarkAgentRuntimeOnline to flip the row back online.
+UPDATE agent_runtime
+SET last_seen_at = now()
+WHERE id = $1 AND status = 'online';
+
+-- name: TouchAgentRuntimesLastSeenBatch :execrows
+-- Bulk variant of TouchAgentRuntimeLastSeen used by the BatchedHeartbeatScheduler:
+-- coalesces N per-runtime "bump last_seen_at" requests into a single UPDATE so a
+-- fleet beating every 15s costs ~1 DB transaction per batch tick instead of N.
+--
+-- Same load-bearing predicate as the single-id form: status='online' avoids
+-- silently un-deleting a sweeper-flipped offline row, and we deliberately do
+-- NOT touch updated_at so the rows stay HOT-eligible. Affected-rows < len(ids)
+-- means some IDs raced to offline between Schedule and flush; their next beat
+-- will fall through the recordHeartbeat sync path and call MarkAgentRuntimeOnline.
+UPDATE agent_runtime
+SET last_seen_at = now()
+WHERE id = ANY(@ids::uuid[]) AND status = 'online';
+
+-- name: MarkAgentRuntimeOnline :one
+-- Used on the offline→online transition (and on first heartbeat after
+-- registration). Writes status, last_seen_at, and updated_at because the
+-- status flip is a real state change and we want updated_at to reflect it.
 UPDATE agent_runtime
 SET status = 'online', last_seen_at = now(), updated_at = now()
 WHERE id = $1
@@ -50,12 +95,33 @@ UPDATE agent_runtime
 SET status = 'offline', updated_at = now()
 WHERE id = $1;
 
--- name: MarkStaleRuntimesOffline :many
+-- name: SelectStaleOnlineRuntimes :many
+-- Lists online runtimes whose last_seen_at exceeds the stale window. The
+-- sweeper uses this as a candidate set, then optionally filters via the
+-- LivenessStore before flipping rows to offline (a fresh Redis liveness
+-- record means the DB row is just lagging, not actually dead).
+SELECT id, workspace_id, owner_id, daemon_id, provider FROM agent_runtime
+WHERE status = 'online'
+  AND last_seen_at < now() - make_interval(secs => @stale_seconds::double precision);
+
+-- name: MarkRuntimesOfflineByIDs :many
+-- Flips a known set of runtime IDs from online to offline. Paired with
+-- SelectStaleOnlineRuntimes in the sweeper so the candidate selection and
+-- the actual write are decoupled (the LivenessStore filter sits between).
+--
+-- Re-checks the stale predicate inside the UPDATE so a concurrent heartbeat
+-- between the SELECT (candidate gather), the LivenessStore filter, and this
+-- UPDATE cannot demote a runtime that just refreshed last_seen_at. The
+-- legacy MarkStaleRuntimesOffline UPDATE had this property implicitly
+-- because the predicate and the write lived in one statement; here we
+-- carry it forward explicitly so the SELECT/filter/UPDATE pipeline retains
+-- the same race-freedom.
 UPDATE agent_runtime
 SET status = 'offline', updated_at = now()
 WHERE status = 'online'
+  AND id = ANY(@ids::uuid[])
   AND last_seen_at < now() - make_interval(secs => @stale_seconds::double precision)
-RETURNING id, workspace_id;
+RETURNING id, workspace_id, owner_id, daemon_id, provider;
 
 -- name: FailTasksForOfflineRuntimes :many
 -- Marks dispatched/running tasks as failed when their runtime is offline.
@@ -74,6 +140,39 @@ SELECT * FROM agent_runtime
 WHERE workspace_id = $1 AND owner_id = $2
 ORDER BY created_at ASC;
 
+-- name: ForceOfflineRuntimesByIDs :many
+-- Unconditionally flips a known set of runtime IDs to offline. Distinct from
+-- MarkRuntimesOfflineByIDs (which keeps a stale-window predicate so the
+-- sweeper cannot demote a runtime that just heartbeated): this variant is
+-- used by intentional revocation paths — e.g. removing a workspace member —
+-- where the caller has already decided the runtime should be offline
+-- regardless of recent liveness.
+UPDATE agent_runtime
+SET status = 'offline', updated_at = now()
+WHERE id = ANY(@runtime_ids::uuid[]) AND status = 'online'
+RETURNING id, workspace_id, owner_id, daemon_id, provider;
+
+-- name: CancelAgentTasksByRuntimeOrAgent :many
+-- Cancels every active task that either lives on one of the given runtimes
+-- OR belongs to one of the given agents. Used by the member-revocation flow:
+-- the runtime-side covers tasks queued against the leaving member's runtimes;
+-- the agent-side covers tasks pinned to a different runtime that those agents
+-- left behind from a prior UpdateAgent (agent.runtime_id can change, but
+-- agent_task_queue.runtime_id does not get rewritten when it does, so a task
+-- queued on runtime A by agent X — later moved to runtime B — survives the
+-- runtime-only revoke and could still be claimed because ClaimAgentTask does
+-- not gate on agent.archived_at).
+--
+-- We use 'cancelled' rather than 'failed' so the daemon's per-task status
+-- poller (watchTaskCancellation) interrupts the running agent gracefully.
+-- Returns the affected rows so the caller can broadcast task:cancelled and
+-- reconcile per-agent status.
+UPDATE agent_task_queue
+SET status = 'cancelled', completed_at = now()
+WHERE (runtime_id = ANY(@runtime_ids::uuid[]) OR agent_id = ANY(@agent_ids::uuid[]))
+  AND status IN ('queued', 'dispatched', 'running')
+RETURNING *;
+
 -- name: DeleteAgentRuntime :exec
 DELETE FROM agent_runtime WHERE id = $1;
 
@@ -82,6 +181,25 @@ SELECT count(*) FROM agent WHERE runtime_id = $1 AND archived_at IS NULL;
 
 -- name: DeleteArchivedAgentsByRuntime :exec
 DELETE FROM agent WHERE runtime_id = $1 AND archived_at IS NOT NULL;
+
+-- name: PauseAutopilotsByAgentAssignees :exec
+-- Pauses every active autopilot whose agent assignee is in the supplied list.
+-- Called before hard-deleting archived agents on runtime teardown so the rows
+-- do not become dangling (autopilot.assignee_id no longer has an agent FK
+-- since migration 096). Status='paused' makes the breakage visible in the UI
+-- — operators can re-point the autopilot at a live agent or delete it —
+-- rather than silently piling skipped runs.
+UPDATE autopilot
+SET status = 'paused', updated_at = now()
+WHERE status = 'active'
+  AND assignee_type = 'agent'
+  AND assignee_id = ANY(@assignee_ids::uuid[]);
+
+-- name: ListArchivedAgentIDsByRuntime :many
+-- Companion to DeleteArchivedAgentsByRuntime: enumerates the archived agents
+-- about to be hard-deleted so the runtime teardown can pause autopilots that
+-- still point at them. Returns ids only — the caller only needs the set.
+SELECT id FROM agent WHERE runtime_id = $1 AND archived_at IS NOT NULL;
 
 -- name: FindLegacyRuntimesByDaemonID :many
 -- Looks up runtime rows keyed on a prior (hostname-derived) daemon_id. Used

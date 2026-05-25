@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Multicacancan installer — installs the CLI and optionally provisions a self-host server.
+# Multica installer — installs the CLI and optionally provisions a self-host server.
 #
 # Install / upgrade CLI only:
 #   curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash
@@ -7,7 +7,7 @@
 # Install CLI + provision self-host server:
 #   curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash -s -- --with-server
 #
-# After installation, run `multicacan setup` to configure your environment.
+# After installation, run `multica setup` to configure your environment.
 #
 set -euo pipefail
 
@@ -16,8 +16,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 REPO_URL="https://github.com/canfidelity/multicacan.git"
 REPO_WEB_URL="https://github.com/canfidelity/multicacan"  # without .git, for GitHub web APIs
-INSTALL_DIR="${MULTICACAN_INSTALL_DIR:-$HOME/.multicacan/server}"
-BREW_PACKAGE="multicacan"
+INSTALL_DIR="${MULTICA_INSTALL_DIR:-$HOME/.multica/server}"
+BREW_PACKAGE="canfidelity/tap/multica"
 
 # Colors (disabled when not a terminal)
 if [ -t 1 ] || [ -t 2 ]; then
@@ -41,6 +41,46 @@ fail()  { printf "${BOLD}${RED}✗ %s${RESET}\n" "$*" >&2; exit 1; }
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
+env_file_value() {
+  local file="$1"
+  local key="$2"
+  local default="$3"
+  local line value
+  line="$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1 || true)"
+  if [ -z "$line" ]; then
+    printf "%s" "$default"
+    return
+  fi
+  value="${line#*=}"
+  value="${value%$'\r'}"
+  value="${value%\"}"
+  value="${value#\"}"
+  value="${value%\'}"
+  value="${value#\'}"
+  if [ -z "$value" ]; then
+    printf "%s" "$default"
+  else
+    printf "%s" "$value"
+  fi
+}
+
+selfhost_backend_port() {
+  local file="${1:-.env}"
+  local value
+  for key in BACKEND_PORT API_PORT SERVER_PORT PORT; do
+    value="$(env_file_value "$file" "$key" "")"
+    if [ -n "$value" ]; then
+      printf "%s" "$value"
+      return
+    fi
+  done
+  printf "8080"
+}
+
+selfhost_frontend_port() {
+  env_file_value "${1:-.env}" "FRONTEND_PORT" "3000"
+}
+
 detect_os() {
   case "$(uname -s)" in
     Darwin) OS="darwin" ;;
@@ -48,7 +88,7 @@ detect_os() {
     MINGW*|MSYS*|CYGWIN*)
             fail "This script does not support Windows. Use the PowerShell installer instead:
   irm https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.ps1 | iex" ;;
-    *)      fail "Unsupported operating system: $(uname -s). Multicacancan supports macOS, Linux, and Windows." ;;
+    *)      fail "Unsupported operating system: $(uname -s). Multica supports macOS, Linux, and Windows." ;;
   esac
 
   ARCH="$(uname -m)"
@@ -63,25 +103,43 @@ detect_os() {
 # ---------------------------------------------------------------------------
 # CLI Installation
 # ---------------------------------------------------------------------------
+_dump_brew_log() {
+  local log="$1"
+  if [ -s "$log" ]; then
+    warn "Homebrew output (last 80 lines):"
+    tail -n 80 "$log" | sed 's/^/  /' >&2
+  fi
+}
+
 install_cli_brew() {
-  info "Installing Multicacancan CLI via Homebrew..."
-  if ! brew tap multicacan 2>/dev/null; then
-    fail "Failed to add Homebrew tap. Check your network connection."
+  info "Installing Multica CLI via Homebrew..."
+  local brew_log
+  brew_log=$(mktemp)
+  if ! brew tap canfidelity/tap >"$brew_log" 2>&1; then
+    warn "Failed to add Homebrew tap. Falling back to GitHub Releases binary install."
+    _dump_brew_log "$brew_log"
+    rm -f "$brew_log"
+    return 1
   fi
   # brew install exits non-zero if already installed on older Homebrew versions
-  if ! brew install "$BREW_PACKAGE" 2>/dev/null; then
+  if ! brew install "$BREW_PACKAGE" >"$brew_log" 2>&1; then
     if brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
-      ok "Multicacancan CLI already installed via Homebrew"
+      rm -f "$brew_log"
+      ok "Multica CLI already installed via Homebrew"
     else
-      fail "Failed to install multicacan via Homebrew."
+      warn "Failed to install multica via Homebrew. Falling back to GitHub Releases binary install."
+      _dump_brew_log "$brew_log"
+      rm -f "$brew_log"
+      return 1
     fi
   else
-    ok "Multicacancan CLI installed via Homebrew"
+    rm -f "$brew_log"
+    ok "Multica CLI installed via Homebrew"
   fi
 }
 
 install_cli_binary() {
-  info "Installing Multicacancan CLI from GitHub Releases..."
+  info "Installing Multica CLI from GitHub Releases..."
 
   # Get latest release tag
   local latest
@@ -91,29 +149,30 @@ install_cli_binary() {
   fi
 
   local version="${latest#v}"
-  local url="https://github.com/canfidelity/multicacan/releases/download/${latest}/multicacan-cli-${version}-${OS}-${ARCH}.tar.gz"
+  local url="https://github.com/canfidelity/multicacan/releases/download/${latest}/multica-cli-${version}-${OS}-${ARCH}.tar.gz"
   local tmp_dir
   tmp_dir=$(mktemp -d)
 
   info "Downloading $url ..."
-  if ! curl -fsSL "$url" -o "$tmp_dir/multicacan.tar.gz"; then
+  if ! curl -fsSL "$url" -o "$tmp_dir/multica.tar.gz"; then
     rm -rf "$tmp_dir"
     fail "Failed to download CLI binary."
   fi
 
-  tar -xzf "$tmp_dir/multicacan.tar.gz" -C "$tmp_dir" multicacan
+  tar -xzf "$tmp_dir/multica.tar.gz" -C "$tmp_dir" multica
 
-  # Try /usr/local/bin first, fall back to ~/.local/bin
-  local bin_dir="/usr/local/bin"
+  # Try /usr/local/bin first, fall back to ~/.local/bin. Tests and scripted
+  # installs can override the first choice with MULTICA_BIN_DIR.
+  local bin_dir="${MULTICA_BIN_DIR:-/usr/local/bin}"
   if [ -w "$bin_dir" ]; then
-    mv "$tmp_dir/multicacan" "$bin_dir/multicacan"
+    mv "$tmp_dir/multica" "$bin_dir/multica"
   elif command_exists sudo; then
-    sudo mv "$tmp_dir/multicacan" "$bin_dir/multicacan"
+    sudo mv "$tmp_dir/multica" "$bin_dir/multica"
   else
     bin_dir="$HOME/.local/bin"
     mkdir -p "$bin_dir"
-    mv "$tmp_dir/multicacan" "$bin_dir/multicacan"
-    chmod +x "$bin_dir/multicacan"
+    mv "$tmp_dir/multica" "$bin_dir/multica"
+    chmod +x "$bin_dir/multica"
     # Add to PATH if not already there
     if ! echo "$PATH" | tr ':' '\n' | grep -q "^$bin_dir$"; then
       export PATH="$bin_dir:$PATH"
@@ -122,7 +181,7 @@ install_cli_binary() {
   fi
 
   rm -rf "$tmp_dir"
-  ok "Multicacancan CLI installed to $bin_dir/multicacan"
+  ok "Multica CLI installed to $bin_dir/multica"
 }
 
 add_to_path() {
@@ -130,7 +189,7 @@ add_to_path() {
   local line="export PATH=\"$dir:\$PATH\""
   for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
     if [ -f "$rc" ] && ! grep -qF "$dir" "$rc"; then
-      printf '\n# Added by Multicacancan installer\n%s\n' "$line" >> "$rc"
+      printf '\n# Added by Multica installer\n%s\n' "$line" >> "$rc"
     fi
   done
 }
@@ -141,8 +200,8 @@ get_latest_version() {
 }
 
 get_selfhost_ref() {
-  if [ -n "${MULTICACAN_SELFHOST_REF:-}" ]; then
-    printf '%s' "$MULTICACAN_SELFHOST_REF"
+  if [ -n "${MULTICA_SELFHOST_REF:-}" ]; then
+    printf '%s' "$MULTICA_SELFHOST_REF"
     return
   fi
 
@@ -190,21 +249,21 @@ pull_official_selfhost_images() {
 }
 
 upgrade_cli_brew() {
-  info "Upgrading Multicacancan CLI via Homebrew..."
+  info "Upgrading Multica CLI via Homebrew..."
   brew update 2>/dev/null || true
   if brew upgrade "$BREW_PACKAGE" 2>/dev/null; then
-    ok "Multicacancan CLI upgraded via Homebrew"
+    ok "Multica CLI upgraded via Homebrew"
   else
     # brew upgrade exits non-zero if already up to date
-    ok "Multicacancan CLI is already the latest version"
+    ok "Multica CLI is already the latest version"
   fi
 }
 
 install_cli() {
-  if command_exists multicacan; then
+  if command_exists multica; then
     local current_ver
-    # `multicacan version` outputs "multicacan v0.1.13 (commit: abc1234)" — extract just the version
-    current_ver=$(multicacan version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    # `multica version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
+    current_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
 
     local latest_ver
     latest_ver=$(get_latest_version)
@@ -214,11 +273,11 @@ install_cli() {
     local latest_cmp="${latest_ver#v}"
 
     if [ -z "$latest_ver" ] || [ "$current_cmp" = "$latest_cmp" ]; then
-      ok "Multicacancan CLI is up to date ($current_ver)"
+      ok "Multica CLI is up to date ($current_ver)"
       return 0
     fi
 
-    info "Multicacancan CLI $current_ver installed, latest is $latest_ver — upgrading..."
+    info "Multica CLI $current_ver installed, latest is $latest_ver — upgrading..."
     if command_exists brew && brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
       upgrade_cli_brew
     else
@@ -226,19 +285,19 @@ install_cli() {
     fi
 
     local new_ver
-    new_ver=$(multicacan version 2>/dev/null | awk '{print $2}' || echo "unknown")
-    ok "Multicacancan CLI upgraded ($current_ver → $new_ver)"
+    new_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    ok "Multica CLI upgraded ($current_ver → $new_ver)"
     return 0
   fi
 
   if command_exists brew; then
-    install_cli_brew
+    install_cli_brew || install_cli_binary
   else
     install_cli_binary
   fi
 
   # Verify
-  if ! command_exists multicacan; then
+  if ! command_exists multica; then
     fail "CLI installed but 'multicacan' not found on PATH. You may need to restart your shell."
   fi
 }
@@ -249,7 +308,7 @@ install_cli() {
 check_docker() {
   if ! command_exists docker; then
     printf "\n"
-    fail "Docker is not installed. Multicacancan self-hosting requires Docker and Docker Compose.
+    fail "Docker is not installed. Multica self-hosting requires Docker and Docker Compose.
 
 Install Docker:
   macOS:  https://docs.docker.com/desktop/install/mac-install/
@@ -269,7 +328,7 @@ After installing Docker, re-run this script with --with-server."
 # Server setup (self-host / --with-server)
 # ---------------------------------------------------------------------------
 setup_server() {
-  info "Setting up Multicacancan server..."
+  info "Setting up Multica server..."
   local server_ref
   server_ref=$(get_selfhost_ref)
   info "Using self-host assets from ${server_ref}..."
@@ -278,7 +337,7 @@ setup_server() {
     info "Updating existing installation at $INSTALL_DIR..."
     cd "$INSTALL_DIR"
   else
-    info "Cloning Multicacancan repository..."
+    info "Cloning Multica repository..."
     if ! command_exists git; then
       fail "Git is not installed. Please install git and re-run."
     fi
@@ -313,16 +372,18 @@ setup_server() {
   fi
 
   # Start Docker Compose
-  info "Pulling Multicacancan images..."
+  info "Pulling official Multica images..."
   pull_official_selfhost_images
-  info "Starting Multicacancan services (this may take a few minutes on first run)..."
+  info "Starting Multica services (this may take a few minutes on first run)..."
   docker compose -f docker-compose.selfhost.yml up -d
 
   # Wait for health check
   info "Waiting for backend to be ready..."
+  local backend_port
+  backend_port="$(selfhost_backend_port .env)"
   local ready=false
   for i in $(seq 1 45); do
-    if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    if curl -sf "http://localhost:${backend_port}/health" >/dev/null 2>&1; then
       ready=true
       break
     fi
@@ -330,7 +391,7 @@ setup_server() {
   done
 
   if [ "$ready" = true ]; then
-    ok "Multicacancan server is running"
+    ok "Multica server is running"
   else
     warn "Server is still starting. You can check logs with:"
     echo "  cd $INSTALL_DIR && docker compose -f docker-compose.selfhost.yml logs"
@@ -344,7 +405,7 @@ setup_server() {
 # ---------------------------------------------------------------------------
 run_default() {
   printf "\n"
-  printf "${BOLD}  Multicacancan — Installer${RESET}\n"
+  printf "${BOLD}  Multica — Installer${RESET}\n"
   printf "\n"
 
   detect_os
@@ -352,13 +413,13 @@ run_default() {
 
   printf "\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-  printf "${BOLD}${GREEN}  ✓ Multicacancan CLI is ready!${RESET}\n"
+  printf "${BOLD}${GREEN}  ✓ Multica CLI is ready!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
   printf "  ${BOLD}Next: configure your environment${RESET}\n"
   printf "\n"
-  printf "     ${CYAN}multicacan setup${RESET}                # Connect to Multicacancan\n"
-  printf "     ${CYAN}multicacan setup self-host${RESET}       # Connect to a self-hosted server\n"
+  printf "     ${CYAN}multica setup${RESET}                # Connect to Multica Cloud (multica.ai)\n"
+  printf "     ${CYAN}multica setup self-host${RESET}       # Connect to a self-hosted server\n"
   printf "\n"
   printf "  ${BOLD}Self-hosting?${RESET} Install the server first:\n"
   printf "     curl -fsSL https://raw.githubusercontent.com/canfidelity/multicacan/main/scripts/install.sh | bash -s -- --with-server\n"
@@ -370,7 +431,7 @@ run_default() {
 # ---------------------------------------------------------------------------
 run_with_server() {
   printf "\n"
-  printf "${BOLD}  Multicacancan — Self-Host Installer${RESET}\n"
+  printf "${BOLD}  Multica — Self-Host Installer${RESET}\n"
   printf "  Provisioning server infrastructure + installing CLI\n"
   printf "\n"
 
@@ -381,16 +442,19 @@ run_with_server() {
 
   printf "\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-  printf "${BOLD}${GREEN}  ✓ Multicacancan server is running and CLI is ready!${RESET}\n"
+  printf "${BOLD}${GREEN}  ✓ Multica server is running and CLI is ready!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
-  printf "  ${BOLD}Frontend:${RESET}  http://localhost:3000\n"
-  printf "  ${BOLD}Backend:${RESET}   http://localhost:8080\n"
+  local frontend_port backend_port
+  frontend_port="$(selfhost_frontend_port "$INSTALL_DIR/.env")"
+  backend_port="$(selfhost_backend_port "$INSTALL_DIR/.env")"
+  printf "  ${BOLD}Frontend:${RESET}  http://localhost:%s\n" "$frontend_port"
+  printf "  ${BOLD}Backend:${RESET}   http://localhost:%s\n" "$backend_port"
   printf "  ${BOLD}Server at:${RESET} %s\n" "$INSTALL_DIR"
   printf "\n"
   printf "  ${BOLD}Next: configure your CLI to connect${RESET}\n"
   printf "\n"
-  printf "     ${CYAN}multicacan setup self-host${RESET}   # Configure + authenticate + start daemon\n"
+  printf "     ${CYAN}multica setup self-host${RESET}   # Configure + authenticate + start daemon\n"
   printf "\n"
   printf "  ${BOLD}Login:${RESET} configure ${CYAN}RESEND_API_KEY${RESET} in .env for email codes,\n"
   printf "  or read the generated code from backend logs when Resend is unset.\n"
@@ -405,7 +469,7 @@ run_with_server() {
 # ---------------------------------------------------------------------------
 run_stop() {
   printf "\n"
-  info "Stopping Multicacancan services..."
+  info "Stopping Multica services..."
 
   if [ -d "$INSTALL_DIR" ]; then
     cd "$INSTALL_DIR"
@@ -416,11 +480,11 @@ run_stop() {
       warn "No docker-compose.selfhost.yml found at $INSTALL_DIR"
     fi
   else
-    warn "No Multicacancan installation found at $INSTALL_DIR"
+    warn "No Multica installation found at $INSTALL_DIR"
   fi
 
-  if command_exists multicacan; then
-    multicacan daemon stop 2>/dev/null && ok "Daemon stopped" || true
+  if command_exists multica; then
+    multica daemon stop 2>/dev/null && ok "Daemon stopped" || true
   fi
 
   printf "\n"
@@ -440,11 +504,20 @@ main() {
       --help|-h)
         echo "Usage: install.sh [--with-server | --stop]"
         echo ""
-        echo "  (default)       Install / upgrade the Multicacancan CLI"
+        echo "  (default)       Install / upgrade the Multica CLI"
         echo "  --with-server   Install CLI + provision a self-host server (Docker)"
         echo "  --stop          Stop a self-hosted installation"
         echo ""
-        echo "After installation, run 'multicacan setup' to configure your environment."
+        echo "Environment variables:"
+        echo "  MULTICA_INSTALL_DIR   Self-host server install directory"
+        echo "                        (default: \$HOME/.multica/server)"
+        echo "  MULTICA_BIN_DIR       Target directory for the CLI binary when"
+        echo "                        installing from GitHub Releases"
+        echo "                        (default: /usr/local/bin, then \$HOME/.local/bin)"
+        echo "  MULTICA_SELFHOST_REF  Git ref to check out for self-host assets"
+        echo "                        (default: latest release tag, falling back to main)"
+        echo ""
+        echo "After installation, run 'multica setup' to configure your environment."
         exit 0
         ;;
       *) warn "Unknown option: $1" ;;

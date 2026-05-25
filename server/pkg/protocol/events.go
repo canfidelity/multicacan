@@ -122,4 +122,9 @@ const (
 	EventPullRequestLinked         = "pull_request:linked"
 	EventPullRequestUpdated        = "pull_request:updated"
 	EventPullRequestUnlinked       = "pull_request:unlinked"
+
+	// Pair programming events
+	EventPairStarted    = "pair:started"
+	EventPairEnded      = "pair:ended"
+	EventPairSuggestion = "pair:suggestion"
 )

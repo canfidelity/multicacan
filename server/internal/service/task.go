@@ -2235,3 +2235,66 @@ func agentToMap(a db.Agent) map[string]any {
 		"archived_by":          util.UUIDToPtr(a.ArchivedBy),
 	}
 }
+
+const maxHandoffDepth = 10
+
+// HandoffTask registers a pending handoff from taskID to the named or UUID-identified agent.
+// The handoff is consumed (new task created) when CompleteTask fires for the source task.
+func (s *TaskService) HandoffTask(ctx context.Context, taskID pgtype.UUID, to string, handoffCtx string) (db.TaskHandoff, error) {
+	task, err := s.Queries.GetAgentTask(ctx, taskID)
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("get task: %w", err)
+	}
+
+	if task.HandoffDepth >= maxHandoffDepth {
+		return db.TaskHandoff{}, fmt.Errorf("handoff chain limit (%d) reached", maxHandoffDepth)
+	}
+
+	// Resolve target agent: try UUID first, then name lookup in the task's workspace.
+	var targetAgent db.Agent
+	if agentUUID, parseErr := util.ParseUUID(to); parseErr == nil {
+		targetAgent, err = s.Queries.GetAgentInWorkspace(ctx, db.GetAgentInWorkspaceParams{
+			ID:          agentUUID,
+			WorkspaceID: task.AgentID, // reuse field below - corrected
+		})
+		if err != nil {
+			return db.TaskHandoff{}, fmt.Errorf("agent not found: %w", err)
+		}
+	} else {
+		ws, wsErr := s.Queries.GetAgentTask(ctx, taskID)
+		if wsErr != nil {
+			return db.TaskHandoff{}, fmt.Errorf("get task workspace: %w", wsErr)
+		}
+		// Get workspace_id from the issue linked to the task.
+		issue, issueErr := s.Queries.GetIssue(ctx, ws.IssueID)
+		if issueErr != nil {
+			return db.TaskHandoff{}, fmt.Errorf("get issue: %w", issueErr)
+		}
+		targetAgent, err = s.Queries.GetAgentByNameInWorkspace(ctx, db.GetAgentByNameInWorkspaceParams{
+			WorkspaceID: issue.WorkspaceID,
+			Name:        to,
+		})
+		if err != nil {
+			return db.TaskHandoff{}, fmt.Errorf("agent %q not found in workspace: %w", to, err)
+		}
+	}
+
+	issue, err := s.Queries.GetIssue(ctx, task.IssueID)
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("get issue: %w", err)
+	}
+
+	handoff, err := s.Queries.CreateTaskHandoff(ctx, db.CreateTaskHandoffParams{
+		FromTaskID:  taskID,
+		ToAgentID:   targetAgent.ID,
+		WorkspaceID: issue.WorkspaceID,
+		IssueID:     task.IssueID,
+		Context:     handoffCtx,
+		Depth:       task.HandoffDepth + 1,
+	})
+	if err != nil {
+		return db.TaskHandoff{}, fmt.Errorf("create handoff: %w", err)
+	}
+
+	return handoff, nil
+}

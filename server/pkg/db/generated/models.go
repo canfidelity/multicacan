@@ -96,6 +96,20 @@ type AgentTaskQueue struct {
 	TriggerSummary    pgtype.Text        `json:"trigger_summary"`
 	ForceFreshSession bool               `json:"force_fresh_session"`
 	IsLeaderTask      bool               `json:"is_leader_task"`
+	HandoffContext    string             `json:"handoff_context"`
+	HandoffDepth      int32              `json:"handoff_depth"`
+}
+
+type TaskHandoff struct {
+	ID          pgtype.UUID        `json:"id"`
+	FromTaskID  pgtype.UUID        `json:"from_task_id"`
+	ToAgentID   pgtype.UUID        `json:"to_agent_id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	Context     string             `json:"context"`
+	Depth       int32              `json:"depth"`
+	Consumed    bool               `json:"consumed"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type Attachment struct {
@@ -651,6 +665,53 @@ type Workspace struct {
 	Repos        []byte             `json:"repos"`
 	IssuePrefix  string             `json:"issue_prefix"`
 	IssueCounter int32              `json:"issue_counter"`
+}
+
+type PairIntervention struct {
+	ID        pgtype.UUID        `json:"id"`
+	SessionID pgtype.UUID        `json:"session_id"`
+	IssueID   pgtype.UUID        `json:"issue_id"`
+	Content   string             `json:"content"`
+	Consumed  bool               `json:"consumed"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PairSession struct {
+	ID           pgtype.UUID        `json:"id"`
+	WorkspaceID  pgtype.UUID        `json:"workspace_id"`
+	IssueID      pgtype.UUID        `json:"issue_id"`
+	AgentID      pgtype.UUID        `json:"agent_id"`
+	StartedBy    pgtype.UUID        `json:"started_by"`
+	RuntimeID    pgtype.UUID        `json:"runtime_id"`
+	Status       string             `json:"status"`
+	WorkDir      pgtype.Text        `json:"work_dir"`
+	LastDiffHash pgtype.Text        `json:"last_diff_hash"`
+	Intervene    bool               `json:"intervene"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	EndedAt      pgtype.Timestamptz `json:"ended_at"`
+}
+
+type PairSuggestion struct {
+	ID            pgtype.UUID        `json:"id"`
+	PairSessionID pgtype.UUID        `json:"pair_session_id"`
+	DiffSnippet   string             `json:"diff_snippet"`
+	Content       string             `json:"content"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type WorkspaceAsset struct {
+	ID             pgtype.UUID        `json:"id"`
+	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
+	Name           string             `json:"name"`
+	Description    string             `json:"description"`
+	Tags           []string           `json:"tags"`
+	Url            string             `json:"url"`
+	ContentType    string             `json:"content_type"`
+	SizeBytes      int64              `json:"size_bytes"`
+	UploadedByType string             `json:"uploaded_by_type"`
+	UploadedByID   pgtype.UUID        `json:"uploaded_by_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type WorkspaceInvitation struct {

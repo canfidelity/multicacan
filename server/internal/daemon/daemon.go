@@ -131,6 +131,9 @@ type Daemon struct {
 	activeEnvRootsMu sync.Mutex
 	activeEnvRoots   map[string]int // env root path -> reference count (handles reuse paths marked twice)
 
+	activeTaskWorkDirsMu sync.RWMutex
+	activeTaskWorkDirs   map[string]string // issueID -> active task work_dir (cleared on task completion)
+
 	// bgSyncs tracks background goroutines started by registerTaskRepos so
 	// callers (notably tests using t.TempDir-backed cache roots) can wait for
 	// them to drain before tearing the daemon down. Without this the bg
@@ -164,6 +167,7 @@ func New(cfg Config, logger *slog.Logger) *Daemon {
 		agentVersions:             make(map[string]string),
 		wsHBLastAck:               make(map[string]time.Time),
 		activeEnvRoots:            make(map[string]int),
+		activeTaskWorkDirs:        make(map[string]string),
 		runtimeGoneInflight:       make(map[string]struct{}),
 		reregisterNextAttempt:     make(map[string]time.Time),
 		reregisterLastCompletedAt: make(map[string]time.Time),
@@ -691,6 +695,16 @@ func (d *Daemon) allRuntimeIDs() []string {
 	var ids []string
 	for _, ws := range d.workspaces {
 		ids = append(ids, ws.runtimeIDs...)
+	}
+	return ids
+}
+
+func (d *Daemon) allWorkspaceIDs() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	ids := make([]string, 0, len(d.workspaces))
+	for id := range d.workspaces {
+		ids = append(ids, id)
 	}
 	return ids
 }

@@ -477,3 +477,38 @@ func (c *Client) getJSON(ctx context.Context, path string, respBody any) error {
 	}
 	return json.NewDecoder(resp.Body).Decode(respBody)
 }
+
+// PairSession is the daemon-side view of an active pair programming session.
+type PairSession struct {
+	ID           string  `json:"id"`
+	IssueID      string  `json:"issue_id"`
+	AgentID      string  `json:"agent_id"`
+	RuntimeID    string  `json:"runtime_id"`
+	WorkDir      *string `json:"work_dir"`
+	TaskWorkDir  string  `json:"task_work_dir"`
+	LastDiffHash *string `json:"last_diff_hash"`
+	Intervene    bool    `json:"intervene"`
+}
+
+func (c *Client) ListActivePairSessions(ctx context.Context, runtimeID string) ([]PairSession, error) {
+	var sessions []PairSession
+	if err := c.getJSON(ctx, "/api/daemon/pair-sessions?runtime_id="+runtimeID, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+func (c *Client) ClaimPairSession(ctx context.Context, sessionID, workDir string) error {
+	body := map[string]string{"work_dir": workDir}
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/claim", body, nil)
+}
+
+func (c *Client) PostPairSuggestion(ctx context.Context, sessionID, diff, content, diffHash string) error {
+	body := map[string]string{"diff_snippet": diff, "content": content, "diff_hash": diffHash}
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/suggestions", body, nil)
+}
+
+func (c *Client) PostPairIntervention(ctx context.Context, sessionID, issueID, content string) error {
+	body := map[string]string{"issue_id": issueID, "content": content}
+	return c.postJSON(ctx, "/api/daemon/pair-sessions/"+sessionID+"/interventions", body, nil)
+}

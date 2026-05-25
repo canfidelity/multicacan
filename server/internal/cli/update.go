@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -343,4 +344,47 @@ func extractBinaryFromZip(r io.Reader, name string) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("binary %q not found in archive", name)
+}
+
+var reReleaseVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
+
+// IsReleaseVersion returns true if s is a clean semver tag (x.y.z or vx.y.z).
+func IsReleaseVersion(s string) bool {
+	return reReleaseVersion.MatchString(strings.TrimSpace(s))
+}
+
+// IsNewerVersion returns true if latest is a higher semver than current.
+// Returns false if either string is not a clean release version.
+func IsNewerVersion(latest, current string) bool {
+	l := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(latest), "v"))
+	c := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(current), "v"))
+	if !reReleaseVersion.MatchString(l) || !reReleaseVersion.MatchString(c) {
+		return false
+	}
+	var lMaj, lMin, lPatch int
+	var cMaj, cMin, cPatch int
+	if _, err := fmt.Sscanf(l, "%d.%d.%d", &lMaj, &lMin, &lPatch); err != nil {
+		return false
+	}
+	if _, err := fmt.Sscanf(c, "%d.%d.%d", &cMaj, &cMin, &cPatch); err != nil {
+		return false
+	}
+	if lMaj != cMaj {
+		return lMaj > cMaj
+	}
+	if lMin != cMin {
+		return lMin > cMin
+	}
+	return lPatch > cPatch
+}
+
+// MatchKnownBrewPrefix checks if path is under a known Homebrew prefix and
+// returns that prefix, or empty string if not matched.
+func MatchKnownBrewPrefix(path string) string {
+	for _, prefix := range []string{"/opt/homebrew", "/usr/local", "/home/linuxbrew/.linuxbrew"} {
+		if strings.HasPrefix(path, prefix+"/") {
+			return prefix
+		}
+	}
+	return ""
 }

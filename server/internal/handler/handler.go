@@ -105,6 +105,9 @@ type Handler struct {
 	WebhookRateLimiter    WebhookRateLimiter
 	WebhookIPRateLimiter  WebhookRateLimiter
 	CloudRuntime          cloudRuntimeProxy
+	NativeIDERelays       *NativeIDERelayHub
+	SimulatorRelays       *SimulatorRelayHub
+	WebPreviewRelays      *WebPreviewRelayHub
 	cfg                   Config
 }
 
@@ -150,7 +153,10 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 			BaseURL: cfg.CloudRuntimeFleetURL,
 			Timeout: cfg.CloudRuntimeFleetTimeout,
 		}),
-		cfg: cfg,
+		NativeIDERelays:  NewNativeIDERelayHub(),
+		SimulatorRelays:  NewSimulatorRelayHub(),
+		WebPreviewRelays: NewWebPreviewRelayHub(),
+		cfg:              cfg,
 	}
 }
 

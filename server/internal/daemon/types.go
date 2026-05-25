@@ -80,7 +80,10 @@ type Task struct {
 	// agent never sees the daemon's own (often workspace-owner) credential.
 	// Empty when the server-side runtime has no owning user — the daemon
 	// then falls back to its own token. See MUL-2600.
-	AuthToken string `json:"auth_token,omitempty"`
+	AuthToken            string   `json:"auth_token,omitempty"`
+	HandoffContext       string   `json:"handoff_context,omitempty"`
+	HandoffDepth         int32    `json:"handoff_depth,omitempty"`
+	PendingInterventions []string `json:"pending_interventions,omitempty"`
 }
 
 // ChatAttachmentMeta is the structured attachment metadata the daemon

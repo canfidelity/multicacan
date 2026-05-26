@@ -331,3 +331,52 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 		)
 	}
 }
+
+// triggerProjectSquadLeaderForReview re-triggers the squad leader when an issue
+// moves to in_review. This closes the feedback loop that was missing: agents
+// finish work → issue goes in_review → leader reviews and drives the next step.
+//
+// Two paths:
+//   - Issue is squad-assigned → leader can review it directly.
+//   - Issue is agent-assigned in a running project → find the project's squad
+//     and trigger its leader so it can review and continue the project loop.
+func (h *Handler) triggerProjectSquadLeaderForReview(ctx context.Context, issue db.Issue) {
+	// Squad-assigned: the squad owns this issue, trigger its leader directly.
+	if issue.AssigneeType.String == "squad" && issue.AssigneeID.Valid {
+		h.enqueueSquadLeaderTask(ctx, issue, pgtype.UUID{}, "system", "")
+		return
+	}
+
+	// Agent-assigned in a project: only continue if the project is running.
+	if !issue.ProjectID.Valid {
+		return
+	}
+	project, err := h.Queries.GetProject(ctx, issue.ProjectID)
+	if err != nil || project.ExecutionStatus != "running" {
+		return
+	}
+
+	squadID, err := h.Queries.GetFirstProjectSquad(ctx, issue.ProjectID)
+	if err != nil {
+		return
+	}
+	squad, err := h.Queries.GetSquad(ctx, squadID)
+	if err != nil {
+		return
+	}
+
+	hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
+		IssueID: issue.ID,
+		AgentID: squad.LeaderID,
+	})
+	if err != nil || hasPending {
+		return
+	}
+
+	if _, err := h.TaskService.EnqueueTaskForSquadLeader(ctx, issue, squad.LeaderID, pgtype.UUID{}); err != nil {
+		slog.Warn("roadmap: failed to trigger project squad leader for review",
+			"issue_id", uuidToString(issue.ID),
+			"squad_id", uuidToString(squad.ID),
+			"error", err)
+	}
+}

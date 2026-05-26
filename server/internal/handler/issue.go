@@ -2280,6 +2280,13 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		go h.TriggerNextMilestone(r.Context(), issue.ID)
 	}
 
+	// Autonomous loop: when an issue moves to in_review, re-trigger the squad
+	// leader so it can review completed work and drive the next step. Without
+	// this, agent tasks complete but the project loop never continues.
+	if statusChanged && issue.Status == "in_review" && issue.ProjectID.Valid {
+		go h.triggerProjectSquadLeaderForReview(r.Context(), issue)
+	}
+
 	// Platform-driven parent notification: when this issue transitions into
 	// `done` and has a parent, post a top-level system comment on the parent
 	// (MUL-2538 — replaces the agent-prompt rule that caused self-mention
@@ -2718,6 +2725,13 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		// Cancel active tasks when the issue is cancelled by a user.
 		if statusChanged && issue.Status == "cancelled" {
 			h.TaskService.CancelTasksForIssue(r.Context(), issue.ID)
+		}
+
+		if statusChanged && issue.Status == "done" {
+			go h.TriggerNextMilestone(r.Context(), issue.ID)
+		}
+		if statusChanged && issue.Status == "in_review" && issue.ProjectID.Valid {
+			go h.triggerProjectSquadLeaderForReview(r.Context(), issue)
 		}
 
 		// Platform-driven parent notification, mirrored from UpdateIssue

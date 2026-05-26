@@ -298,6 +298,28 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 		r.Post("/runtimes/{runtimeId}/recover-orphans", h.RecoverOrphanedTasks)
 		r.Post("/tasks/{taskId}/session", h.PinTaskSession)
+		r.Post("/tasks/{taskId}/handoff", h.DaemonHandoffTask)
+
+		// Live Pair Programming — daemon side
+		r.Get("/runtimes/{runtimeId}/pair-sessions", h.DaemonListActivePairSessions)
+		r.Post("/pair-sessions/{sessionId}/claim", h.DaemonClaimPairSession)
+		r.Get("/pair-sessions/{sessionId}/suggestions", h.ListPairSuggestions)
+		r.Post("/pair-sessions/{sessionId}/suggestions", h.DaemonPostPairSuggestion)
+		r.Post("/pair-sessions/{sessionId}/intervention", h.DaemonPostPairIntervention)
+		r.Post("/issues/{issueId}/interventions/consume", h.DaemonConsumeIssueInterventions)
+	})
+
+	// Simulator relay registration: a Mac Mini daemon opens an outbound
+	// WebSocket here so this VPS can tunnel iOS simulator frames to a
+	// browser anywhere. Authentication uses the same DaemonAuth middleware
+	// as the rest of /api/daemon — applied via the inline group below
+	// rather than the route block above so we can keep the URL flat
+	// (/api/simulator/relay) for the front-end and CLI to consume.
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.DaemonAuth(queries, patCache, daemonTokenCache))
+		r.Get("/api/simulator/relay", h.SimulatorRelayRegister)
+		r.Get("/api/webpreview/relay", h.WebPreviewRelayRegister)
+		r.Get("/api/native-ide/relay", h.NativeIDERelayRegister)
 	})
 
 	// Protected API routes
@@ -306,6 +328,38 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Use(middleware.RefreshCloudFrontCookies(cfSigner))
 
 		// --- User-scoped routes (no workspace context required) ---
+
+		// Simulator (serve-sim proxy) — machine-level, no workspace needed
+		r.Route("/api/simulator", func(r chi.Router) {
+			r.Get("/status", h.SimulatorStatus)
+			r.Get("/stream.mjpeg", h.SimulatorStreamProxy)
+			r.Get("/ws", h.SimulatorWSProxy)
+			r.Get("/native", h.SimulatorNativeWS)
+			r.Get("/config", h.SimulatorConfigProxy)
+			r.Post("/exec", h.SimulatorExecProxy)
+		})
+
+		// Web Preview — proxies a daemon's local dev server through a relay WebSocket.
+		r.Get("/api/webpreview/status", h.WebPreviewStatus)
+		r.HandleFunc("/api/webpreview/{workspaceId}/{port}/*", h.WebPreviewProxy)
+		r.HandleFunc("/api/webpreview/{workspaceId}/{port}", h.WebPreviewProxy)
+
+		// IDE — proxies openvscode-server running on VPS (filesystem mounted via SSHFS).
+		r.Get("/api/ide/status", h.IDEStatus)
+		r.HandleFunc("/api/ide/{workspaceId}/*", h.IDEProxy)
+		r.HandleFunc("/api/ide/{workspaceId}", h.IDEProxy)
+
+		// Native IDE — file system and PTY relay via daemon.
+		r.Get("/api/native-ide/status", h.NativeIDEStatus)
+		r.Get("/api/native-ide/{workspaceId}/files", h.NativeIDEFiles)
+		r.Get("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Put("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Delete("/api/native-ide/{workspaceId}/file", h.NativeIDEFile)
+		r.Post("/api/native-ide/{workspaceId}/rename", h.NativeIDERename)
+		r.Get("/api/native-ide/{workspaceId}/terminal", h.NativeIDETerminal)
+		r.Get("/api/native-ide/{workspaceId}/runtimes", h.NativeIDERuntimes)
+		r.Post("/api/native-ide/{workspaceId}/chat/stream", h.NativeIDEChatStream)
+
 		r.Get("/api/me", h.GetMe)
 		r.Patch("/api/me", h.UpdateMe)
 		r.Patch("/api/me/onboarding", h.PatchOnboarding)
@@ -378,6 +432,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Delete("/{id}", h.RevokePersonalAccessToken)
 		})
 
+		// Pair session suggestions — accessible to authenticated users (no daemon auth needed).
+		r.Get("/api/pair-sessions/{sessionId}/suggestions", h.ListPairSuggestions)
+
 		// --- Workspace-scoped routes (all require workspace membership) ---
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireWorkspaceMember(queries))
@@ -421,6 +478,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Put("/metadata/{key}", h.SetIssueMetadataKey)
 					r.Delete("/metadata/{key}", h.DeleteIssueMetadataKey)
 					r.Get("/pull-requests", h.ListPullRequestsForIssue)
+					// Live Pair Programming
+					r.Get("/pair", h.GetActivePairSession)
+					r.Post("/pair/start", h.StartPairSession)
+					r.Post("/pair/end", h.EndPairSession)
 				})
 			})
 
@@ -508,6 +569,13 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Get("/api/attachments/{id}", h.GetAttachmentByID)
 			r.Get("/api/attachments/{id}/content", h.GetAttachmentContent)
 			r.Delete("/api/attachments/{id}", h.DeleteAttachment)
+
+			// Workspace assets
+			r.Post("/api/assets", h.UploadAsset)
+			r.Get("/api/assets", h.ListAssets)
+			r.Get("/api/assets/{id}", h.GetAsset)
+			r.Patch("/api/assets/{id}", h.UpdateAsset)
+			r.Delete("/api/assets/{id}", h.DeleteAsset)
 
 			// Comments
 			r.Route("/api/comments/{commentId}", func(r chi.Router) {

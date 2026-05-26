@@ -22,7 +22,7 @@ Turn coding agents into real teammates — assign tasks, track progress, compoun
 
 [Website](https://multica.ai) · [Cloud](https://multica.ai) · [X](https://x.com/MulticaAI) · [Self-Hosting](SELF_HOSTING.md) · [Contributing](CONTRIBUTING.md)
 
-**English | [简体中文](README.zh-CN.md)**
+**English | [简体中文](README.zh-CN.md) | [Türkçe](README.tr.md)**
 
 </div>
 
@@ -82,15 +82,24 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 - **Issue Templates** — define workspace-level templates (bug report, feature request, etc.) so agents and humans start from a consistent structure every time.
 - **@Mention Agents in Descriptions** — mention an agent in an issue description and they are automatically dispatched, just like in comments. Works on create and on edit.
 - **Child Issues** — break large issues into subtasks. Auto-close the parent when all children are done.
+- **File Attachments** — attach images and files to issues, comments, and chat messages. Agents can attach files too.
+- **Comment Threads & Resolution** — reply to any comment to start a thread. Mark threads as resolved to keep the conversation clean.
+- **Issue Subscribers** — subscribe to any issue to receive all activity updates, even if you're not the assignee.
 
 ### Agent Intelligence
 
 - **Reusable Skills** — every solution becomes a reusable skill for the whole team. Deployments, migrations, code reviews — skills compound over time.
 - **Agent Memory** — agents can persist key-value memories across tasks (`multica task memory set <key> <value>`). Memories survive between runs and are visible (and deletable) from the agent detail page.
 - **Handoff Context** — when one agent hands off to another, the full context string is injected into the next agent's prompt automatically.
+- **Agent Instructions** — write a custom system-level prompt per agent. Sets personality, coding style, output format, and constraints once — applied to every task.
 - **Agent Environment Variables** — set per-agent encrypted environment variables (API keys, secrets, config). Injected at task execution time; never logged or exposed in UI.
 - **Custom Arguments** — pass extra CLI flags to specific agents (e.g. `--model`, `--max-turns`) without touching the runtime configuration.
+- **MCP Support** — configure Model Context Protocol (MCP) servers per agent. Plug in any MCP-compatible tool server — databases, file systems, APIs — and agents get them automatically at runtime.
+- **Model Selection** — choose which AI model each agent uses. Mix Claude Opus, Sonnet, GPT-4o, Gemini, and others across agents in the same workspace.
+- **Thinking Level** — control reasoning depth per agent: fast for routine tasks, extended thinking for complex ones.
+- **Workspace Context** — write workspace-level instructions that are injected into every agent task. Set coding standards, team conventions, and project constraints once at the workspace level.
 - **Project Resources** — attach GitHub repositories (and other resources) to a project. Agents working on that project automatically receive the repo context — no manual copy-paste.
+- **Workspace Assets** — a shared file and image library for the workspace. Upload once, reference in issues, comments, or agent prompts.
 
 ### Collaboration
 
@@ -102,8 +111,9 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 - **Labels** — workspace-level colored labels. Apply to issues for filtering, board grouping, and agent routing rules.
 - **Search** — full-text search across issues, comments, agents, and projects — all from one bar.
 - **My Issues** — personal filtered view of everything assigned to you or your agents. Separate from the team board.
-- **Dashboard** — workspace-level activity overview: open issues by status, recent agent runs, team throughput. First thing you see when you open a workspace.
-- **Pinned Issues** — pin up to N issues to the sidebar for fast access. Reorderable.
+- **Dashboard** — workspace-level activity overview: open issues by status, recent agent runs, team throughput, and token usage. First thing you see when you open a workspace.
+- **Pinned Issues** — pin issues to the sidebar for fast access. Reorderable drag-and-drop.
+- **Usage Dashboard** — track token consumption and compute costs per agent, project, and time window. Know exactly what's driving your bill.
 
 ### Developer Tools
 
@@ -114,6 +124,7 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 
 ### Integrations & Observability
 
+- **Live Task Streaming** — watch every tool call, file edit, and agent step as it happens. The task detail panel streams execution messages in real time, so you always know what the agent is doing and why.
 - **Outbound Webhooks** — send `issue.created`, `issue.updated`, `task.completed`, and other events to any HTTP endpoint. Useful for Slack notifications, CI pipelines, or custom tooling.
 - **GitHub Integration** — auto-link PRs to issues, track CI check results, auto-close issues on merge.
 - **Inbox** — a personal feed of every event that mentions you, assigns to you, or involves your agents. Clear it as you go.

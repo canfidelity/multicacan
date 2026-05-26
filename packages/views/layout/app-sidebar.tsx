@@ -38,6 +38,7 @@ import {
   Globe,
   Code2,
   Images,
+  Loader2,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 import { ActorAvatar } from "@multicacan/ui/components/common/actor-avatar";
@@ -79,8 +80,8 @@ import { useMyRuntimesNeedUpdate } from "@multicacan/core/runtimes/hooks";
 import { pinListOptions } from "@multicacan/core/pins/queries";
 import { useDeletePin, useReorderPins } from "@multicacan/core/pins/mutations";
 import { issueDetailOptions } from "@multicacan/core/issues/queries";
-import { projectDetailOptions } from "@multicacan/core/projects/queries";
-import type { PinnedItem } from "@multicacan/core/types";
+import { projectDetailOptions, projectListOptions } from "@multicacan/core/projects/queries";
+import type { PinnedItem, Project, Issue } from "@multicacan/core/types";
 import { useLogout } from "../auth";
 import { ProjectIcon } from "../projects/components/project-icon";
 import { useT } from "../i18n";
@@ -99,6 +100,8 @@ function isNavActive(pathname: string, href: string): boolean {
 // `useEffect`/`useMemo` that depends on the value, and can trigger infinite
 // re-render loops when the effect itself calls `setState`.
 const EMPTY_PINS: PinnedItem[] = [];
+const EMPTY_PROJECTS: Project[] = [];
+const EMPTY_ISSUES: Issue[] = [];
 const EMPTY_WORKSPACES: Awaited<ReturnType<typeof api.listWorkspaces>> = [];
 const EMPTY_INVITATIONS: Awaited<ReturnType<typeof api.listMyInvitations>> = [];
 const EMPTY_INBOX: Awaited<ReturnType<typeof api.listInbox>> = [];
@@ -380,6 +383,18 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
     [inboxItems],
   );
   const hasRuntimeUpdates = useMyRuntimesNeedUpdate(wsId);
+  const { data: inProgressIssues = EMPTY_ISSUES } = useQuery({
+    queryKey: wsId ? ["issues", wsId, "sidebar-progress"] : ["issues", "disabled"],
+    queryFn: async () => {
+      const res = await api.listIssues({ status: "in_progress", limit: 10 });
+      return res.issues;
+    },
+    enabled: !!wsId,
+  });
+  const { data: projects = EMPTY_PROJECTS } = useQuery({
+    ...projectListOptions(wsId ?? ""),
+    enabled: !!wsId,
+  });
   const { data: pinnedItems = EMPTY_PINS } = useQuery({
     ...pinListOptions(wsId ?? "", userId ?? ""),
     enabled: !!wsId && !!userId,
@@ -711,6 +726,115 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {wsId && inProgressIssues.length > 0 && (
+            <Collapsible defaultOpen>
+              <SidebarGroup>
+                <SidebarGroupLabel
+                  render={<CollapsibleTrigger />}
+                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                >
+                  <span>{t(($) => $.sidebar.progress_group)}</span>
+                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
+                  <span className="ml-auto text-[10px] text-muted-foreground">{inProgressIssues.length}</span>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu className="gap-0.5">
+                      {inProgressIssues.map((issue) => {
+                        const href = p.issueDetail(issue.id);
+                        const isActive = pathname === href;
+                        return (
+                          <SidebarMenuItem key={issue.id}>
+                            <SidebarMenuButton
+                              size="sm"
+                              isActive={isActive}
+                              render={<AppLink href={href} />}
+                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                            >
+                              {issue.assignee_type === "agent" ? (
+                                <Loader2 className="!size-3.5 shrink-0 animate-spin text-primary" />
+                              ) : (
+                                <span className="size-3.5 shrink-0 rounded-full border-2 border-muted-foreground/50" />
+                              )}
+                              <span
+                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+                                style={{
+                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                }}
+                              >
+                                {issue.identifier ? `${issue.identifier} ${issue.title}` : issue.title}
+                              </span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )}
+
+          {wsId && (
+            <Collapsible defaultOpen>
+              <SidebarGroup className="group/projects">
+                <SidebarGroupLabel
+                  render={<CollapsibleTrigger />}
+                  className="group/trigger cursor-pointer hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                >
+                  <span>{t(($) => $.sidebar.projects_group)}</span>
+                  <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span role="button" />}
+                      className="ml-auto flex size-4 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity group-hover/projects:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        useModalStore.getState().open("create-project");
+                      }}
+                    >
+                      <Plus className="size-3" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={4}>{t(($) => $.sidebar.new_project_tooltip)}</TooltipContent>
+                  </Tooltip>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu className="gap-0.5">
+                      {projects.map((project) => {
+                        const href = p.projectDetail(project.id);
+                        const isActive = isNavActive(pathname, href);
+                        return (
+                          <SidebarMenuItem key={project.id}>
+                            <SidebarMenuButton
+                              size="sm"
+                              isActive={isActive}
+                              render={<AppLink href={href} />}
+                              className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                            >
+                              <ProjectIcon project={project} size="sm" />
+                              <span
+                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+                                style={{
+                                  maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent)",
+                                }}
+                              >
+                                {project.title}
+                              </span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )}
 
           <SidebarGroup>
             <SidebarGroupLabel>{t(($) => $.sidebar.apps_group)}</SidebarGroupLabel>

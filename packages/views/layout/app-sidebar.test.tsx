@@ -114,7 +114,7 @@ vi.mock("@multicacan/core/issues/stores/draft-store", () => ({ useIssueDraftStor
 vi.mock("@multicacan/core/modals", () => ({ useModalStore: { getState: () => ({ modal: null, open: vi.fn() }) } }));
 vi.mock("@multicacan/core/pins/mutations", () => ({ useDeletePin: () => ({ mutate: deletePin }), useReorderPins: () => ({ mutate: vi.fn() }) }));
 vi.mock("@multicacan/core/pins/queries", () => ({ pinListOptions: () => ({ queryKey: ["pins"] }) }));
-vi.mock("@multicacan/core/projects/queries", () => ({ projectDetailOptions: () => ({ queryKey: ["project"] }) }));
+vi.mock("@multicacan/core/projects/queries", () => ({ projectDetailOptions: () => ({ queryKey: ["project"] }), projectListOptions: () => ({ queryKey: ["projects"] }) }));
 vi.mock("@multicacan/core/runtimes/hooks", () => ({ useMyRuntimesNeedUpdate: () => false }));
 vi.mock("@multicacan/core/workspace/queries", () => ({
   myInvitationListOptions: () => ({ queryKey: ["invitations"] }),

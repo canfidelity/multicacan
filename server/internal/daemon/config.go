@@ -221,7 +221,7 @@ func LoadConfig(overrides Overrides) (Config, error) {
 	}
 
 	// Durations: override > env > default
-	pollInterval, err := durationFromEnv("MULTICA_DAEMON_POLL_INTERVAL", DefaultPollInterval)
+	pollInterval, err := durationFromEnv("MULTICACAN_DAEMON_POLL_INTERVAL", DefaultPollInterval)
 	if err != nil {
 		return Config{}, err
 	}
@@ -229,7 +229,7 @@ func LoadConfig(overrides Overrides) (Config, error) {
 		pollInterval = overrides.PollInterval
 	}
 
-	heartbeatInterval, err := durationFromEnv("MULTICA_DAEMON_HEARTBEAT_INTERVAL", DefaultHeartbeatInterval)
+	heartbeatInterval, err := durationFromEnv("MULTICACAN_DAEMON_HEARTBEAT_INTERVAL", DefaultHeartbeatInterval)
 	if err != nil {
 		return Config{}, err
 	}
@@ -261,7 +261,7 @@ func LoadConfig(overrides Overrides) (Config, error) {
 		return Config{}, err
 	}
 
-	maxConcurrentTasks, err := intFromEnv("MULTICA_DAEMON_MAX_CONCURRENT_TASKS", DefaultMaxConcurrentTasks)
+	maxConcurrentTasks, err := intFromEnv("MULTICACAN_DAEMON_MAX_CONCURRENT_TASKS", DefaultMaxConcurrentTasks)
 	if err != nil {
 		return Config{}, err
 	}
@@ -276,9 +276,9 @@ func LoadConfig(overrides Overrides) (Config, error) {
 	// The persistent UUID is written once to `<profile-dir>/daemon.id` and
 	// then reused forever so hostname drift (.local suffix, system rename,
 	// mDNS state, profile switch) no longer mints a new runtime identity.
-	// Callers may still pin a specific id via MULTICA_DAEMON_ID or the
+	// Callers may still pin a specific id via MULTICACAN_DAEMON_ID or the
 	// override field (e.g. for tests or embedded environments).
-	daemonID := strings.TrimSpace(os.Getenv("MULTICA_DAEMON_ID"))
+	daemonID := strings.TrimSpace(os.Getenv("MULTICACAN_DAEMON_ID"))
 	if overrides.DaemonID != "" {
 		daemonID = overrides.DaemonID
 	}
@@ -303,11 +303,11 @@ func LoadConfig(overrides Overrides) (Config, error) {
 		legacyDaemonIDs = append(legacyDaemonIDs, uuids...)
 	}
 	// Strip anything that collides with the resolved daemon_id (e.g. when
-	// the user explicitly pins MULTICA_DAEMON_ID=<hostname>, or when the
+	// the user explicitly pins MULTICACAN_DAEMON_ID=<hostname>, or when the
 	// canonical id was itself promoted from a pre-change profile file).
 	legacyDaemonIDs = filterLegacyIDs(legacyDaemonIDs, daemonID)
 
-	deviceName := envOrDefault("MULTICA_DAEMON_DEVICE_NAME", host)
+	deviceName := envOrDefault("MULTICACAN_DAEMON_DEVICE_NAME", host)
 	if overrides.DeviceName != "" {
 		deviceName = overrides.DeviceName
 	}
@@ -357,15 +357,10 @@ func LoadConfig(overrides Overrides) (Config, error) {
 
 	// Auto-update config: default -> env override -> CLI override.
 	//
-	// Default is opt-in on Multica Cloud (api.multica.ai) and opt-out for
-	// self-hosted instances. Self-host operators frequently run a fork with
-	// their own patches, and silently upgrading their daemon to an upstream
-	// GitHub release would clobber that work; they also commonly stay on an
-	// older server build, which a fresh CLI may no longer talk to. Keeping
-	// auto-update off by default for self-host avoids both footguns (MUL-2381).
-	// Operators on either side can flip the default with MULTICA_DAEMON_AUTO_UPDATE.
-	autoUpdateEnabled := isOfficialCloudServer(serverBaseURL)
-	if v := strings.TrimSpace(os.Getenv("MULTICA_DAEMON_AUTO_UPDATE")); v != "" {
+	// Auto-update is enabled by default for all deployments.
+	// Disable via --no-auto-update flag or MULTICACAN_DAEMON_AUTO_UPDATE=false.
+	autoUpdateEnabled := true
+	if v := strings.TrimSpace(os.Getenv("MULTICACAN_DAEMON_AUTO_UPDATE")); v != "" {
 		switch strings.ToLower(v) {
 		case "false", "0", "no", "off":
 			autoUpdateEnabled = false
@@ -376,7 +371,7 @@ func LoadConfig(overrides Overrides) (Config, error) {
 	if overrides.DisableAutoUpdate {
 		autoUpdateEnabled = false
 	}
-	autoUpdateInterval, err := durationFromEnv("MULTICA_DAEMON_AUTO_UPDATE_INTERVAL", DefaultAutoUpdateCheckInterval)
+	autoUpdateInterval, err := durationFromEnv("MULTICACAN_DAEMON_AUTO_UPDATE_INTERVAL", DefaultAutoUpdateCheckInterval)
 	if err != nil {
 		return Config{}, err
 	}

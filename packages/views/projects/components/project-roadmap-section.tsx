@@ -9,7 +9,7 @@ import {
   useDeleteProjectMilestone,
   useSetProjectExecution,
 } from "@multicacan/core/projects/mutations";
-import type { Project, ProjectMilestone, MilestoneStatus } from "@multicacan/core/types";
+import type { Project, ProjectMilestone, MilestoneStatus, ProjectExecutionStatus } from "@multicacan/core/types";
 import { cn } from "@multicacan/ui/lib/utils";
 import { useNavigation } from "../../navigation";
 import { useWorkspacePaths } from "@multicacan/core/paths";
@@ -41,7 +41,7 @@ export function ProjectRoadmapSection({ wsId, project }: Props) {
   const deleteMilestone = useDeleteProjectMilestone(wsId, project.id);
   const setExecution = useSetProjectExecution(wsId, project.id);
 
-  const execStatus = project.execution_status ?? "idle";
+  const execStatus: ProjectExecutionStatus = project.execution_status ?? "idle";
 
   function handleAddMilestone() {
     const title = newTitle.trim();

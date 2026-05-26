@@ -29,9 +29,9 @@ export interface Project {
   priority: ProjectPriority;
   lead_type: "member" | "agent" | null;
   lead_id: string | null;
-  mission: string | null;
-  execution_status: ProjectExecutionStatus;
-  mission_issue_id: string | null;
+  mission?: string | null;
+  execution_status?: ProjectExecutionStatus;
+  mission_issue_id?: string | null;
   created_at: string;
   updated_at: string;
   issue_count: number;

@@ -54,6 +54,19 @@ export function createRequestId(length = 8): string {
  * Always read from `nativeEvent` when present — React's synthetic event is
  * normalized but the native event reflects the browser's real state.
  */
+/**
+ * Returns a human-readable relative time string (e.g. "3m ago", "2h ago").
+ * Dates within the last minute return "just now".
+ */
+export function timeAgo(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
 export function isImeComposing(event: {
   isComposing?: boolean;
   keyCode?: number;

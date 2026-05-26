@@ -1865,4 +1865,23 @@ export class ApiClient {
   async deleteAsset(id: string): Promise<void> {
     await this.fetch(`/api/assets/${id}`, { method: "DELETE" });
   }
+
+  async getActivePairSession(issueId: string): Promise<import("../types/events").PairSession | null> {
+    return this.fetch(`/api/issues/${issueId}/pair-session`).catch(() => null);
+  }
+
+  async listPairSuggestions(sessionId: string): Promise<import("../types/events").PairSuggestion[]> {
+    return this.fetch(`/api/pair-sessions/${sessionId}/suggestions`);
+  }
+
+  async startPairSession(issueId: string, agentId: string, intervene: boolean): Promise<import("../types/events").PairSession> {
+    return this.fetch(`/api/issues/${issueId}/pair-session`, {
+      method: "POST",
+      body: JSON.stringify({ agent_id: agentId, intervene }),
+    });
+  }
+
+  async stopPairSession(issueId: string): Promise<void> {
+    await this.fetch(`/api/issues/${issueId}/pair-session`, { method: "DELETE" });
+  }
 }

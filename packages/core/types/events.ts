@@ -77,7 +77,10 @@ export type WSEventType =
   | "github_installation:deleted"
   | "pull_request:linked"
   | "pull_request:updated"
-  | "pull_request:unlinked";
+  | "pull_request:unlinked"
+  | "pair:started"
+  | "pair:suggestion"
+  | "pair:ended";
 
 export interface WSMessage<T = unknown> {
   type: WSEventType;
@@ -436,6 +439,9 @@ export interface WSEventPayloadMap {
   "pull_request:linked": unknown;
   "pull_request:updated": unknown;
   "pull_request:unlinked": unknown;
+  "pair:started": PairStartedPayload;
+  "pair:suggestion": PairSuggestionPayload;
+  "pair:ended": PairEndedPayload;
 }
 
 /**
@@ -444,5 +450,34 @@ export interface WSEventPayloadMap {
  * a map entry, callers see `unknown` (forced narrow) rather than `any`
  * (silent unsafe access).
  */
+export interface PairSession {
+  id: string;
+  issue_id: string;
+  agent_id: string;
+  status: "active" | "ended";
+  intervene: boolean;
+  created_at: string;
+}
+
+export interface PairSuggestion {
+  id: string;
+  session_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface PairStartedPayload {
+  session: PairSession;
+}
+
+export interface PairSuggestionPayload {
+  suggestion: PairSuggestion;
+}
+
+export interface PairEndedPayload {
+  session_id: string;
+  issue_id: string;
+}
+
 export type WSEventPayload<E extends WSEventType> =
   E extends keyof WSEventPayloadMap ? WSEventPayloadMap[E] : unknown;

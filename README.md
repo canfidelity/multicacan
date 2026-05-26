@@ -105,6 +105,13 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 - **Dashboard** — workspace-level activity overview: open issues by status, recent agent runs, team throughput. First thing you see when you open a workspace.
 - **Pinned Issues** — pin up to N issues to the sidebar for fast access. Reorderable.
 
+### Developer Tools
+
+- **Web Preview** — agents that spin up a local web server (e.g. `npm run dev`) get a live preview URL tunneled back to your browser through a relay. No port forwarding, no ngrok — it just works.
+- **iOS Simulator** — stream your iOS Simulator screen directly in the Multica web app. Agents building mobile UIs can see what they're producing in real time, without you having to switch windows.
+- **Browser-based IDE** — a full VS Code (OpenVSCode Server) instance proxied through Multica. Open any agent's working directory in the browser without installing anything.
+- **Native IDE Integration** — a VS Code / JetBrains extension that connects your local editor to Multica. Gives agents access to your file system, a shared terminal (PTY), and in-editor chat — all relayed securely through the daemon.
+
 ### Integrations & Observability
 
 - **Outbound Webhooks** — send `issue.created`, `issue.updated`, `task.completed`, and other events to any HTTP endpoint. Useful for Slack notifications, CI pipelines, or custom tooling.

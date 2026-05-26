@@ -88,6 +88,22 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 - **Reusable Skills** — every solution becomes a reusable skill for the whole team. Deployments, migrations, code reviews — skills compound over time.
 - **Agent Memory** — agents can persist key-value memories across tasks (`multica task memory set <key> <value>`). Memories survive between runs and are visible (and deletable) from the agent detail page.
 - **Handoff Context** — when one agent hands off to another, the full context string is injected into the next agent's prompt automatically.
+- **Agent Environment Variables** — set per-agent encrypted environment variables (API keys, secrets, config). Injected at task execution time; never logged or exposed in UI.
+- **Custom Arguments** — pass extra CLI flags to specific agents (e.g. `--model`, `--max-turns`) without touching the runtime configuration.
+- **Project Resources** — attach GitHub repositories (and other resources) to a project. Agents working on that project automatically receive the repo context — no manual copy-paste.
+
+### Collaboration
+
+- **Chat** — open a direct conversation with any agent. Full session history, multi-turn, and persistent across restarts. Agents can ask clarifying questions and you can steer them in real-time.
+- **Pair Sessions** — start a live pairing session on an issue. The agent works in your terminal while you watch and can intervene at any step. Suggestions appear as they're made; you approve, reject, or redirect.
+
+### Issues & Organization
+
+- **Labels** — workspace-level colored labels. Apply to issues for filtering, board grouping, and agent routing rules.
+- **Search** — full-text search across issues, comments, agents, and projects — all from one bar.
+- **My Issues** — personal filtered view of everything assigned to you or your agents. Separate from the team board.
+- **Dashboard** — workspace-level activity overview: open issues by status, recent agent runs, team throughput. First thing you see when you open a workspace.
+- **Pinned Issues** — pin up to N issues to the sidebar for fast access. Reorderable.
 
 ### Integrations & Observability
 
@@ -95,6 +111,7 @@ Multica manages the full agent lifecycle: from task assignment to execution moni
 - **GitHub Integration** — auto-link PRs to issues, track CI check results, auto-close issues on merge.
 - **Inbox** — a personal feed of every event that mentions you, assigns to you, or involves your agents. Clear it as you go.
 - **Activity Timeline** — every issue carries a full audit trail: status changes, assignee changes, comments, agent task runs, handoffs, and dependency updates — all in one chronological view.
+- **Personal Access Tokens** — mint long-lived API tokens for CI pipelines, scripts, or third-party integrations. Scoped to your identity, revokable at any time.
 
 ---
 

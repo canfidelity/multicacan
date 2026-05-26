@@ -46,6 +46,18 @@ type Agent struct {
 	ThinkingLevel      pgtype.Text        `json:"thinking_level"`
 }
 
+type AgentMemory struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	AgentID     pgtype.UUID        `json:"agent_id"`
+	Key         string             `json:"key"`
+	Value       string             `json:"value"`
+	Description string             `json:"description"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AgentRuntime struct {
 	ID             pgtype.UUID        `json:"id"`
 	WorkspaceID    pgtype.UUID        `json:"workspace_id"`
@@ -117,21 +129,23 @@ type Attachment struct {
 }
 
 type Autopilot struct {
-	ID                 pgtype.UUID        `json:"id"`
-	WorkspaceID        pgtype.UUID        `json:"workspace_id"`
-	Title              string             `json:"title"`
-	Description        pgtype.Text        `json:"description"`
-	AssigneeID         pgtype.UUID        `json:"assignee_id"`
-	Status             string             `json:"status"`
-	ExecutionMode      string             `json:"execution_mode"`
-	IssueTitleTemplate pgtype.Text        `json:"issue_title_template"`
-	CreatedByType      string             `json:"created_by_type"`
-	CreatedByID        pgtype.UUID        `json:"created_by_id"`
-	LastRunAt          pgtype.Timestamptz `json:"last_run_at"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-	AssigneeType       string             `json:"assignee_type"`
-	ProjectID          pgtype.UUID        `json:"project_id"`
+	ID                          pgtype.UUID        `json:"id"`
+	WorkspaceID                 pgtype.UUID        `json:"workspace_id"`
+	Title                       string             `json:"title"`
+	Description                 pgtype.Text        `json:"description"`
+	AssigneeID                  pgtype.UUID        `json:"assignee_id"`
+	Status                      string             `json:"status"`
+	ExecutionMode               string             `json:"execution_mode"`
+	IssueTitleTemplate          pgtype.Text        `json:"issue_title_template"`
+	CreatedByType               string             `json:"created_by_type"`
+	CreatedByID                 pgtype.UUID        `json:"created_by_id"`
+	LastRunAt                   pgtype.Timestamptz `json:"last_run_at"`
+	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
+	AssigneeType                string             `json:"assignee_type"`
+	ProjectID                   pgtype.UUID        `json:"project_id"`
+	IsOrchestrator              bool               `json:"is_orchestrator"`
+	OrchestratorContextTemplate pgtype.Text        `json:"orchestrator_context_template"`
 }
 
 type AutopilotRun struct {
@@ -166,6 +180,7 @@ type AutopilotTrigger struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	Provider       string             `json:"provider"`
 	SigningSecret  pgtype.Text        `json:"signing_secret"`
+	EventFilter    pgtype.Text        `json:"event_filter"`
 }
 
 type ChatMessage struct {
@@ -360,10 +375,13 @@ type Issue struct {
 }
 
 type IssueDependency struct {
-	ID               pgtype.UUID `json:"id"`
-	IssueID          pgtype.UUID `json:"issue_id"`
-	DependsOnIssueID pgtype.UUID `json:"depends_on_issue_id"`
-	Type             string      `json:"type"`
+	ID               pgtype.UUID        `json:"id"`
+	IssueID          pgtype.UUID        `json:"issue_id"`
+	DependsOnIssueID pgtype.UUID        `json:"depends_on_issue_id"`
+	Type             string             `json:"type"`
+	WorkspaceID      pgtype.UUID        `json:"workspace_id"`
+	CreatedBy        pgtype.UUID        `json:"created_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type IssueLabel struct {
@@ -539,6 +557,13 @@ type ProjectResource struct {
 	Position     int32              `json:"position"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	CreatedBy    pgtype.UUID        `json:"created_by"`
+}
+
+type ProjectSquad struct {
+	ID        pgtype.UUID        `json:"id"`
+	ProjectID pgtype.UUID        `json:"project_id"`
+	SquadID   pgtype.UUID        `json:"squad_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Skill struct {

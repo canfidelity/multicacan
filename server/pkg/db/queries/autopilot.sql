@@ -37,6 +37,8 @@ UPDATE autopilot SET
     execution_mode = COALESCE(sqlc.narg('execution_mode'), execution_mode),
     issue_title_template = sqlc.narg('issue_title_template'),
     project_id = sqlc.narg('project_id'),
+    is_orchestrator = COALESCE(sqlc.narg('is_orchestrator')::boolean, is_orchestrator),
+    orchestrator_context_template = sqlc.narg('orchestrator_context_template'),
     updated_at = now()
 WHERE id = $1
 RETURNING *;
@@ -78,6 +80,7 @@ UPDATE autopilot_trigger SET
     timezone = COALESCE(sqlc.narg('timezone'), timezone),
     next_run_at = sqlc.narg('next_run_at'),
     label = COALESCE(sqlc.narg('label'), label),
+    event_filter = sqlc.narg('event_filter'),
     updated_at = now()
 WHERE id = $1
 RETURNING *;
@@ -326,3 +329,16 @@ UPDATE autopilot
 SET status = 'paused', updated_at = now()
 WHERE id = $1 AND status = 'active'
 RETURNING *;
+
+-- name: GetWorkspaceOrchestrator :one
+SELECT * FROM autopilot
+WHERE workspace_id = $1 AND is_orchestrator = TRUE
+LIMIT 1;
+
+-- name: SetAutopilotTaskContext :exec
+UPDATE agent_task_queue SET context = $2 WHERE id = $1;
+
+-- name: GetWorkspaceProjectStats :many
+SELECT id, title, icon, status, priority FROM project
+WHERE workspace_id = $1 AND status NOT IN ('completed', 'cancelled')
+ORDER BY created_at DESC LIMIT 20;

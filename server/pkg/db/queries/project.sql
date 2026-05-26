@@ -49,3 +49,28 @@ SELECT project_id,
 FROM issue
 WHERE project_id = ANY(sqlc.arg('project_ids')::uuid[])
 GROUP BY project_id;
+
+-- name: AddProjectSquad :one
+INSERT INTO project_squad (project_id, squad_id) VALUES ($1, $2) RETURNING *;
+
+-- name: RemoveProjectSquad :execrows
+DELETE FROM project_squad WHERE project_id = $1 AND squad_id = $2;
+
+-- name: ListProjectSquads :many
+SELECT ps.id, ps.project_id, ps.squad_id, ps.created_at,
+       s.name AS squad_name, s.avatar_url, s.leader_id, s.archived_at
+FROM project_squad ps
+JOIN squad s ON s.id = ps.squad_id
+WHERE ps.project_id = $1
+ORDER BY ps.created_at ASC;
+
+-- name: ListProjectsForSquad :many
+SELECT ps.id, ps.squad_id, ps.project_id, ps.created_at,
+       p.title AS project_title, p.icon AS project_icon, p.status AS project_status
+FROM project_squad ps
+JOIN project p ON p.id = ps.project_id
+WHERE ps.squad_id = $1
+ORDER BY ps.created_at ASC;
+
+-- name: GetFirstProjectSquad :one
+SELECT squad_id FROM project_squad WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1;

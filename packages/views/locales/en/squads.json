@@ -72,6 +72,8 @@
     "unsaved_changes": "Unsaved changes",
     "save_button": "Save"
   },
+  "projects_tab": "Projects",
+  "projects_empty": "This squad is not assigned to any projects yet.",
   "activity_tab": {
     "stats_period": "Last {{days}} days",
     "stat_total": "Total evaluations",

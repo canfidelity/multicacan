@@ -1,4 +1,4 @@
-export type { Issue, IssueStatus, IssuePriority, IssueAssigneeType, IssueMetadata, IssueMetadataValue, IssueReaction } from "./issue";
+export type { Issue, IssueStatus, IssuePriority, IssueAssigneeType, IssueMetadata, IssueMetadataValue, IssueReaction, IssueDependency, IssueDependenciesResponse } from "./issue";
 export type {
   Agent,
   AgentStatus,
@@ -79,7 +79,10 @@ export type {
   GithubRepoResourceRef,
   CreateProjectResourceRequest,
   ListProjectResourcesResponse,
+  ProjectSquadEntry,
+  SquadProjectEntry,
 } from "./project";
+export type { AgentMemory } from "./agent_memory";
 export type { PinnedItem, PinnedItemType, CreatePinRequest, ReorderPinsRequest } from "./pin";
 export type {
   GitHubInstallation,

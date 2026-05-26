@@ -22,3 +22,15 @@ export function projectDetailOptions(wsId: string, id: string) {
     queryFn: () => api.getProject(id),
   });
 }
+
+export const projectSquadsOptions = (wsId: string, projectId: string) =>
+  queryOptions({
+    queryKey: [...projectKeys.detail(wsId, projectId), 'squads'],
+    queryFn: () => api.listProjectSquads(projectId),
+  });
+
+export const squadProjectsOptions = (wsId: string, squadId: string) =>
+  queryOptions({
+    queryKey: ['squads', wsId, 'projects', squadId],
+    queryFn: () => api.listProjectsForSquad(squadId),
+  });

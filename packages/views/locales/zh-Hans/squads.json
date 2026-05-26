@@ -72,6 +72,8 @@
     "unsaved_changes": "有未保存的修改",
     "save_button": "保存"
   },
+  "projects_tab": "项目",
+  "projects_empty": "该小队暂未分配到任何项目。",
   "activity_tab": {
     "stats_period": "过去 {{days}} 天",
     "stat_total": "总评估次数",

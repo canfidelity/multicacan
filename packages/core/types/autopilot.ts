@@ -34,6 +34,8 @@ export interface Autopilot {
   status: AutopilotStatus;
   execution_mode: AutopilotExecutionMode;
   issue_title_template: string | null;
+  is_orchestrator: boolean;
+  orchestrator_context_template: string | null;
   created_by_type: string;
   created_by_id: string;
   last_run_at: string | null;
@@ -59,6 +61,7 @@ export interface AutopilotTrigger {
   // webhook_path when this is missing.
   webhook_url?: string | null;
   label: string | null;
+  event_filter?: string | null;
   last_fired_at: string | null;
   created_at: string;
   updated_at: string;

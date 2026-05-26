@@ -56,6 +56,7 @@ import { collectThreadReplies } from "./thread-utils";
 import { AgentLiveCard } from "./agent-live-card";
 import { ExecutionLogSection } from "./execution-log-section";
 import { PullRequestList } from "./pull-request-list";
+import { IssueDependenciesSection } from "./issue-dependencies-section";
 import { useGitHubSettings } from "@multicacan/core/github";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@multicacan/core/auth";
@@ -239,6 +240,10 @@ function formatActivity(
       return t(($) => $.activity.task_completed, { count: entry.coalesced_count ?? 1 });
     case "task_failed":
       return t(($) => $.activity.task_failed, { count: entry.coalesced_count ?? 1 });
+    case "task_handed_off": {
+      const name = (entry.details as Record<string, string> | null)?.to_agent_name ?? "another agent";
+      return t(($) => $.activity.task_handed_off, { name });
+    }
     case "squad_leader_evaluated": {
       const reason = details.reason?.trim();
       switch (details.outcome) {
@@ -1427,6 +1432,9 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
           </div>}
         </div>
       )}
+
+      {/* Dependencies — blocks / blocked-by / related links between issues. */}
+      <IssueDependenciesSection issue={issue} wsId={wsId} />
 
       {/* Pull requests — hidden when the workspace disables the PR sidebar
           (or the GitHub master switch is off). Backend data is kept either

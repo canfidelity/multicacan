@@ -32,16 +32,18 @@ type AutopilotResponse struct {
 	// AssigneeType is "agent" or "squad". Path A from MUL-2429: when set
 	// to "squad", AssigneeID points at squad(id) rather than agent(id) and
 	// dispatch resolves to squad.leader_id at run time.
-	AssigneeType       string  `json:"assignee_type"`
-	AssigneeID         string  `json:"assignee_id"`
-	Status             string  `json:"status"`
-	ExecutionMode      string  `json:"execution_mode"`
-	IssueTitleTemplate *string `json:"issue_title_template"`
-	CreatedByType      string  `json:"created_by_type"`
-	CreatedByID        string  `json:"created_by_id"`
-	LastRunAt          *string `json:"last_run_at"`
-	CreatedAt          string  `json:"created_at"`
-	UpdatedAt          string  `json:"updated_at"`
+	AssigneeType                string  `json:"assignee_type"`
+	AssigneeID                  string  `json:"assignee_id"`
+	Status                      string  `json:"status"`
+	ExecutionMode               string  `json:"execution_mode"`
+	IssueTitleTemplate          *string `json:"issue_title_template"`
+	IsOrchestrator              bool    `json:"is_orchestrator"`
+	OrchestratorContextTemplate *string `json:"orchestrator_context_template"`
+	CreatedByType               string  `json:"created_by_type"`
+	CreatedByID                 string  `json:"created_by_id"`
+	LastRunAt                   *string `json:"last_run_at"`
+	CreatedAt                   string  `json:"created_at"`
+	UpdatedAt                   string  `json:"updated_at"`
 }
 
 type AutopilotTriggerResponse struct {
@@ -74,10 +76,14 @@ type AutopilotTriggerResponse struct {
 	// surfaced to help operators tell two secrets apart in the UI. Nil when
 	// no secret is configured.
 	SigningSecretHint *string `json:"signing_secret_hint"`
-	Label             *string `json:"label"`
-	LastFiredAt       *string `json:"last_fired_at"`
-	CreatedAt         string  `json:"created_at"`
-	UpdatedAt         string  `json:"updated_at"`
+	Label       *string `json:"label"`
+	// EventFilter is a comma-separated list of event:action patterns that
+	// gate dispatch for GitHub webhook triggers (e.g. "pull_request:opened").
+	// Empty means accept all events. Nil for non-webhook / non-GitHub triggers.
+	EventFilter *string `json:"event_filter"`
+	LastFiredAt *string `json:"last_fired_at"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
 }
 
 type AutopilotRunResponse struct {
@@ -112,16 +118,18 @@ func autopilotToResponse(a db.Autopilot) AutopilotResponse {
 		Title:              a.Title,
 		Description:        textToPtr(a.Description),
 		ProjectID:          uuidToPtr(a.ProjectID),
-		AssigneeType:       assigneeType,
-		AssigneeID:         uuidToString(a.AssigneeID),
-		Status:             a.Status,
-		ExecutionMode:      a.ExecutionMode,
-		IssueTitleTemplate: textToPtr(a.IssueTitleTemplate),
-		CreatedByType:      a.CreatedByType,
-		CreatedByID:        uuidToString(a.CreatedByID),
-		LastRunAt:          timestampToPtr(a.LastRunAt),
-		CreatedAt:          timestampToString(a.CreatedAt),
-		UpdatedAt:          timestampToString(a.UpdatedAt),
+		AssigneeType:                assigneeType,
+		AssigneeID:                  uuidToString(a.AssigneeID),
+		Status:                      a.Status,
+		ExecutionMode:               a.ExecutionMode,
+		IssueTitleTemplate:          textToPtr(a.IssueTitleTemplate),
+		IsOrchestrator:              a.IsOrchestrator,
+		OrchestratorContextTemplate: textToPtr(a.OrchestratorContextTemplate),
+		CreatedByType:               a.CreatedByType,
+		CreatedByID:                 uuidToString(a.CreatedByID),
+		LastRunAt:                   timestampToPtr(a.LastRunAt),
+		CreatedAt:                   timestampToString(a.CreatedAt),
+		UpdatedAt:                   timestampToString(a.UpdatedAt),
 	}
 }
 
@@ -136,6 +144,7 @@ func (h *Handler) triggerToResponse(t db.AutopilotTrigger) AutopilotTriggerRespo
 		NextRunAt:      timestampToPtr(t.NextRunAt),
 		WebhookToken:   textToPtr(t.WebhookToken),
 		Label:          textToPtr(t.Label),
+		EventFilter:    textToPtr(t.EventFilter),
 		LastFiredAt:    timestampToPtr(t.LastFiredAt),
 		CreatedAt:      timestampToString(t.CreatedAt),
 		UpdatedAt:      timestampToString(t.UpdatedAt),
@@ -231,14 +240,16 @@ type CreateAutopilotRequest struct {
 }
 
 type UpdateAutopilotRequest struct {
-	Title              *string `json:"title"`
-	Description        *string `json:"description"`
-	ProjectID          *string `json:"project_id"`
-	AssigneeType       *string `json:"assignee_type"`
-	AssigneeID         *string `json:"assignee_id"`
-	Status             *string `json:"status"`
-	ExecutionMode      *string `json:"execution_mode"`
-	IssueTitleTemplate *string `json:"issue_title_template"`
+	Title                       *string `json:"title"`
+	Description                 *string `json:"description"`
+	ProjectID                   *string `json:"project_id"`
+	AssigneeType                *string `json:"assignee_type"`
+	AssigneeID                  *string `json:"assignee_id"`
+	Status                      *string `json:"status"`
+	ExecutionMode               *string `json:"execution_mode"`
+	IssueTitleTemplate          *string `json:"issue_title_template"`
+	IsOrchestrator              *bool   `json:"is_orchestrator"`
+	OrchestratorContextTemplate *string `json:"orchestrator_context_template"`
 }
 
 type CreateAutopilotTriggerRequest struct {
@@ -269,6 +280,7 @@ type UpdateAutopilotTriggerRequest struct {
 	CronExpression *string `json:"cron_expression"`
 	Timezone       *string `json:"timezone"`
 	Label          *string `json:"label"`
+	EventFilter    *string `json:"event_filter"`
 }
 
 // ── Handlers ────────────────────────────────────────────────────────────────
@@ -489,6 +501,14 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		params.ProjectID = projectID
+	}
+	if _, ok := rawFields["is_orchestrator"]; ok {
+		if req.IsOrchestrator != nil {
+			params.IsOrchestrator = pgtype.Bool{Bool: *req.IsOrchestrator, Valid: true}
+		}
+	}
+	if _, ok := rawFields["orchestrator_context_template"]; ok {
+		params.OrchestratorContextTemplate = ptrToText(req.OrchestratorContextTemplate)
 	}
 	// assignee_type and assignee_id are validated as a pair: switching
 	// between agent and squad without supplying a new id would leave the
@@ -914,6 +934,9 @@ func (h *Handler) UpdateAutopilotTrigger(w http.ResponseWriter, r *http.Request)
 	}
 	if req.Label != nil {
 		params.Label = pgtype.Text{String: *req.Label, Valid: true}
+	}
+	if req.EventFilter != nil {
+		params.EventFilter = pgtype.Text{String: *req.EventFilter, Valid: *req.EventFilter != ""}
 	}
 
 	// Recompute next_run_at if cron or timezone changed.

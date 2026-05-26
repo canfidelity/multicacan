@@ -307,6 +307,13 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Post("/pair-sessions/{sessionId}/suggestions", h.DaemonPostPairSuggestion)
 		r.Post("/pair-sessions/{sessionId}/intervention", h.DaemonPostPairIntervention)
 		r.Post("/issues/{issueId}/interventions/consume", h.DaemonConsumeIssueInterventions)
+
+		// Agent long-term memory — daemon (agent) side. Key-value store
+		// scoped per agent; agents write during task execution, humans read
+		// via /api/agents/{id}/memories above.
+		r.Get("/memory", h.GetDaemonMemory)
+		r.Put("/memory", h.UpsertDaemonMemory)
+		r.Delete("/memory", h.DeleteDaemonMemory)
 	})
 
 	// Simulator relay registration: a Mac Mini daemon opens an outbound
@@ -478,6 +485,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Put("/metadata/{key}", h.SetIssueMetadataKey)
 					r.Delete("/metadata/{key}", h.DeleteIssueMetadataKey)
 					r.Get("/pull-requests", h.ListPullRequestsForIssue)
+					// Dependencies
+					r.Get("/dependencies", h.ListIssueDependencies)
+					r.Post("/dependencies", h.AddIssueDependency)
+					r.Delete("/dependencies/{depId}", h.RemoveIssueDependency)
 					// Live Pair Programming
 					r.Get("/pair", h.GetActivePairSession)
 					r.Post("/pair/start", h.StartPairSession)
@@ -511,6 +522,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Get("/resources", h.ListProjectResources)
 					r.Post("/resources", h.CreateProjectResource)
 					r.Delete("/resources/{resourceId}", h.DeleteProjectResource)
+					r.Get("/squads", h.ListProjectSquads)
+					r.Post("/squads", h.AddProjectSquad)
+					r.Delete("/squads/{squadId}", h.RemoveProjectSquad)
 				})
 			})
 
@@ -529,6 +543,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Patch("/members/role", h.UpdateSquadMemberRole)
 					r.Get("/activity", h.ListSquadActivity)
 					r.Get("/activity-stats", h.GetSquadActivityStats)
+					r.Get("/projects", h.ListProjectsForSquad)
 				})
 			})
 
@@ -613,6 +628,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					// internal/handler/agent_env.go.
 					r.Get("/env", h.GetAgentEnv)
 					r.Put("/env", h.UpdateAgentEnv)
+					// Agent long-term memory (readable by workspace members,
+					// writable by the agent via daemon routes below).
+					r.Get("/memories", h.ListAgentMemories)
+					r.Delete("/memories/{key}", h.DeleteAgentMemory)
 				})
 			})
 

@@ -95,5 +95,12 @@
   },
   "chip": {
     "fallback_label": "Project"
+  },
+  "squads": {
+    "section_title": "Squads",
+    "add": "Add Squad",
+    "no_squads": "No squads assigned to this project",
+    "remove_aria": "Remove squad",
+    "add_placeholder": "Search squads..."
   }
 }

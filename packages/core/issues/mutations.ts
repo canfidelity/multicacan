@@ -718,6 +718,27 @@ export function useToggleIssueReaction(issueId: string) {
 // Issue Subscribers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Issue Dependencies
+// ---------------------------------------------------------------------------
+
+export function useAddIssueDependency(wsId: string, issueId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { depends_on_issue_id: string; type: string }) =>
+      api.addIssueDependency(issueId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...issueKeys.detail(wsId, issueId), 'dependencies'] }),
+  });
+}
+
+export function useRemoveIssueDependency(wsId: string, issueId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (depId: string) => api.removeIssueDependency(issueId, depId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...issueKeys.detail(wsId, issueId), 'dependencies'] }),
+  });
+}
+
 export function useToggleIssueSubscriber(issueId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -523,6 +523,25 @@ func (h *Handler) HandleAutopilotWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// 10b. Event filter: if the trigger has an event_filter, check whether
+	//      the incoming event matches any of the comma-separated patterns.
+	//      An empty filter accepts all events.
+	if trigRow.EventFilter.Valid && trigRow.EventFilter.String != "" {
+		matched := false
+		for _, pattern := range strings.Split(trigRow.EventFilter.String, ",") {
+			if strings.TrimSpace(pattern) == envelope.Event {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			respBody := map[string]any{"status": "ignored", "delivery_id": uuidToString(delivery.ID), "reason": "event_filtered"}
+			h.finaliseDeliveryTerminal(r, delivery.ID, deliveryStatusIgnored, http.StatusOK, respBody, "event_filtered")
+			writeJSON(w, http.StatusOK, respBody)
+			return
+		}
+	}
+
 	// 11. Dispatch synchronously. DispatchAutopilot publishes WS events,
 	//     persists trigger_payload on autopilot_run, runs the admission
 	//     check (offline runtime → skipped), and bumps last_run_at.

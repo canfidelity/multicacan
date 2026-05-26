@@ -35,7 +35,8 @@
       "labs": "实验室",
       "members": "成员",
       "templates": "模板",
-      "webhooks": "Webhook"
+      "webhooks": "Webhook",
+      "orchestrator": "编排器"
     }
   },
   "account": {
@@ -318,6 +319,20 @@
       "task.completed": "任务已完成",
       "task.failed": "任务失败"
     }
+  },
+  "orchestrator": {
+    "tab": "编排器",
+    "title": "工作区编排器",
+    "description": "指定一个 Agent 或小队作为工作区编排器。它按计划运行，并接收工作区范围的上下文快照（活跃项目、小队状态），以协调自主工作。",
+    "none_title": "未配置编排器",
+    "none_description": "设置编排器以启用工作区范围的自主协调。",
+    "setup_cta": "设置编排器",
+    "current_title": "当前编排器",
+    "disable": "禁用编排器",
+    "edit": "编辑",
+    "autopilot_label": "自动驾驶",
+    "context_template_label": "指令模板",
+    "context_template_placeholder": "可选：注入到每次编排器运行的额外指令..."
   },
   "members": {
     "section_title": "成员（{{count}}）",

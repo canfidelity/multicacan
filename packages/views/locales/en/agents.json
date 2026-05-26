@@ -195,6 +195,7 @@
     "skills": "Skills",
     "environment": "Environment",
     "custom_args": "Custom Args",
+    "memories": "Memories",
     "discard_dialog_title": "Discard unsaved changes?",
     "discard_dialog_description": "You have unsaved changes in this tab. Leaving now will discard them.",
     "discard_keep": "Keep editing",
@@ -252,6 +253,13 @@
       "upload_failed_toast": "Avatar upload failed"
     }
   },
+  "memories_tab": "Memories",
+  "memories_empty": "No memories yet. Agents write memories via CLI during task execution.",
+  "memory_key": "Key",
+  "memory_value": "Value",
+  "memory_description": "Description",
+  "memory_updated": "Updated",
+  "memory_delete_aria": "Delete memory",
   "tab_body": {
     "common": {
       "save": "Save",

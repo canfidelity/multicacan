@@ -10,12 +10,13 @@ import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
 import { isImeComposing } from "@multicacan/core/utils";
 import { useTimeAgo } from "../../i18n";
 import { agentListOptions, memberListOptions, squadMemberStatusOptions, workspaceKeys } from "@multicacan/core/workspace/queries";
+import { squadProjectsOptions } from "@multicacan/core/projects/queries";
 import { runtimeListOptions } from "@multicacan/core/runtimes";
 import { CreateAgentDialog } from "../../agents/components/create-agent-dialog";
 import { useNavigation } from "../../navigation";
 import { AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
-import { Users, Plus, Trash2, ArrowLeft, ArrowUpRight, Crown, Camera, Loader2, Pencil, FileText, Save, BarChart2, CheckCircle2, MinusCircle, XCircle } from "lucide-react";
+import { Users, Plus, Trash2, ArrowLeft, ArrowUpRight, Crown, Camera, Loader2, Pencil, FileText, Save, BarChart2, CheckCircle2, MinusCircle, XCircle, FolderKanban } from "lucide-react";
 import { Button } from "@multicacan/ui/components/ui/button";
 import { Input } from "@multicacan/ui/components/ui/input";
 import { Label } from "@multicacan/ui/components/ui/label";
@@ -986,12 +987,13 @@ function SquadDescriptionEditorBody({
 // Mirrors AgentOverviewPane: dirty-guard via AlertDialog when switching tabs
 // with unsaved Instructions.
 // ---------------------------------------------------------------------------
-type SquadDetailTab = "members" | "instructions" | "activity";
+type SquadDetailTab = "members" | "instructions" | "activity" | "projects";
 
 const squadDetailTabs: { id: SquadDetailTab; label: string; icon: typeof FileText }[] = [
   { id: "members", label: "Members", icon: Users },
   { id: "instructions", label: "Instructions", icon: FileText },
   { id: "activity", label: "Activity", icon: BarChart2 },
+  { id: "projects", label: "Projects", icon: FolderKanban },
 ];
 
 function SquadOverviewPane({
@@ -1094,6 +1096,11 @@ function SquadOverviewPane({
         {activeTab === "activity" && (
           <div className="flex h-full flex-col p-4 md:p-6">
             <SquadActivityTab squadId={squadId} />
+          </div>
+        )}
+        {activeTab === "projects" && (
+          <div className="flex h-full flex-col p-4 md:p-6">
+            <SquadProjectsTab squadId={squadId} />
           </div>
         )}
       </div>
@@ -1402,6 +1409,48 @@ function SquadInstructionsTab({
           {t(($) => $.instructions_tab.save_button)}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Projects tab — lists every project this squad is assigned to, with a link
+// to the project detail page.
+function SquadProjectsTab({ squadId }: { squadId: string }) {
+  const { t } = useT("squads");
+  const wsId = useWorkspaceId();
+  const p = useWorkspacePaths();
+  const { data: projects = [], isLoading } = useQuery(squadProjectsOptions(wsId, squadId));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-10 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground text-center py-10">
+        {t(($) => $.projects_empty)}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {projects.map((proj) => (
+        <AppLink
+          key={proj.project_id}
+          href={p.projectDetail(proj.project_id)}
+          className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors group"
+        >
+          <span className="text-xl shrink-0">{proj.project_icon ?? "📁"}</span>
+          <span className="flex-1 min-w-0 text-sm font-medium truncate">{proj.project_title}</span>
+          <span className="shrink-0 text-xs text-muted-foreground capitalize">{proj.project_status.replace("_", " ")}</span>
+          <ArrowUpRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </AppLink>
+      ))}
     </div>
   );
 }

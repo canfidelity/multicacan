@@ -4,9 +4,9 @@ import { useState } from "react";
 import {
   Zap, Play, Clock, Plus, Trash2, CheckCircle2, XCircle, Loader2, Pencil,
   Ban, ChevronDown, ChevronRight,
-  Webhook, Copy, Check, RotateCw,
+  Webhook, Copy, Check, RotateCw, Filter,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { autopilotDetailOptions, autopilotRunsOptions, autopilotRunOptions } from "@multicacan/core/autopilots/queries";
 import { projectDetailOptions } from "@multicacan/core/projects/queries";
 import {
@@ -28,6 +28,7 @@ import { ActorAvatar } from "../../common/actor-avatar";
 import { Skeleton } from "@multicacan/ui/components/ui/skeleton";
 import { Button } from "@multicacan/ui/components/ui/button";
 import { Switch } from "@multicacan/ui/components/ui/switch";
+import { Checkbox } from "@multicacan/ui/components/ui/checkbox";
 import { cn } from "@multicacan/ui/lib/utils";
 import { toast } from "sonner";
 import {
@@ -250,6 +251,108 @@ function SkippedRunsGroup({
   );
 }
 
+// ---------------------------------------------------------------------------
+// GitHub event filter definitions
+// ---------------------------------------------------------------------------
+
+interface GitHubEventOption {
+  value: string;
+  label: string;
+}
+
+const GITHUB_EVENT_OPTIONS: GitHubEventOption[] = [
+  { value: "pull_request:opened", label: "pull_request:opened" },
+  { value: "pull_request:closed", label: "pull_request:closed" },
+  { value: "pull_request:merged", label: "pull_request:merged" },
+  { value: "check_suite:completed", label: "check_suite:completed" },
+  { value: "check_suite:failure", label: "check_suite:failure" },
+];
+
+function parseEventFilter(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function buildEventFilter(selected: string[]): string {
+  return selected.join(",");
+}
+
+function GitHubEventFilterSection({
+  trigger,
+  autopilotId,
+}: {
+  trigger: AutopilotTrigger;
+  autopilotId: string;
+}) {
+  const wsId = useWorkspaceId();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const currentSelected = parseEventFilter(trigger.event_filter);
+
+  const updateMutation = useMutation({
+    mutationFn: (selected: string[]) =>
+      api.updateAutopilotTrigger(autopilotId, trigger.id, {
+        event_filter: buildEventFilter(selected) || null,
+      } as Parameters<typeof api.updateAutopilotTrigger>[2]),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["autopilots", wsId] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error && err.message ? err.message : "Failed to update event filter");
+    },
+  });
+
+  const toggleEvent = (value: string, checked: boolean) => {
+    const next = checked
+      ? [...currentSelected, value]
+      : currentSelected.filter((v) => v !== value);
+    updateMutation.mutate(next);
+  };
+
+  const filterSummary =
+    currentSelected.length === 0
+      ? "All events"
+      : currentSelected.length <= 2
+      ? currentSelected.join(", ")
+      : `${currentSelected.slice(0, 2).join(", ")} +${currentSelected.length - 2}`;
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Filter className="h-3 w-3 shrink-0" />
+        <span className="font-medium">Event Filter (GitHub)</span>
+        <span className="text-muted-foreground/70">· {filterSummary}</span>
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="mt-2 ml-1 space-y-1.5">
+          {GITHUB_EVENT_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-2 cursor-pointer select-none"
+            >
+              <Checkbox
+                checked={currentSelected.includes(opt.value)}
+                disabled={updateMutation.isPending}
+                onCheckedChange={(checked) => toggleEvent(opt.value, !!checked)}
+              />
+              <span className="text-xs font-mono">{opt.label}</span>
+            </label>
+          ))}
+          <p className="text-[10px] text-muted-foreground pt-0.5">
+            Leave all unchecked to receive every event.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TriggerRow({ trigger, autopilotId }: { trigger: AutopilotTrigger; autopilotId: string }) {
   const { t } = useT("autopilots");
   const deleteTrigger = useDeleteAutopilotTrigger();
@@ -393,6 +496,9 @@ function TriggerRow({ trigger, autopilotId }: { trigger: AutopilotTrigger; autop
             </Button>
             {deleteButton}
           </div>
+        )}
+        {isWebhook && (
+          <GitHubEventFilterSection trigger={trigger} autopilotId={autopilotId} />
         )}
       </div>
       {!showWebhookUrlRow && deleteButton}

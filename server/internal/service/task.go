@@ -2296,5 +2296,48 @@ func (s *TaskService) HandoffTask(ctx context.Context, taskID pgtype.UUID, to st
 		return db.TaskHandoff{}, fmt.Errorf("create handoff: %w", err)
 	}
 
+	// Record handoff in the activity timeline so the issue history shows the chain.
+	if task.IssueID.Valid {
+		details, _ := json.Marshal(map[string]any{
+			"to_agent_id":   util.UUIDToString(targetAgent.ID),
+			"to_agent_name": targetAgent.Name,
+			"depth":         handoff.Depth,
+		})
+		activity, actErr := s.Queries.CreateActivity(ctx, db.CreateActivityParams{
+			WorkspaceID: issue.WorkspaceID,
+			IssueID:     task.IssueID,
+			ActorType:   util.StrToText("agent"),
+			ActorID:     task.AgentID,
+			Action:      "task_handed_off",
+			Details:     details,
+		})
+		if actErr != nil {
+			slog.Warn("handoff: failed to record activity", "task_id", util.UUIDToString(taskID), "error", actErr)
+		} else {
+			actorType := ""
+			if activity.ActorType.Valid {
+				actorType = activity.ActorType.String
+			}
+			s.Bus.Publish(events.Event{
+				Type:        protocol.EventActivityCreated,
+				WorkspaceID: util.UUIDToString(issue.WorkspaceID),
+				ActorType:   actorType,
+				ActorID:     util.UUIDToString(activity.ActorID),
+				Payload: map[string]any{
+					"issue_id": util.UUIDToString(activity.IssueID),
+					"entry": map[string]any{
+						"type":       "activity",
+						"id":         util.UUIDToString(activity.ID),
+						"actor_type": actorType,
+						"actor_id":   util.UUIDToString(activity.ActorID),
+						"action":     activity.Action,
+						"details":    json.RawMessage(activity.Details),
+						"created_at": util.TimestampToString(activity.CreatedAt),
+					},
+				},
+			})
+		}
+	}
+
 	return handoff, nil
 }

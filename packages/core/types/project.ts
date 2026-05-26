@@ -82,3 +82,24 @@ export interface ListProjectResourcesResponse {
   resources: ProjectResource[];
   total: number;
 }
+
+export interface ProjectSquadEntry {
+  id: string;
+  project_id: string;
+  squad_id: string;
+  squad_name: string;
+  avatar_url: string | null;
+  leader_id: string;
+  archived: boolean;
+  created_at: string;
+}
+
+export interface SquadProjectEntry {
+  id: string;
+  squad_id: string;
+  project_id: string;
+  project_title: string;
+  project_icon: string | null;
+  project_status: string;
+  created_at: string;
+}

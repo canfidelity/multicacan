@@ -1141,6 +1141,37 @@ func (h *Handler) isSquadLeaderReady(ctx context.Context, issue db.Issue) bool {
 	return ready
 }
 
+func (h *Handler) ListProjectsForSquad(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	workspaceID := workspaceIDFromURL(r, "workspaceId")
+	squadUUID, ok := parseUUIDOrBadRequest(w, id, "squad id")
+	if !ok {
+		return
+	}
+	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
+	if !ok {
+		return
+	}
+	squad, err := h.Queries.GetSquadInWorkspace(r.Context(), db.GetSquadInWorkspaceParams{
+		ID:          squadUUID,
+		WorkspaceID: wsUUID,
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "squad not found")
+		return
+	}
+	rows, err := h.Queries.ListProjectsForSquad(r.Context(), squad.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list projects for squad")
+		return
+	}
+	resp := make([]SquadProjectEntryResponse, len(rows))
+	for i, row := range rows {
+		resp[i] = squadProjectRowToResponse(row)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"projects": resp})
+}
+
 // enqueueSquadLeaderTask triggers the squad leader agent for an issue assigned to a squad.
 func (h *Handler) enqueueSquadLeaderTask(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID, authorType, authorID string) {
 	squad, err := h.Queries.GetSquadInWorkspace(ctx, db.GetSquadInWorkspaceParams{

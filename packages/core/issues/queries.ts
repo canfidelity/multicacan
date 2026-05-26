@@ -409,3 +409,9 @@ export function issueAttachmentsOptions(issueId: string) {
     queryFn: () => api.listAttachments(issueId),
   });
 }
+
+export const issueDependencyOptions = (wsId: string, issueId: string) =>
+  queryOptions({
+    queryKey: [...issueKeys.detail(wsId, issueId), 'dependencies'],
+    queryFn: () => api.listIssueDependencies(issueId),
+  });

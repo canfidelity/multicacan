@@ -2,14 +2,14 @@
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useDefaultLayout, usePanelRef } from "react-resizable-panels";
-import { Check, ChevronRight, Link2, ListTodo, MoreHorizontal, PanelRight, Pin, PinOff, Plus, Trash2, UserMinus } from "lucide-react";
+import { Check, ChevronRight, Link2, ListTodo, MoreHorizontal, PanelRight, Pin, PinOff, Plus, Trash2, UserMinus, X } from "lucide-react";
 import { useQuery, type QueryKey } from "@tanstack/react-query";
 import { cn } from "@multicacan/ui/lib/utils";
 import { toast } from "sonner";
 import type { Issue, IssueAssigneeGroup, ProjectStatus, ProjectPriority, UpdateIssueRequest } from "@multicacan/core/types";
 import { useAuthStore } from "@multicacan/core/auth";
-import { projectDetailOptions } from "@multicacan/core/projects/queries";
-import { useUpdateProject, useDeleteProject } from "@multicacan/core/projects/mutations";
+import { projectDetailOptions, projectSquadsOptions } from "@multicacan/core/projects/queries";
+import { useUpdateProject, useDeleteProject, useAddProjectSquad, useRemoveProjectSquad } from "@multicacan/core/projects/mutations";
 import { pinListOptions } from "@multicacan/core/pins";
 import { useCreatePin, useDeletePin } from "@multicacan/core/pins";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@multicacan/core/issues/queries";
 import { useUpdateIssue } from "@multicacan/core/issues/mutations";
 import { useModalStore } from "@multicacan/core/modals";
-import { memberListOptions, agentListOptions } from "@multicacan/core/workspace/queries";
+import { memberListOptions, agentListOptions, squadListOptions } from "@multicacan/core/workspace/queries";
 import { useWorkspaceId } from "@multicacan/core/hooks";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
 import { useActorName } from "@multicacan/core/workspace/hooks";
@@ -390,6 +390,18 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(leadQuery) || matchesPinyin(m.name, leadQuery));
   const filteredAgents = agents.filter((a) => !a.archived_at && (a.name.toLowerCase().includes(leadQuery) || matchesPinyin(a.name, leadQuery)));
 
+  // Squads section
+  const { data: projectSquads = [] } = useQuery(projectSquadsOptions(wsId, projectId));
+  const { data: allSquads = [] } = useQuery(squadListOptions(wsId));
+  const addProjectSquad = useAddProjectSquad(wsId, projectId);
+  const removeProjectSquad = useRemoveProjectSquad(wsId, projectId);
+  const [squadsOpen, setSquadsOpen] = useState(false);
+  const [squadFilter, setSquadFilter] = useState("");
+  const assignedSquadIds = new Set(projectSquads.map((s) => s.squad_id));
+  const filteredSquads = allSquads.filter(
+    (s) => !s.archived_at && !assignedSquadIds.has(s.id) && s.name.toLowerCase().includes(squadFilter.toLowerCase()),
+  );
+
   const handleUpdateField = useCallback(
     (data: Parameters<typeof updateProject.mutate>[0] extends { id: string } & infer R ? R : never) => {
       if (!project) return;
@@ -589,6 +601,66 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
               </PopoverContent>
             </Popover>
           </PropRow>
+          {/* Squads */}
+          <div className="flex min-h-8 items-start gap-2 rounded-md px-2 py-1.5 -mx-2 hover:bg-accent/50 transition-colors">
+            <span className="w-16 shrink-0 text-xs text-muted-foreground mt-0.5">{t(($) => $.squads.section_title)}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              {projectSquads.length === 0 && (
+                <span className="text-xs text-muted-foreground">{t(($) => $.squads.no_squads)}</span>
+              )}
+              {projectSquads.map((sq) => (
+                <div key={sq.squad_id} className="group inline-flex items-center gap-1.5 rounded bg-accent/60 px-1.5 py-0.5 text-xs w-fit max-w-full">
+                  <span className="truncate">{sq.squad_name}</span>
+                  <button
+                    type="button"
+                    aria-label={t(($) => $.squads.remove_aria)}
+                    onClick={() => removeProjectSquad.mutate(sq.squad_id)}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ))}
+              <Popover open={squadsOpen} onOpenChange={(v) => { setSquadsOpen(v); if (!v) setSquadFilter(""); }}>
+                <PopoverTrigger
+                  render={
+                    <button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                      <Plus className="h-3 w-3" />
+                      {t(($) => $.squads.add)}
+                    </button>
+                  }
+                />
+                <PopoverContent align="start" className="w-52 p-0">
+                  <div className="px-2 py-1.5 border-b">
+                    <input
+                      type="text"
+                      value={squadFilter}
+                      onChange={(e) => setSquadFilter(e.target.value)}
+                      placeholder={t(($) => $.squads.add_placeholder)}
+                      className="w-full bg-transparent text-sm placeholder:text-muted-foreground outline-none"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="p-1 max-h-60 overflow-y-auto">
+                    {filteredSquads.length === 0 ? (
+                      <div className="px-2 py-3 text-center text-sm text-muted-foreground">{t(($) => $.lead.no_results)}</div>
+                    ) : (
+                      filteredSquads.map((s) => (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => { addProjectSquad.mutate(s.id); setSquadsOpen(false); setSquadFilter(""); }}
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
+                        >
+                          <span>{s.name}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </div>}
       </div>
 

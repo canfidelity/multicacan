@@ -308,6 +308,12 @@ func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot,
 		*run = updatedRun
 	}
 
+	// Orchestrator: inject workspace-wide context so the agent has a full
+	// picture of active projects and squads without needing to call the API.
+	if ap.IsOrchestrator {
+		s.injectOrchestratorContext(ctx, ap, task.ID)
+	}
+
 	// Drop the empty-claim cache and wake the daemon. dispatchRunOnly
 	// inserts the task row directly via Queries.CreateAutopilotTask
 	// (bypassing TaskService.Enqueue*), so without this the runtime
@@ -963,4 +969,52 @@ func (s *AutopilotService) getIssuePrefix(workspaceID pgtype.UUID) string {
 		return ""
 	}
 	return ws.IssuePrefix
+}
+
+// injectOrchestratorContext enriches an orchestrator task's context JSONB with
+// a snapshot of the workspace: active projects and their issue counts. The agent
+// receives this inline so it can reason about the whole workspace without extra
+// API calls.
+func (s *AutopilotService) injectOrchestratorContext(ctx context.Context, ap db.Autopilot, taskID pgtype.UUID) {
+	projects, err := s.Queries.GetWorkspaceProjectStats(ctx, ap.WorkspaceID)
+	if err != nil {
+		slog.Warn("orchestrator: failed to load project stats", "autopilot_id", util.UUIDToString(ap.ID), "error", err)
+		return
+	}
+	type projectSummary struct {
+		ID       string  `json:"id"`
+		Title    string  `json:"title"`
+		Icon     *string `json:"icon,omitempty"`
+		Status   string  `json:"status"`
+		Priority string  `json:"priority"`
+	}
+	summaries := make([]projectSummary, len(projects))
+	for i, p := range projects {
+		var icon *string
+		if p.Icon.Valid {
+			icon = &p.Icon.String
+		}
+		summaries[i] = projectSummary{
+			ID:       util.UUIDToString(p.ID),
+			Title:    p.Title,
+			Icon:     icon,
+			Status:   p.Status,
+			Priority: p.Priority,
+		}
+	}
+	orchCtx := map[string]any{
+		"type":     "orchestrator",
+		"projects": summaries,
+	}
+	if ap.OrchestratorContextTemplate.Valid && ap.OrchestratorContextTemplate.String != "" {
+		orchCtx["instructions"] = ap.OrchestratorContextTemplate.String
+	}
+	ctxJSON, err := json.Marshal(orchCtx)
+	if err != nil {
+		return
+	}
+	_ = s.Queries.SetAutopilotTaskContext(ctx, db.SetAutopilotTaskContextParams{
+		ID:      taskID,
+		Context: ctxJSON,
+	})
 }

@@ -1797,6 +1797,14 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		dueDate = pgtype.Timestamptz{Time: t, Valid: true}
 	}
 
+	// Auto-assign to the project's first squad when no assignee was set.
+	if req.AssigneeType == nil && projectID.Valid {
+		if squadID, err := h.Queries.GetFirstProjectSquad(r.Context(), projectID); err == nil && squadID.Valid {
+			assigneeType = pgtype.Text{String: "squad", Valid: true}
+			assigneeID = squadID
+		}
+	}
+
 	// Use a transaction to atomically guard against active duplicates,
 	// increment the workspace issue counter, and create the issue.
 	tx, err := h.TxStarter.Begin(r.Context())

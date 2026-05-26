@@ -35,7 +35,8 @@
       "labs": "Labs",
       "members": "Members",
       "templates": "Templates",
-      "webhooks": "Webhooks"
+      "webhooks": "Webhooks",
+      "orchestrator": "Orchestrator"
     }
   },
   "account": {
@@ -318,6 +319,20 @@
       "task.completed": "Task completed",
       "task.failed": "Task failed"
     }
+  },
+  "orchestrator": {
+    "tab": "Orchestrator",
+    "title": "Workspace Orchestrator",
+    "description": "Designate one agent or squad as the workspace orchestrator. It runs on a schedule and receives a workspace-wide context snapshot — active projects, squad statuses — to coordinate autonomous work.",
+    "none_title": "No orchestrator configured",
+    "none_description": "Set up an orchestrator to enable workspace-wide autonomous coordination.",
+    "setup_cta": "Set up Orchestrator",
+    "current_title": "Current Orchestrator",
+    "disable": "Disable Orchestrator",
+    "edit": "Edit",
+    "autopilot_label": "Autopilot",
+    "context_template_label": "Instructions Template",
+    "context_template_placeholder": "Optional: extra instructions injected into every orchestrator run..."
   },
   "members": {
     "section_title": "Members ({{count}})",

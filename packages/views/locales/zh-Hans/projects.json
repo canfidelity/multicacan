@@ -95,5 +95,12 @@
   },
   "chip": {
     "fallback_label": "项目"
+  },
+  "squads": {
+    "section_title": "小队",
+    "add": "添加小队",
+    "no_squads": "暂无分配到此项目的小队",
+    "remove_aria": "移除小队",
+    "add_placeholder": "搜索小队..."
   }
 }

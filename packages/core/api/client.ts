@@ -109,6 +109,11 @@ import type {
   OutboundWebhookDelivery,
   CreateOutboundWebhookRequest,
   UpdateOutboundWebhookRequest,
+  ProjectSquadEntry,
+  SquadProjectEntry,
+  IssueDependency,
+  IssueDependenciesResponse,
+  AgentMemory,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type {
@@ -1956,5 +1961,59 @@ export class ApiClient {
     const qs = q.toString() ? `?${q.toString()}` : "";
     const data = await this.fetch<OutboundWebhookDelivery[]>(`/api/outbound-webhooks/${id}/deliveries${qs}`);
     return Array.isArray(data) ? data : [];
+  }
+
+  // Project-Squad associations
+  async listProjectSquads(projectId: string): Promise<ProjectSquadEntry[]> {
+    const data = await this.fetch<{ squads: ProjectSquadEntry[] }>(`/api/projects/${projectId}/squads`);
+    return Array.isArray(data?.squads) ? data.squads : [];
+  }
+
+  async addProjectSquad(projectId: string, squadId: string): Promise<ProjectSquadEntry> {
+    return this.fetch(`/api/projects/${projectId}/squads`, {
+      method: "POST",
+      body: JSON.stringify({ squad_id: squadId }),
+    });
+  }
+
+  async removeProjectSquad(projectId: string, squadId: string): Promise<void> {
+    await this.fetch(`/api/projects/${projectId}/squads/${squadId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async listProjectsForSquad(squadId: string): Promise<SquadProjectEntry[]> {
+    const data = await this.fetch<{ projects: SquadProjectEntry[] }>(`/api/squads/${squadId}/projects`);
+    return Array.isArray(data?.projects) ? data.projects : [];
+  }
+
+  // Issue Dependencies
+  async listIssueDependencies(issueId: string): Promise<IssueDependenciesResponse> {
+    return this.fetch(`/api/issues/${issueId}/dependencies`);
+  }
+
+  async addIssueDependency(issueId: string, body: { depends_on_issue_id: string; type: string }): Promise<IssueDependency> {
+    return this.fetch(`/api/issues/${issueId}/dependencies`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async removeIssueDependency(issueId: string, depId: string): Promise<void> {
+    await this.fetch(`/api/issues/${issueId}/dependencies/${depId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Agent Memory
+  async listAgentMemories(agentId: string): Promise<AgentMemory[]> {
+    const data = await this.fetch<AgentMemory[]>(`/api/agents/${agentId}/memories`);
+    return Array.isArray(data) ? data : [];
+  }
+
+  async deleteAgentMemory(agentId: string, key: string): Promise<void> {
+    await this.fetch(`/api/agents/${agentId}/memories/${encodeURIComponent(key)}`, {
+      method: "DELETE",
+    });
   }
 }

@@ -56,3 +56,19 @@ export interface Issue {
   created_at: string;
   updated_at: string;
 }
+
+export interface IssueDependency {
+  id: string;
+  issue_id: string;
+  depends_on_issue_id: string;
+  type: 'blocks' | 'blocked_by' | 'related';
+  dep_number: number;
+  dep_title: string;
+  dep_status: string;
+  created_at: string;
+}
+
+export interface IssueDependenciesResponse {
+  dependencies: IssueDependency[];
+  dependents: IssueDependency[];
+}

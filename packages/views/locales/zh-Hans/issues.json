@@ -226,6 +226,7 @@
     "task_completed_other": "完成了 task（{{count}} 次）",
     "task_failed_one": "task 失败",
     "task_failed_other": "task 失败（{{count}} 次）",
+    "task_handed_off": "已移交给 {{name}}",
     "squad_leader_evaluated": "评估了小队触发",
     "squad_leader_action": "已评估并采取了操作",
     "squad_leader_action_reason": "已评估并采取了操作：{{reason}}",
@@ -419,6 +420,17 @@
     "create_failed": "创建标签失败",
     "update_failed": "更新标签失败",
     "delete_failed": "删除标签失败"
+  },
+  "dependencies": {
+    "section_title": "依赖关系",
+    "blocks": "阻塞",
+    "blocked_by": "被阻塞",
+    "related": "关联",
+    "add_blocks": "添加被阻塞的 issue...",
+    "add_blocked_by": "添加阻塞项...",
+    "add_related": "添加关联 issue...",
+    "remove_aria": "移除依赖",
+    "no_deps": "暂无依赖"
   },
   "backlog_hint": {
     "title": "智能体在 backlog 状态下暂停",

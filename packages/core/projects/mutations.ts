@@ -73,3 +73,19 @@ export function useDeleteProject() {
     },
   });
 }
+
+export const useAddProjectSquad = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (squadId: string) => api.addProjectSquad(projectId, squadId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'squads'] }),
+  });
+};
+
+export const useRemoveProjectSquad = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (squadId: string) => api.removeProjectSquad(projectId, squadId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'squads'] }),
+  });
+};

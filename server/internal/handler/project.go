@@ -742,3 +742,183 @@ func (h *Handler) SearchProjects(w http.ResponseWriter, r *http.Request) {
 		"total":    total,
 	})
 }
+
+// ── Project Squad Assignment ─────────────────────────────────────────────────
+
+type ProjectSquadEntryResponse struct {
+	ID        string  `json:"id"`
+	ProjectID string  `json:"project_id"`
+	SquadID   string  `json:"squad_id"`
+	SquadName string  `json:"squad_name"`
+	AvatarURL *string `json:"avatar_url"`
+	LeaderID  string  `json:"leader_id"`
+	Archived  bool    `json:"archived"`
+	CreatedAt string  `json:"created_at"`
+}
+
+type SquadProjectEntryResponse struct {
+	ID            string  `json:"id"`
+	SquadID       string  `json:"squad_id"`
+	ProjectID     string  `json:"project_id"`
+	ProjectTitle  string  `json:"project_title"`
+	ProjectIcon   *string `json:"project_icon"`
+	ProjectStatus string  `json:"project_status"`
+	CreatedAt     string  `json:"created_at"`
+}
+
+func projectSquadRowToResponse(row db.ListProjectSquadsRow) ProjectSquadEntryResponse {
+	return ProjectSquadEntryResponse{
+		ID:        uuidToString(row.ID),
+		ProjectID: uuidToString(row.ProjectID),
+		SquadID:   uuidToString(row.SquadID),
+		SquadName: row.SquadName,
+		AvatarURL: textToPtr(row.AvatarUrl),
+		LeaderID:  uuidToString(row.LeaderID),
+		Archived:  row.ArchivedAt.Valid,
+		CreatedAt: timestampToString(row.CreatedAt),
+	}
+}
+
+func squadProjectRowToResponse(row db.ListProjectsForSquadRow) SquadProjectEntryResponse {
+	return SquadProjectEntryResponse{
+		ID:            uuidToString(row.ID),
+		SquadID:       uuidToString(row.SquadID),
+		ProjectID:     uuidToString(row.ProjectID),
+		ProjectTitle:  row.ProjectTitle,
+		ProjectIcon:   textToPtr(row.ProjectIcon),
+		ProjectStatus: row.ProjectStatus,
+		CreatedAt:     timestampToString(row.CreatedAt),
+	}
+}
+
+func (h *Handler) ListProjectSquads(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	workspaceID := h.resolveWorkspaceID(r)
+	idUUID, ok := parseUUIDOrBadRequest(w, id, "project id")
+	if !ok {
+		return
+	}
+	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
+	if !ok {
+		return
+	}
+	project, err := h.Queries.GetProjectInWorkspace(r.Context(), db.GetProjectInWorkspaceParams{
+		ID: idUUID, WorkspaceID: wsUUID,
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+	rows, err := h.Queries.ListProjectSquads(r.Context(), project.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list project squads")
+		return
+	}
+	resp := make([]ProjectSquadEntryResponse, len(rows))
+	for i, row := range rows {
+		resp[i] = projectSquadRowToResponse(row)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"squads": resp})
+}
+
+func (h *Handler) AddProjectSquad(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	workspaceID := h.resolveWorkspaceID(r)
+	idUUID, ok := parseUUIDOrBadRequest(w, id, "project id")
+	if !ok {
+		return
+	}
+	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
+	if !ok {
+		return
+	}
+	project, err := h.Queries.GetProjectInWorkspace(r.Context(), db.GetProjectInWorkspaceParams{
+		ID: idUUID, WorkspaceID: wsUUID,
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+
+	var req struct {
+		SquadID string `json:"squad_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.SquadID == "" {
+		writeError(w, http.StatusBadRequest, "squad_id is required")
+		return
+	}
+
+	squadUUID, ok := parseUUIDOrBadRequest(w, req.SquadID, "squad_id")
+	if !ok {
+		return
+	}
+
+	_, err = h.Queries.AddProjectSquad(r.Context(), db.AddProjectSquadParams{
+		ProjectID: project.ID,
+		SquadID:   squadUUID,
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			writeError(w, http.StatusConflict, "squad already assigned to project")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to add squad to project")
+		return
+	}
+
+	rows, err := h.Queries.ListProjectSquads(r.Context(), project.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load project squads")
+		return
+	}
+	var entry ProjectSquadEntryResponse
+	for _, row := range rows {
+		if uuidToString(row.SquadID) == req.SquadID {
+			entry = projectSquadRowToResponse(row)
+			break
+		}
+	}
+	writeJSON(w, http.StatusCreated, entry)
+}
+
+func (h *Handler) RemoveProjectSquad(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	squadID := chi.URLParam(r, "squadId")
+	workspaceID := h.resolveWorkspaceID(r)
+	idUUID, ok := parseUUIDOrBadRequest(w, id, "project id")
+	if !ok {
+		return
+	}
+	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
+	if !ok {
+		return
+	}
+	project, err := h.Queries.GetProjectInWorkspace(r.Context(), db.GetProjectInWorkspaceParams{
+		ID: idUUID, WorkspaceID: wsUUID,
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+	squadUUID, ok := parseUUIDOrBadRequest(w, squadID, "squadId")
+	if !ok {
+		return
+	}
+	rows, err := h.Queries.RemoveProjectSquad(r.Context(), db.RemoveProjectSquadParams{
+		ProjectID: project.ID,
+		SquadID:   squadUUID,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to remove squad from project")
+		return
+	}
+	if rows == 0 {
+		writeError(w, http.StatusNotFound, "squad not assigned to this project")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

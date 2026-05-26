@@ -11,6 +11,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addProjectSquad = `-- name: AddProjectSquad :one
+INSERT INTO project_squad (project_id, squad_id) VALUES ($1, $2) RETURNING id, project_id, squad_id, created_at
+`
+
+type AddProjectSquadParams struct {
+	ProjectID pgtype.UUID `json:"project_id"`
+	SquadID   pgtype.UUID `json:"squad_id"`
+}
+
+func (q *Queries) AddProjectSquad(ctx context.Context, arg AddProjectSquadParams) (ProjectSquad, error) {
+	row := q.db.QueryRow(ctx, addProjectSquad, arg.ProjectID, arg.SquadID)
+	var i ProjectSquad
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.SquadID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const countIssuesByProject = `-- name: CountIssuesByProject :one
 SELECT count(*) FROM issue
 WHERE project_id = $1
@@ -84,6 +105,17 @@ type DeleteProjectParams struct {
 func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) error {
 	_, err := q.db.Exec(ctx, deleteProject, arg.ID, arg.WorkspaceID)
 	return err
+}
+
+const getFirstProjectSquad = `-- name: GetFirstProjectSquad :one
+SELECT squad_id FROM project_squad WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1
+`
+
+func (q *Queries) GetFirstProjectSquad(ctx context.Context, projectID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getFirstProjectSquad, projectID)
+	var squad_id pgtype.UUID
+	err := row.Scan(&squad_id)
+	return squad_id, err
 }
 
 const getProject = `-- name: GetProject :one
@@ -174,6 +206,55 @@ func (q *Queries) GetProjectIssueStats(ctx context.Context, projectIds []pgtype.
 	return items, nil
 }
 
+const listProjectSquads = `-- name: ListProjectSquads :many
+SELECT ps.id, ps.project_id, ps.squad_id, ps.created_at,
+       s.name AS squad_name, s.avatar_url, s.leader_id, s.archived_at
+FROM project_squad ps
+JOIN squad s ON s.id = ps.squad_id
+WHERE ps.project_id = $1
+ORDER BY ps.created_at ASC
+`
+
+type ListProjectSquadsRow struct {
+	ID         pgtype.UUID        `json:"id"`
+	ProjectID  pgtype.UUID        `json:"project_id"`
+	SquadID    pgtype.UUID        `json:"squad_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	SquadName  string             `json:"squad_name"`
+	AvatarUrl  pgtype.Text        `json:"avatar_url"`
+	LeaderID   pgtype.UUID        `json:"leader_id"`
+	ArchivedAt pgtype.Timestamptz `json:"archived_at"`
+}
+
+func (q *Queries) ListProjectSquads(ctx context.Context, projectID pgtype.UUID) ([]ListProjectSquadsRow, error) {
+	rows, err := q.db.Query(ctx, listProjectSquads, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProjectSquadsRow{}
+	for rows.Next() {
+		var i ListProjectSquadsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.SquadID,
+			&i.CreatedAt,
+			&i.SquadName,
+			&i.AvatarUrl,
+			&i.LeaderID,
+			&i.ArchivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjects = `-- name: ListProjects :many
 SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority FROM project
 WHERE workspace_id = $1
@@ -218,6 +299,70 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]P
 		return nil, err
 	}
 	return items, nil
+}
+
+const listProjectsForSquad = `-- name: ListProjectsForSquad :many
+SELECT ps.id, ps.squad_id, ps.project_id, ps.created_at,
+       p.title AS project_title, p.icon AS project_icon, p.status AS project_status
+FROM project_squad ps
+JOIN project p ON p.id = ps.project_id
+WHERE ps.squad_id = $1
+ORDER BY ps.created_at ASC
+`
+
+type ListProjectsForSquadRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	SquadID       pgtype.UUID        `json:"squad_id"`
+	ProjectID     pgtype.UUID        `json:"project_id"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ProjectTitle  string             `json:"project_title"`
+	ProjectIcon   pgtype.Text        `json:"project_icon"`
+	ProjectStatus string             `json:"project_status"`
+}
+
+func (q *Queries) ListProjectsForSquad(ctx context.Context, squadID pgtype.UUID) ([]ListProjectsForSquadRow, error) {
+	rows, err := q.db.Query(ctx, listProjectsForSquad, squadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProjectsForSquadRow{}
+	for rows.Next() {
+		var i ListProjectsForSquadRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SquadID,
+			&i.ProjectID,
+			&i.CreatedAt,
+			&i.ProjectTitle,
+			&i.ProjectIcon,
+			&i.ProjectStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const removeProjectSquad = `-- name: RemoveProjectSquad :execrows
+DELETE FROM project_squad WHERE project_id = $1 AND squad_id = $2
+`
+
+type RemoveProjectSquadParams struct {
+	ProjectID pgtype.UUID `json:"project_id"`
+	SquadID   pgtype.UUID `json:"squad_id"`
+}
+
+func (q *Queries) RemoveProjectSquad(ctx context.Context, arg RemoveProjectSquadParams) (int64, error) {
+	result, err := q.db.Exec(ctx, removeProjectSquad, arg.ProjectID, arg.SquadID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateProject = `-- name: UpdateProject :one

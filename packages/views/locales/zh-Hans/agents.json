@@ -191,6 +191,7 @@
     "skills": "skill",
     "environment": "环境变量",
     "custom_args": "自定义参数",
+    "memories": "记忆",
     "discard_dialog_title": "放弃未保存的修改？",
     "discard_dialog_description": "当前 tab 有未保存的修改，离开会丢弃这些修改。",
     "discard_keep": "继续编辑",
@@ -247,6 +248,13 @@
       "upload_failed_toast": "头像上传失败"
     }
   },
+  "memories_tab": "记忆",
+  "memories_empty": "暂无记忆。智能体在执行任务期间通过 CLI 写入记忆。",
+  "memory_key": "键",
+  "memory_value": "值",
+  "memory_description": "描述",
+  "memory_updated": "更新时间",
+  "memory_delete_aria": "删除记忆",
   "tab_body": {
     "common": {
       "save": "保存",

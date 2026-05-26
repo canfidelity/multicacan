@@ -10,7 +10,11 @@
     "usage": "用量",
     "runtimes": "运行时",
     "skills": "Skill",
-    "settings": "设置"
+    "settings": "设置",
+    "simulator": "模拟器",
+    "preview": "网页预览",
+    "ide": "代码编辑器",
+    "assets": "资源库"
   },
   "help": {
     "trigger": "帮助",
@@ -36,6 +40,7 @@
     "pinned_label": "固定",
     "workspace_group": "工作区",
     "configure_group": "配置",
+    "apps_group": "应用",
     "unread_overflow": "99+"
   }
 }

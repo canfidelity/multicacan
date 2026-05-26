@@ -637,7 +637,26 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.gcLoop(ctx)
 	go d.autoUpdateLoop(ctx)
 	go d.serveHealth(ctx, healthLn, time.Now())
-	d.logger.Debug("background loops launched (workspace-sync, task-wakeup, heartbeat, gc, auto-update, health)")
+
+	// Simulator relay: tunnel the local iOS simulator stream out to the VPS
+	// so a browser anywhere can drive it. No-op when sim-capture isn't on
+	// this machine, so cheap to always run.
+	go d.relaySimulatorLoop(ctx)
+
+	// Live Pair Programming: poll active pair sessions and stream agent analysis.
+	d.startPairLoop(ctx)
+
+	// Web Preview: detect running local dev servers and relay them to the VPS.
+	go d.webPreviewLoop(ctx)
+
+	// Native IDE: relay file system and PTY sessions to the VPS.
+	go d.nativeIDELoop(ctx)
+
+	// SSH Tunnel: maintain a reverse SSH tunnel so the VPS can mount this
+	// daemon's filesystem via SSHFS for openvscode-server IDE access.
+	go d.sshTunnelLoop(ctx)
+
+	d.logger.Debug("background loops launched (workspace-sync, task-wakeup, heartbeat, gc, auto-update, health, simulator-relay, pair, webpreview, native-ide, ssh-tunnel)")
 	err = d.pollLoop(ctx, taskWakeups)
 	d.logger.Debug("daemon main loop returning", "error", err)
 	return err

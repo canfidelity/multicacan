@@ -240,11 +240,10 @@ func stageFakeAgent(t *testing.T) string {
 	return binDir
 }
 
-// TestLoadConfig_AutoUpdateDefault_SelfHostOff is the regression guard for
-// MUL-2381: a daemon pointed at any non-cloud server URL must default
-// AutoUpdateEnabled to false, because self-host operators frequently run a
-// fork and the upstream GitHub release would silently overwrite it.
-func TestLoadConfig_AutoUpdateDefault_SelfHostOff(t *testing.T) {
+// TestLoadConfig_AutoUpdateDefault_AlwaysOn confirms that auto-update defaults
+// to enabled for all deployments including self-hosted, so Multicacan fork
+// operators get updates automatically without manual intervention.
+func TestLoadConfig_AutoUpdateDefault_AlwaysOn(t *testing.T) {
 	stageFakeAgent(t)
 	cfg, err := LoadConfig(Overrides{
 		ServerURL:      "http://localhost:8080",
@@ -253,16 +252,13 @@ func TestLoadConfig_AutoUpdateDefault_SelfHostOff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	if cfg.AutoUpdateEnabled {
-		t.Fatalf("AutoUpdateEnabled = true for self-host (localhost) server, want false")
+	if !cfg.AutoUpdateEnabled {
+		t.Fatalf("AutoUpdateEnabled = false for self-host (localhost) server, want true")
 	}
 }
 
-// TestLoadConfig_AutoUpdateDefault_CloudOn confirms the symmetric case: a
-// daemon pointed at Multica's hosted cloud keeps the historical opt-in
-// auto-update default. We pass the WSS form of the URL to also exercise that
-// NormalizeServerBaseURL maps it through to the http host the detector
-// inspects.
+// TestLoadConfig_AutoUpdateDefault_CloudOn confirms cloud deployments also
+// default to auto-update enabled.
 func TestLoadConfig_AutoUpdateDefault_CloudOn(t *testing.T) {
 	stageFakeAgent(t)
 	cfg, err := LoadConfig(Overrides{
@@ -273,15 +269,15 @@ func TestLoadConfig_AutoUpdateDefault_CloudOn(t *testing.T) {
 		t.Fatalf("LoadConfig: %v", err)
 	}
 	if !cfg.AutoUpdateEnabled {
-		t.Fatalf("AutoUpdateEnabled = false for Multica Cloud server, want true")
+		t.Fatalf("AutoUpdateEnabled = false for cloud server, want true")
 	}
 }
 
-// TestLoadConfig_AutoUpdateEnv_ForcesOnForSelfHost lets a self-host operator
-// re-enable auto-update via env var, overriding the new conservative default.
+// TestLoadConfig_AutoUpdateEnv_ForcesOnForSelfHost confirms MULTICACAN_DAEMON_AUTO_UPDATE=true
+// keeps auto-update enabled on self-hosted.
 func TestLoadConfig_AutoUpdateEnv_ForcesOnForSelfHost(t *testing.T) {
 	stageFakeAgent(t)
-	t.Setenv("MULTICA_DAEMON_AUTO_UPDATE", "true")
+	t.Setenv("MULTICACAN_DAEMON_AUTO_UPDATE", "true")
 	cfg, err := LoadConfig(Overrides{
 		ServerURL:      "http://localhost:8080",
 		WorkspacesRoot: t.TempDir(),
@@ -290,15 +286,15 @@ func TestLoadConfig_AutoUpdateEnv_ForcesOnForSelfHost(t *testing.T) {
 		t.Fatalf("LoadConfig: %v", err)
 	}
 	if !cfg.AutoUpdateEnabled {
-		t.Fatalf("AutoUpdateEnabled = false after explicit MULTICA_DAEMON_AUTO_UPDATE=true, want true")
+		t.Fatalf("AutoUpdateEnabled = false after explicit MULTICACAN_DAEMON_AUTO_UPDATE=true, want true")
 	}
 }
 
-// TestLoadConfig_AutoUpdateEnv_ForcesOffForCloud covers the inverse: a cloud
-// user can still opt out via env var.
-func TestLoadConfig_AutoUpdateEnv_ForcesOffForCloud(t *testing.T) {
+// TestLoadConfig_AutoUpdateEnv_ForcesOff confirms MULTICACAN_DAEMON_AUTO_UPDATE=false
+// disables auto-update on any deployment.
+func TestLoadConfig_AutoUpdateEnv_ForcesOff(t *testing.T) {
 	stageFakeAgent(t)
-	t.Setenv("MULTICA_DAEMON_AUTO_UPDATE", "false")
+	t.Setenv("MULTICACAN_DAEMON_AUTO_UPDATE", "false")
 	cfg, err := LoadConfig(Overrides{
 		ServerURL:      "https://api.multica.ai",
 		WorkspacesRoot: t.TempDir(),
@@ -307,16 +303,15 @@ func TestLoadConfig_AutoUpdateEnv_ForcesOffForCloud(t *testing.T) {
 		t.Fatalf("LoadConfig: %v", err)
 	}
 	if cfg.AutoUpdateEnabled {
-		t.Fatalf("AutoUpdateEnabled = true after explicit MULTICA_DAEMON_AUTO_UPDATE=false, want false")
+		t.Fatalf("AutoUpdateEnabled = true after explicit MULTICACAN_DAEMON_AUTO_UPDATE=false, want false")
 	}
 }
 
-// TestLoadConfig_AutoUpdate_NoFlagWinsOverCloudDefault keeps the legacy CLI
-// flag working: --no-auto-update (translated into overrides.DisableAutoUpdate)
-// forces auto-update off even when the cloud default and env var would enable.
-func TestLoadConfig_AutoUpdate_NoFlagWinsOverCloudDefault(t *testing.T) {
+// TestLoadConfig_AutoUpdate_NoFlagWins confirms --no-auto-update flag always
+// wins over env var and default.
+func TestLoadConfig_AutoUpdate_NoFlagWins(t *testing.T) {
 	stageFakeAgent(t)
-	t.Setenv("MULTICA_DAEMON_AUTO_UPDATE", "true")
+	t.Setenv("MULTICACAN_DAEMON_AUTO_UPDATE", "true")
 	cfg, err := LoadConfig(Overrides{
 		ServerURL:         "https://api.multica.ai",
 		WorkspacesRoot:    t.TempDir(),

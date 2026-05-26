@@ -17,15 +17,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: isProd
-      ? "Multica"
+      ? "Multicacan"
       : isStaging
-        ? "Multica (Staging)"
-        : "Multica (Dev)",
-    slug: "multica-mobile",
+        ? "Multicacan (Staging)"
+        : "Multicacan (Dev)",
+    slug: "multicacan-mobile",
     version: "0.1.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
-    scheme: "multica",
+    scheme: "multicacan",
     // 1024x1024 source shared with the desktop client
     // (apps/desktop/build/icon.png). Expo prebuild generates every required
     // iOS icon size from this single PNG.
@@ -42,10 +42,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // auto-loads `.env.<mode>.local` regardless of APP_ENV) and collapse
       // dev / staging / prod onto a single id.
       bundleIdentifier: isProd
-        ? (process.env.EXPO_BUNDLE_IDENTIFIER_PROD ?? "ai.multica.mobile")
+        ? (process.env.EXPO_BUNDLE_IDENTIFIER_PROD ?? "ai.multicacan.mobile")
         : isStaging
-          ? "ai.multica.mobile.staging"
-          : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multica.mobile.dev"),
+          ? "ai.multicacan.mobile.staging"
+          : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multicacan.mobile.dev"),
     },
     plugins: [
       "expo-router",
@@ -60,7 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           // iOS 14+. Camera + microphone are disabled — we only ever read
           // from the existing photo library.
           photosPermission:
-            "Allow Multica to access your photos to attach images to issues and comments.",
+            "Allow Multicacan to access your photos to attach images to issues and comments.",
           cameraPermission: false,
           microphonePermission: false,
         },

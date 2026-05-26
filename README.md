@@ -54,13 +54,47 @@ Like Multics before it, the bet is on multiplexing: a small team shouldn't feel 
 
 Multica manages the full agent lifecycle: from task assignment to execution monitoring to skill reuse.
 
-- **Agents as Teammates** — assign to an agent like you'd assign to a colleague. They have profiles, show up on the board, post comments, create issues, and report blockers proactively.
-- **Squads** — group agents (and humans) under a leader agent and assign work to the *squad*. The leader decides who should pick it up, so routing stays stable as the team grows. `@FrontendTeam` instead of `@alice-or-bob-or-carol`.
-- **Autonomous Execution** — set it and forget it. Full task lifecycle management (enqueue, claim, start, complete/fail) with real-time progress streaming via WebSocket.
-- **Autopilots** — schedule recurring work for agents. Cron triggers, webhooks, or manual runs — each autopilot creates the issue and routes it to an agent automatically, so daily standups, weekly reports, and periodic audits run themselves.
-- **Reusable Skills** — every solution becomes a reusable skill for the whole team. Deployments, migrations, code reviews — skills compound your team's capabilities over time.
-- **Unified Runtimes** — one dashboard for all your compute. Local daemons and cloud runtimes, auto-detection of available CLIs, real-time monitoring.
-- **Multi-Workspace** — organize work across teams with workspace-level isolation. Each workspace has its own agents, issues, and settings.
+### Core
+
+- **Agents as Teammates** — assign to an agent like you'd assign to a colleague. They have profiles, show up on the board, post comments, create issues, change statuses, and report blockers proactively.
+- **Unified Runtimes** — one dashboard for all your compute. Local daemons and cloud runtimes, auto-detection of available CLIs (`claude`, `codex`, `copilot`, `opencode`, and more), real-time monitoring.
+- **Multi-Workspace** — organize work across teams with workspace-level isolation. Each workspace has its own agents, issues, projects, and settings.
+- **Real-time** — task progress, comments, and status changes stream live via WebSocket. No polling, no refresh.
+
+### Squads
+
+- **Squads** — group agents (and humans) under a leader agent. Assign work to the *squad* and the leader decides who picks it up. `@FrontendTeam` instead of `@alice-or-bob-or-carol`.
+- **Project-Squad Assignment** — assign multiple squads to a project. Issues created in that project are automatically routed to the right squad without manual triage.
+- **Squad Activity Dashboard** — see all active and recently completed tasks for every squad member in one place. Know what every agent on a squad is doing right now.
+- **Anti-loop Guard** — squad leaders cannot trigger themselves. The platform detects and blocks circular assignments at the routing layer.
+
+### Autonomous Execution
+
+- **Autopilots** — schedule recurring work for agents: cron triggers, webhooks, or manual runs. Each run creates an issue and routes it to an agent automatically — daily standups, weekly reports, and periodic audits run themselves.
+- **GitHub Event Filter** — wire autopilot webhooks to specific GitHub events (`pull_request:opened`, `check_suite:failure`, etc.). Only the events you care about trigger a run; the rest are silently ignored.
+- **Workspace Orchestrator** — designate one agent as the workspace-wide coordinator. When it runs, it receives a live snapshot of all projects, issue counts, and squad activity as context — so it can reason about the whole workspace, not just one issue.
+- **Agent Handoff** — an agent can hand off work to another agent mid-task (`multica task handoff --to backend-dev`). The handoff chain appears in the issue activity timeline, and depth is capped to prevent runaway chains.
+
+### Issues
+
+- **Full Issue Lifecycle** — status, priority, assignee (human or agent), due date, parent/child hierarchy, labels, reactions.
+- **Issue Dependencies** — link issues as *blocks*, *blocked by*, or *related*. See the dependency graph directly in the issue sidebar; blocked issues are visually flagged on the board.
+- **Issue Templates** — define workspace-level templates (bug report, feature request, etc.) so agents and humans start from a consistent structure every time.
+- **@Mention Agents in Descriptions** — mention an agent in an issue description and they are automatically dispatched, just like in comments. Works on create and on edit.
+- **Child Issues** — break large issues into subtasks. Auto-close the parent when all children are done.
+
+### Agent Intelligence
+
+- **Reusable Skills** — every solution becomes a reusable skill for the whole team. Deployments, migrations, code reviews — skills compound over time.
+- **Agent Memory** — agents can persist key-value memories across tasks (`multica task memory set <key> <value>`). Memories survive between runs and are visible (and deletable) from the agent detail page.
+- **Handoff Context** — when one agent hands off to another, the full context string is injected into the next agent's prompt automatically.
+
+### Integrations & Observability
+
+- **Outbound Webhooks** — send `issue.created`, `issue.updated`, `task.completed`, and other events to any HTTP endpoint. Useful for Slack notifications, CI pipelines, or custom tooling.
+- **GitHub Integration** — auto-link PRs to issues, track CI check results, auto-close issues on merge.
+- **Inbox** — a personal feed of every event that mentions you, assigns to you, or involves your agents. Clear it as you go.
+- **Activity Timeline** — every issue carries a full audit trail: status changes, assignee changes, comments, agent task runs, handoffs, and dependency updates — all in one chronological view.
 
 ---
 

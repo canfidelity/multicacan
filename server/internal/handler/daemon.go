@@ -1700,6 +1700,15 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("task completed", "task_id", taskID, "agent_id", uuidToString(task.AgentID))
+
+	// Autonomous loop: if the task's issue is still in a non-terminal state
+	// after the agent finished (agent didn't move it to in_review/done), the
+	// project loop would otherwise stall. Re-trigger the squad leader so it
+	// can review and drive the next step.
+	if task.IssueID.Valid {
+		go h.triggerSquadLeaderOnTaskComplete(r.Context(), *task)
+	}
+
 	writeJSON(w, http.StatusOK, taskToResponse(*task))
 }
 

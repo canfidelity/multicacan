@@ -332,6 +332,26 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 	}
 }
 
+// triggerSquadLeaderOnTaskComplete is called when any agent task completes. If
+// the issue is still in a non-terminal state (not done/in_review/cancelled),
+// the squad leader is re-triggered so the project loop doesn't stall when an
+// agent finishes work but forgets to update the issue status.
+func (h *Handler) triggerSquadLeaderOnTaskComplete(ctx context.Context, task db.AgentTaskQueue) {
+	if !task.IssueID.Valid {
+		return
+	}
+	issue, err := h.Queries.GetIssue(ctx, task.IssueID)
+	if err != nil {
+		return
+	}
+	// Already handled by UpdateIssue hooks or terminal — nothing to do.
+	switch issue.Status {
+	case "done", "in_review", "cancelled":
+		return
+	}
+	h.triggerProjectSquadLeaderForReview(ctx, issue)
+}
+
 // triggerProjectSquadLeaderForReview re-triggers the squad leader when an issue
 // moves to in_review. This closes the feedback loop that was missing: agents
 // finish work → issue goes in_review → leader reviews and drives the next step.

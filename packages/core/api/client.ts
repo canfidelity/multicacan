@@ -111,6 +111,9 @@ import type {
   UpdateOutboundWebhookRequest,
   ProjectSquadEntry,
   SquadProjectEntry,
+  ProjectMilestone,
+  CreateMilestoneRequest,
+  UpdateMilestoneRequest,
   IssueDependency,
   IssueDependenciesResponse,
   AgentMemory,
@@ -1985,6 +1988,39 @@ export class ApiClient {
   async listProjectsForSquad(squadId: string): Promise<SquadProjectEntry[]> {
     const data = await this.fetch<{ projects: SquadProjectEntry[] }>(`/api/squads/${squadId}/projects`);
     return Array.isArray(data?.projects) ? data.projects : [];
+  }
+
+  // Project Milestones
+  async listProjectMilestones(projectId: string): Promise<ProjectMilestone[]> {
+    const data = await this.fetch<ProjectMilestone[]>(`/api/projects/${projectId}/milestones`);
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createProjectMilestone(projectId: string, body: CreateMilestoneRequest): Promise<ProjectMilestone> {
+    return this.fetch(`/api/projects/${projectId}/milestones`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async updateProjectMilestone(projectId: string, milestoneId: string, body: UpdateMilestoneRequest): Promise<ProjectMilestone> {
+    return this.fetch(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteProjectMilestone(projectId: string, milestoneId: string): Promise<void> {
+    await this.fetch(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async setProjectExecution(projectId: string, status: string): Promise<Project> {
+    return this.fetch(`/api/projects/${projectId}/execution`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    });
   }
 
   // Issue Dependencies

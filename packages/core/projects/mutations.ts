@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { projectKeys } from "./queries";
 import { useWorkspaceId } from "../hooks";
-import type { Project, CreateProjectRequest, UpdateProjectRequest, ListProjectsResponse } from "../types";
+import type { Project, CreateProjectRequest, UpdateProjectRequest, ListProjectsResponse, CreateMilestoneRequest, UpdateMilestoneRequest } from "../types";
 
 export function useCreateProject() {
   const qc = useQueryClient();
@@ -87,5 +87,41 @@ export const useRemoveProjectSquad = (wsId: string, projectId: string) => {
   return useMutation({
     mutationFn: (squadId: string) => api.removeProjectSquad(projectId, squadId),
     onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'squads'] }),
+  });
+};
+
+export const useCreateProjectMilestone = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateMilestoneRequest) => api.createProjectMilestone(projectId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'milestones'] }),
+  });
+};
+
+export const useUpdateProjectMilestone = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ milestoneId, body }: { milestoneId: string; body: UpdateMilestoneRequest }) =>
+      api.updateProjectMilestone(projectId, milestoneId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'milestones'] }),
+  });
+};
+
+export const useDeleteProjectMilestone = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (milestoneId: string) => api.deleteProjectMilestone(projectId, milestoneId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...projectKeys.detail(wsId, projectId), 'milestones'] }),
+  });
+};
+
+export const useSetProjectExecution = (wsId: string, projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (status: string) => api.setProjectExecution(projectId, status),
+    onSuccess: (updated) => {
+      qc.setQueryData(projectKeys.detail(wsId, projectId), updated);
+      qc.invalidateQueries({ queryKey: projectKeys.detail(wsId, projectId) });
+    },
   });
 };

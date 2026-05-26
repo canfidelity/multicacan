@@ -102,5 +102,23 @@
     "no_squads": "暂无分配到此项目的小队",
     "remove_aria": "移除小队",
     "add_placeholder": "搜索小队..."
+  },
+  "roadmap": {
+    "section_title": "路线图",
+    "mission_label": "使命",
+    "mission_placeholder": "描述此项目将要实现的目标...",
+    "add_milestone": "添加里程碑",
+    "milestone_placeholder": "里程碑标题",
+    "no_milestones": "暂无里程碑",
+    "delete_aria": "删除里程碑",
+    "start": "启动",
+    "pause": "暂停",
+    "resume": "继续",
+    "stop": "停止",
+    "status_idle": "空闲",
+    "status_running": "运行中",
+    "status_paused": "已暂停",
+    "status_stopped": "已停止",
+    "status_completed": "已完成"
   }
 }

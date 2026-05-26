@@ -81,6 +81,11 @@ export type {
   ListProjectResourcesResponse,
   ProjectSquadEntry,
   SquadProjectEntry,
+  ProjectMilestone,
+  MilestoneStatus,
+  ProjectExecutionStatus,
+  CreateMilestoneRequest,
+  UpdateMilestoneRequest,
 } from "./project";
 export type { AgentMemory } from "./agent_memory";
 export type { PinnedItem, PinnedItemType, CreatePinRequest, ReorderPinsRequest } from "./pin";

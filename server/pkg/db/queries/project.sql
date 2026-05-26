@@ -16,9 +16,9 @@ WHERE id = $1 AND workspace_id = $2;
 -- name: CreateProject :one
 INSERT INTO project (
     workspace_id, title, description, icon, status,
-    lead_type, lead_id, priority
+    lead_type, lead_id, priority, mission
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 ) RETURNING *;
 
 -- name: UpdateProject :one
@@ -30,9 +30,18 @@ UPDATE project SET
     priority = COALESCE(sqlc.narg('priority'), priority),
     lead_type = sqlc.narg('lead_type'),
     lead_id = sqlc.narg('lead_id'),
+    mission = COALESCE(sqlc.narg('mission'), mission),
+    mission_issue_id = COALESCE(sqlc.narg('mission_issue_id'), mission_issue_id),
+    execution_status = COALESCE(sqlc.narg('execution_status'), execution_status),
     updated_at = now()
 WHERE id = $1
 RETURNING *;
+
+-- name: SetProjectExecutionStatus :one
+UPDATE project SET execution_status = $2, updated_at = now() WHERE id = $1 RETURNING *;
+
+-- name: SetProjectMissionIssue :one
+UPDATE project SET mission_issue_id = $2, updated_at = now() WHERE id = $1 RETURNING *;
 
 -- name: DeleteProject :exec
 -- Defense-in-depth: workspace_id is a SQL-layer tenant guard. See DeleteIssue.
@@ -74,3 +83,7 @@ ORDER BY ps.created_at ASC;
 
 -- name: GetFirstProjectSquad :one
 SELECT squad_id FROM project_squad WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1;
+
+
+-- name: GetFirstIssueInProject :one
+SELECT * FROM issue WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1;

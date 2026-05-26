@@ -17,19 +17,22 @@ import (
 )
 
 type ProjectResponse struct {
-	ID          string  `json:"id"`
-	WorkspaceID string  `json:"workspace_id"`
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	Icon        *string `json:"icon"`
-	Status      string  `json:"status"`
-	Priority    string  `json:"priority"`
-	LeadType    *string `json:"lead_type"`
-	LeadID      *string `json:"lead_id"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
-	IssueCount  int64   `json:"issue_count"`
-	DoneCount   int64   `json:"done_count"`
+	ID              string  `json:"id"`
+	WorkspaceID     string  `json:"workspace_id"`
+	Title           string  `json:"title"`
+	Description     *string `json:"description"`
+	Icon            *string `json:"icon"`
+	Status          string  `json:"status"`
+	Priority        string  `json:"priority"`
+	LeadType        *string `json:"lead_type"`
+	LeadID          *string `json:"lead_id"`
+	Mission         *string `json:"mission"`
+	ExecutionStatus string  `json:"execution_status"`
+	MissionIssueID  *string `json:"mission_issue_id"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
+	IssueCount      int64   `json:"issue_count"`
+	DoneCount       int64   `json:"done_count"`
 	// ResourceCount is a breadcrumb pointing at the sub-collection at
 	// /api/projects/{id}/resources. Resources themselves stay out of this
 	// payload to keep parent metadata and child collections separate; clients
@@ -39,17 +42,20 @@ type ProjectResponse struct {
 
 func projectToResponse(p db.Project) ProjectResponse {
 	return ProjectResponse{
-		ID:          uuidToString(p.ID),
-		WorkspaceID: uuidToString(p.WorkspaceID),
-		Title:       p.Title,
-		Description: textToPtr(p.Description),
-		Icon:        textToPtr(p.Icon),
-		Status:      p.Status,
-		Priority:    p.Priority,
-		LeadType:    textToPtr(p.LeadType),
-		LeadID:      uuidToPtr(p.LeadID),
-		CreatedAt:   timestampToString(p.CreatedAt),
-		UpdatedAt:   timestampToString(p.UpdatedAt),
+		ID:              uuidToString(p.ID),
+		WorkspaceID:     uuidToString(p.WorkspaceID),
+		Title:           p.Title,
+		Description:     textToPtr(p.Description),
+		Icon:            textToPtr(p.Icon),
+		Status:          p.Status,
+		Priority:        p.Priority,
+		LeadType:        textToPtr(p.LeadType),
+		LeadID:          uuidToPtr(p.LeadID),
+		Mission:         textToPtr(p.Mission),
+		ExecutionStatus: p.ExecutionStatus,
+		MissionIssueID:  uuidToPtr(p.MissionIssueID),
+		CreatedAt:       timestampToString(p.CreatedAt),
+		UpdatedAt:       timestampToString(p.UpdatedAt),
 	}
 }
 
@@ -77,6 +83,7 @@ type CreateProjectRequest struct {
 	Priority    string                                `json:"priority"`
 	LeadType    *string                               `json:"lead_type"`
 	LeadID      *string                               `json:"lead_id"`
+	Mission     *string                               `json:"mission"`
 	Resources   []CreateProjectResourceRequestPayload `json:"resources,omitempty"`
 }
 
@@ -98,6 +105,7 @@ type UpdateProjectRequest struct {
 	Priority    *string `json:"priority"`
 	LeadType    *string `json:"lead_type"`
 	LeadID      *string `json:"lead_id"`
+	Mission     *string `json:"mission"`
 }
 
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +256,7 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		LeadType:    leadType,
 		LeadID:      leadID,
 		Priority:    priority,
+		Mission:     ptrToText(req.Mission),
 	}
 
 	// Without resources, keep the simple non-tx path.
@@ -420,6 +429,9 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		} else {
 			params.LeadID = pgtype.UUID{Valid: false}
 		}
+	}
+	if req.Mission != nil {
+		params.Mission = pgtype.Text{String: *req.Mission, Valid: true}
 	}
 	project, err := h.Queries.UpdateProject(r.Context(), params)
 	if err != nil {

@@ -2274,6 +2274,12 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		h.TaskService.CancelTasksForIssue(r.Context(), issue.ID)
 	}
 
+	// Roadmap: when an issue transitions to done, check if it is a project
+	// milestone and advance the project's autonomous execution loop.
+	if statusChanged && issue.Status == "done" {
+		go h.TriggerNextMilestone(r.Context(), issue.ID)
+	}
+
 	// Platform-driven parent notification: when this issue transitions into
 	// `done` and has a parent, post a top-level system comment on the parent
 	// (MUL-2538 — replaces the agent-prompt rule that caused self-mention

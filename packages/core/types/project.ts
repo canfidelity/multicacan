@@ -2,6 +2,23 @@ export type ProjectStatus = "planned" | "in_progress" | "paused" | "completed" |
 
 export type ProjectPriority = "urgent" | "high" | "medium" | "low" | "none";
 
+export type ProjectExecutionStatus = "idle" | "running" | "paused" | "stopped" | "completed";
+
+export type MilestoneStatus = "todo" | "in_progress" | "done";
+
+export interface ProjectMilestone {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  status: MilestoneStatus;
+  issue_id: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   workspace_id: string;
@@ -12,6 +29,9 @@ export interface Project {
   priority: ProjectPriority;
   lead_type: "member" | "agent" | null;
   lead_id: string | null;
+  mission: string | null;
+  execution_status: ProjectExecutionStatus;
+  mission_issue_id: string | null;
   created_at: string;
   updated_at: string;
   issue_count: number;
@@ -27,6 +47,7 @@ export interface CreateProjectRequest {
   priority?: ProjectPriority;
   lead_type?: "member" | "agent";
   lead_id?: string;
+  mission?: string;
   // Resources to attach in the same transaction as the project. Server returns
   // 4xx (and rolls back) if any one is invalid or duplicate.
   resources?: CreateProjectResourceRequest[];
@@ -40,6 +61,21 @@ export interface UpdateProjectRequest {
   priority?: ProjectPriority;
   lead_type?: "member" | "agent" | null;
   lead_id?: string | null;
+  mission?: string | null;
+}
+
+export interface CreateMilestoneRequest {
+  title: string;
+  description?: string;
+  issue_id?: string;
+}
+
+export interface UpdateMilestoneRequest {
+  title?: string;
+  description?: string;
+  status?: MilestoneStatus;
+  issue_id?: string;
+  position?: number;
 }
 
 export interface ListProjectsResponse {

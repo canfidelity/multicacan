@@ -102,5 +102,23 @@
     "no_squads": "No squads assigned to this project",
     "remove_aria": "Remove squad",
     "add_placeholder": "Search squads..."
+  },
+  "roadmap": {
+    "section_title": "Roadmap",
+    "mission_label": "Mission",
+    "mission_placeholder": "Describe what this project will accomplish...",
+    "add_milestone": "Add milestone",
+    "milestone_placeholder": "Milestone title",
+    "no_milestones": "No milestones yet",
+    "delete_aria": "Delete milestone",
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop",
+    "status_idle": "Idle",
+    "status_running": "Running",
+    "status_paused": "Paused",
+    "status_stopped": "Stopped",
+    "status_completed": "Completed"
   }
 }

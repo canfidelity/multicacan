@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/canfidelity/multicacan/server/internal/util"
 	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
 )
@@ -102,22 +104,31 @@ Hard rules:
 
 // buildSquadLeaderBriefing composes the full system briefing appended to a
 // squad leader's Instructions when it claims a task on a squad-assigned
-// issue. The returned string contains three sections:
+// issue. The returned string contains:
 //
 //  1. Squad Operating Protocol (constant, system-level rules).
-//  2. Squad Roster (data — leader self-row + members with literal
-//     `[@Name](mention://<type>/<UUID>)` strings ready to paste).
-//  3. Squad Instructions (user-defined `squad.instructions`, omitted when
-//     empty so we don't leave a dangling heading).
+//  2. Squad Roster.
+//  3. Project Roadmap (if the issue belongs to a project with milestones).
+//  4. Squad Instructions (user-defined `squad.instructions`, omitted when empty).
 //
-// Archived agent members are skipped — there's no point asking the leader
-// to delegate to a retired agent. Members whose underlying record can't be
-// loaded (deleted user/agent races, FK weirdness) are also skipped silently.
+// Archived agent members are skipped. Members whose underlying record can't be
+// loaded are also skipped silently.
 func buildSquadLeaderBriefing(ctx context.Context, q *db.Queries, squad db.Squad) string {
+	return buildSquadLeaderBriefingForIssue(ctx, q, squad, db.Issue{})
+}
+
+func buildSquadLeaderBriefingForIssue(ctx context.Context, q *db.Queries, squad db.Squad, issue db.Issue) string {
 	var sb strings.Builder
 	sb.WriteString(squadOperatingProtocol)
 	sb.WriteString("\n\n")
 	sb.WriteString(buildSquadRoster(ctx, q, squad))
+
+	if issue.ProjectID.Valid {
+		if roadmap := buildProjectRoadmapSection(ctx, q, issue.ProjectID); roadmap != "" {
+			sb.WriteString("\n\n")
+			sb.WriteString(roadmap)
+		}
+	}
 
 	if trimmed := strings.TrimSpace(squad.Instructions); trimmed != "" {
 		sb.WriteString("\n\n## Squad Instructions (")
@@ -125,6 +136,60 @@ func buildSquadLeaderBriefing(ctx context.Context, q *db.Queries, squad db.Squad
 		sb.WriteString(")\n\n")
 		sb.WriteString(trimmed)
 	}
+	return sb.String()
+}
+
+// buildProjectRoadmapSection renders the "## Project Roadmap" section for a
+// squad leader task, giving the leader visibility into the project's mission
+// and which milestones are pending so it can sequence delegation correctly.
+func buildProjectRoadmapSection(ctx context.Context, q *db.Queries, projectID pgtype.UUID) string {
+	proj, err := q.GetProject(ctx, projectID)
+	if err != nil {
+		return ""
+	}
+	milestones, err := q.ListProjectMilestones(ctx, projectID)
+	if err != nil || len(milestones) == 0 {
+		if !proj.Mission.Valid || proj.Mission.String == "" {
+			return ""
+		}
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## Project Roadmap\n\n")
+	if proj.Mission.Valid && proj.Mission.String != "" {
+		sb.WriteString("**Mission:** ")
+		sb.WriteString(proj.Mission.String)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("**Execution:** ")
+	sb.WriteString(proj.ExecutionStatus)
+	sb.WriteString("\n\n")
+
+	if len(milestones) > 0 {
+		sb.WriteString("Milestones (your roadmap — work through these in order):\n")
+		for _, m := range milestones {
+			switch m.Status {
+			case "done":
+				sb.WriteString("- [x] ")
+			case "in_progress":
+				sb.WriteString("- [~] ")
+			default:
+				sb.WriteString("- [ ] ")
+			}
+			sb.WriteString(m.Title)
+			if m.IssueID.Valid {
+				sb.WriteString(fmt.Sprintf(" (issue: %s)", util.UUIDToString(m.IssueID)))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+		sb.WriteString("Rules for roadmap-driven work:\n")
+		sb.WriteString("- Pick the first unchecked [ ] milestone and create a child issue for it, then delegate.\n")
+		sb.WriteString("- After delegating, link the milestone to the issue: `multica project milestone link <milestone-id> <issue-id>`\n")
+		sb.WriteString("- When execution_status is \"paused\" or \"stopped\", do NOT start new milestones.\n")
+		sb.WriteString("- You will be re-triggered automatically when a milestone issue completes.\n")
+	}
+
 	return sb.String()
 }
 

@@ -314,6 +314,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/memory", h.GetDaemonMemory)
 		r.Put("/memory", h.UpsertDaemonMemory)
 		r.Delete("/memory", h.DeleteDaemonMemory)
+		r.Get("/project/milestones", h.GetDaemonProjectMilestones)
+		r.Post("/project/milestones", h.CreateDaemonProjectMilestone)
+		r.Patch("/project/milestones", h.UpdateDaemonProjectMilestone)
 	})
 
 	// Simulator relay registration: a Mac Mini daemon opens an outbound
@@ -525,6 +528,11 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Get("/squads", h.ListProjectSquads)
 					r.Post("/squads", h.AddProjectSquad)
 					r.Delete("/squads/{squadId}", h.RemoveProjectSquad)
+					r.Get("/milestones", h.ListProjectMilestones)
+					r.Post("/milestones", h.CreateProjectMilestone)
+					r.Patch("/milestones/{milestoneId}", h.UpdateProjectMilestone)
+					r.Delete("/milestones/{milestoneId}", h.DeleteProjectMilestone)
+					r.Post("/execution", h.SetProjectExecution)
 				})
 			})
 

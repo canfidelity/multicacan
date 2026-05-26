@@ -1168,7 +1168,7 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 					ID:          issue.AssigneeID,
 					WorkspaceID: issue.WorkspaceID,
 				}); err == nil && uuidToString(squad.LeaderID) == resp.Agent.ID {
-					briefing := buildSquadLeaderBriefing(r.Context(), h.Queries, squad)
+					briefing := buildSquadLeaderBriefingForIssue(r.Context(), h.Queries, squad, issue)
 					if strings.TrimSpace(resp.Agent.Instructions) == "" {
 						resp.Agent.Instructions = briefing
 					} else {

@@ -534,17 +534,33 @@ type PinnedItem struct {
 }
 
 type Project struct {
+	ID              pgtype.UUID        `json:"id"`
+	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
+	Title           string             `json:"title"`
+	Description     pgtype.Text        `json:"description"`
+	Icon            pgtype.Text        `json:"icon"`
+	Status          string             `json:"status"`
+	LeadType        pgtype.Text        `json:"lead_type"`
+	LeadID          pgtype.UUID        `json:"lead_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Priority        string             `json:"priority"`
+	Mission         pgtype.Text        `json:"mission"`
+	ExecutionStatus string             `json:"execution_status"`
+	MissionIssueID  pgtype.UUID        `json:"mission_issue_id"`
+}
+
+type ProjectMilestone struct {
 	ID          pgtype.UUID        `json:"id"`
+	ProjectID   pgtype.UUID        `json:"project_id"`
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
 	Title       string             `json:"title"`
-	Description pgtype.Text        `json:"description"`
-	Icon        pgtype.Text        `json:"icon"`
+	Description string             `json:"description"`
 	Status      string             `json:"status"`
-	LeadType    pgtype.Text        `json:"lead_type"`
-	LeadID      pgtype.UUID        `json:"lead_id"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	Position    int32              `json:"position"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	Priority    string             `json:"priority"`
 }
 
 type ProjectResource struct {

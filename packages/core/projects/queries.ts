@@ -34,3 +34,9 @@ export const squadProjectsOptions = (wsId: string, squadId: string) =>
     queryKey: ['squads', wsId, 'projects', squadId],
     queryFn: () => api.listProjectsForSquad(squadId),
   });
+
+export const projectMilestonesOptions = (wsId: string, projectId: string) =>
+  queryOptions({
+    queryKey: [...projectKeys.detail(wsId, projectId), 'milestones'],
+    queryFn: () => api.listProjectMilestones(projectId),
+  });

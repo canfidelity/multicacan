@@ -1867,7 +1867,11 @@ export class ApiClient {
   }
 
   async getActivePairSession(issueId: string): Promise<import("../types/events").PairSession | null> {
-    return this.fetch(`/api/issues/${issueId}/pair-session`).catch(() => null);
+    try {
+      return await this.fetch(`/api/issues/${issueId}/pair-session`);
+    } catch {
+      return null;
+    }
   }
 
   async listPairSuggestions(sessionId: string): Promise<import("../types/events").PairSuggestion[]> {

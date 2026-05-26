@@ -456,6 +456,7 @@ export interface PairSession {
   agent_id: string;
   status: "active" | "ended";
   intervene: boolean;
+  work_dir: string;
   created_at: string;
 }
 
@@ -463,6 +464,7 @@ export interface PairSuggestion {
   id: string;
   session_id: string;
   content: string;
+  diff_snippet?: string;
   created_at: string;
 }
 

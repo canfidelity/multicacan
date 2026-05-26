@@ -59,6 +59,30 @@ var projectStatusCmd = &cobra.Command{
 	RunE:  runProjectStatus,
 }
 
+var projectMilestoneCmd = &cobra.Command{
+	Use:   "milestone",
+	Short: "Manage project roadmap milestones",
+}
+
+var projectMilestoneListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List milestones for the current task's project (daemon only)",
+	RunE:  runProjectMilestoneList,
+}
+
+var projectMilestoneAddCmd = &cobra.Command{
+	Use:   "add",
+	Short: "Add a milestone to the current task's project (daemon only)",
+	RunE:  runProjectMilestoneAdd,
+}
+
+var projectMilestoneUpdateCmd = &cobra.Command{
+	Use:   "update <milestone-id>",
+	Short: "Update a milestone status or link it to an issue (daemon only)",
+	Args:  exactArgs(1),
+	RunE:  runProjectMilestoneUpdate,
+}
+
 var projectResourceCmd = &cobra.Command{
 	Use:   "resource",
 	Short: "Manage resources attached to a project",
@@ -96,7 +120,12 @@ func init() {
 	projectCmd.AddCommand(projectUpdateCmd)
 	projectCmd.AddCommand(projectDeleteCmd)
 	projectCmd.AddCommand(projectStatusCmd)
+	projectCmd.AddCommand(projectMilestoneCmd)
 	projectCmd.AddCommand(projectResourceCmd)
+
+	projectMilestoneCmd.AddCommand(projectMilestoneListCmd)
+	projectMilestoneCmd.AddCommand(projectMilestoneAddCmd)
+	projectMilestoneCmd.AddCommand(projectMilestoneUpdateCmd)
 
 	projectResourceCmd.AddCommand(projectResourceListCmd)
 	projectResourceCmd.AddCommand(projectResourceAddCmd)
@@ -118,6 +147,17 @@ func init() {
 	projectCreateCmd.Flags().String("lead", "", "Lead name (member or agent)")
 	projectCreateCmd.Flags().StringArray("repo", nil, "Attach a github_repo resource by URL (may be repeated)")
 	projectCreateCmd.Flags().String("output", "json", "Output format: table or json")
+
+	// project milestone
+	projectMilestoneListCmd.Flags().String("output", "table", "Output format: table or json")
+	projectMilestoneAddCmd.Flags().String("title", "", "Milestone title (required)")
+	projectMilestoneAddCmd.Flags().String("description", "", "Milestone description")
+	projectMilestoneAddCmd.Flags().String("issue-id", "", "Link to an existing issue")
+	projectMilestoneAddCmd.Flags().String("output", "json", "Output format: table or json")
+	projectMilestoneUpdateCmd.Flags().String("status", "", "New status: todo, in_progress, done")
+	projectMilestoneUpdateCmd.Flags().String("issue-id", "", "Link to an issue")
+	projectMilestoneUpdateCmd.Flags().String("title", "", "New title")
+	projectMilestoneUpdateCmd.Flags().String("output", "json", "Output format: table or json")
 
 	// project resource list
 	projectResourceListCmd.Flags().String("output", "table", "Output format: table or json")
@@ -463,6 +503,128 @@ func runProjectStatus(cmd *cobra.Command, args []string) error {
 		return cli.PrintJSON(os.Stdout, result)
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Project milestone commands (daemon-only: uses X-Task-ID via client.TaskID)
+// ---------------------------------------------------------------------------
+
+func runProjectMilestoneList(cmd *cobra.Command, _ []string) error {
+	client, err := newAPIClient(cmd)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	var milestones []any
+	if err := client.GetJSON(ctx, "/api/daemon/project/milestones", &milestones); err != nil {
+		return fmt.Errorf("list milestones: %w", err)
+	}
+
+	output, _ := cmd.Flags().GetString("output")
+	if output == "json" {
+		return cli.PrintJSON(os.Stdout, milestones)
+	}
+
+	headers := []string{"ID", "STATUS", "TITLE", "ISSUE"}
+	rows := make([][]string, 0, len(milestones))
+	for _, raw := range milestones {
+		m, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		issueID := ""
+		if v, ok := m["issue_id"].(string); ok {
+			issueID = v[:8]
+		}
+		rows = append(rows, []string{
+			displayID(strVal(m, "id"), false),
+			strVal(m, "status"),
+			strVal(m, "title"),
+			issueID,
+		})
+	}
+	cli.PrintTable(os.Stdout, headers, rows)
+	return nil
+}
+
+func runProjectMilestoneAdd(cmd *cobra.Command, _ []string) error {
+	title, _ := cmd.Flags().GetString("title")
+	if title == "" {
+		return fmt.Errorf("--title is required")
+	}
+	client, err := newAPIClient(cmd)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	body := map[string]any{"title": title}
+	if v, _ := cmd.Flags().GetString("description"); v != "" {
+		body["description"] = v
+	}
+	if v, _ := cmd.Flags().GetString("issue-id"); v != "" {
+		body["issue_id"] = v
+	}
+
+	var result map[string]any
+	if err := client.PostJSON(ctx, "/api/daemon/project/milestones", body, &result); err != nil {
+		return fmt.Errorf("add milestone: %w", err)
+	}
+
+	output, _ := cmd.Flags().GetString("output")
+	if output == "table" {
+		headers := []string{"ID", "STATUS", "TITLE"}
+		cli.PrintTable(os.Stdout, headers, [][]string{{
+			strVal(result, "id"), strVal(result, "status"), strVal(result, "title"),
+		}})
+		return nil
+	}
+	return cli.PrintJSON(os.Stdout, result)
+}
+
+func runProjectMilestoneUpdate(cmd *cobra.Command, args []string) error {
+	client, err := newAPIClient(cmd)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	body := map[string]any{}
+	if cmd.Flags().Changed("status") {
+		v, _ := cmd.Flags().GetString("status")
+		body["status"] = v
+	}
+	if cmd.Flags().Changed("title") {
+		v, _ := cmd.Flags().GetString("title")
+		body["title"] = v
+	}
+	if cmd.Flags().Changed("issue-id") {
+		v, _ := cmd.Flags().GetString("issue-id")
+		body["issue_id"] = v
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no fields to update; use --status, --title, or --issue-id")
+	}
+
+	path := "/api/daemon/project/milestones?id=" + args[0]
+	var result map[string]any
+	if err := client.PatchJSON(ctx, path, body, &result); err != nil {
+		return fmt.Errorf("update milestone: %w", err)
+	}
+
+	output, _ := cmd.Flags().GetString("output")
+	if output == "table" {
+		headers := []string{"ID", "STATUS", "TITLE"}
+		cli.PrintTable(os.Stdout, headers, [][]string{{
+			strVal(result, "id"), strVal(result, "status"), strVal(result, "title"),
+		}})
+		return nil
+	}
+	return cli.PrintJSON(os.Stdout, result)
 }
 
 // ---------------------------------------------------------------------------

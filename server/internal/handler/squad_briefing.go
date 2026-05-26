@@ -185,9 +185,11 @@ func buildProjectRoadmapSection(ctx context.Context, q *db.Queries, projectID pg
 		sb.WriteString("\n")
 		sb.WriteString("Rules for roadmap-driven work:\n")
 		sb.WriteString("- Pick the first unchecked [ ] milestone and create a child issue for it, then delegate.\n")
-		sb.WriteString("- After delegating, link the milestone to the issue: `multica project milestone link <milestone-id> <issue-id>`\n")
+		sb.WriteString("- After delegating, link the milestone to the issue: `multicacan project milestone update <milestone-id> --status in_progress --issue-id <issue-id>`\n")
+		sb.WriteString("- You can add new milestones anytime: `multicacan project milestone add --title \"...\" [--issue-id <id>]`\n")
+		sb.WriteString("- List milestones: `multicacan project milestone list --output json`\n")
 		sb.WriteString("- When execution_status is \"paused\" or \"stopped\", do NOT start new milestones.\n")
-		sb.WriteString("- You will be re-triggered automatically when a milestone issue completes.\n")
+		sb.WriteString("- You will be re-triggered automatically when any issue in this project moves to in_review or done.\n")
 	}
 
 	return sb.String()

@@ -2389,12 +2389,23 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		"MULTICA_AGENT_ID":     task.AgentID,
 		"MULTICA_TASK_ID":      task.ID,
 		"MULTICA_TASK_SLOT":    strconv.Itoa(slot),
+		// MULTICACAN_* aliases — CLI reads these after the binary rename.
+		"MULTICACAN_TOKEN":        agentToken,
+		"MULTICACAN_SERVER_URL":   d.cfg.ServerBaseURL,
+		"MULTICACAN_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
+		"MULTICACAN_WORKSPACE_ID": task.WorkspaceID,
+		"MULTICACAN_AGENT_NAME":   agentName,
+		"MULTICACAN_AGENT_ID":     task.AgentID,
+		"MULTICACAN_TASK_ID":      task.ID,
+		"MULTICACAN_TASK_SLOT":    strconv.Itoa(slot),
 	}
 	if task.AutopilotRunID != "" {
 		agentEnv["MULTICA_AUTOPILOT_RUN_ID"] = task.AutopilotRunID
+		agentEnv["MULTICACAN_AUTOPILOT_RUN_ID"] = task.AutopilotRunID
 	}
 	if task.AutopilotID != "" {
 		agentEnv["MULTICA_AUTOPILOT_ID"] = task.AutopilotID
+		agentEnv["MULTICACAN_AUTOPILOT_ID"] = task.AutopilotID
 	}
 	// Quick-create marker — when set, the multica CLI's `issue create`
 	// command stamps the new issue with origin_type=quick_create +
@@ -2402,6 +2413,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	// deterministically (see GetIssueByOrigin).
 	if task.QuickCreatePrompt != "" {
 		agentEnv["MULTICA_QUICK_CREATE_TASK_ID"] = task.ID
+		agentEnv["MULTICACAN_QUICK_CREATE_TASK_ID"] = task.ID
 	}
 	// Ensure the multica CLI is on PATH inside the agent's environment.
 	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not

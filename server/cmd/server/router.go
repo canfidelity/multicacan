@@ -527,6 +527,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Post("/members", h.AddSquadMember)
 					r.Delete("/members", h.RemoveSquadMember)
 					r.Patch("/members/role", h.UpdateSquadMemberRole)
+					r.Get("/activity", h.ListSquadActivity)
+					r.Get("/activity-stats", h.GetSquadActivityStats)
 				})
 			})
 
@@ -730,6 +732,28 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Route("/api/notification-preferences", func(r chi.Router) {
 				r.Get("/", h.GetNotificationPreferences)
 				r.Put("/", h.UpdateNotificationPreferences)
+			})
+
+			// Issue templates
+			r.Route("/api/issue-templates", func(r chi.Router) {
+				r.Get("/", h.ListIssueTemplates)
+				r.Post("/", h.CreateIssueTemplate)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", h.GetIssueTemplate)
+					r.Patch("/", h.UpdateIssueTemplate)
+					r.Delete("/", h.DeleteIssueTemplate)
+				})
+			})
+
+			// Outbound webhooks
+			r.Route("/api/outbound-webhooks", func(r chi.Router) {
+				r.Get("/", h.ListOutboundWebhooks)
+				r.Post("/", h.CreateOutboundWebhook)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Patch("/", h.UpdateOutboundWebhook)
+					r.Delete("/", h.DeleteOutboundWebhook)
+					r.Get("/deliveries", h.ListOutboundWebhookDeliveries)
+				})
 			})
 		})
 	})

@@ -71,5 +71,17 @@
     "description": "Squad instructions are injected into the leader agent's prompt whenever it works on an issue assigned to this squad. Use them to give the leader squad-wide guidance, working agreements, or context the leader should follow on every task.",
     "unsaved_changes": "Unsaved changes",
     "save_button": "Save"
+  },
+  "activity_tab": {
+    "stats_period": "Last {{days}} days",
+    "stat_total": "Total evaluations",
+    "stat_action": "Action taken",
+    "stat_no_action": "No action",
+    "stat_failed": "Failed",
+    "outcome_action": "Action",
+    "outcome_no_action": "No action",
+    "outcome_failed": "Failed",
+    "empty": "No evaluations yet. The squad leader records an evaluation each time it handles a trigger.",
+    "view_issue": "View issue"
   }
 }

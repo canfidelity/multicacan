@@ -129,6 +129,24 @@ export type {
   SquadActiveIssueBrief,
   SquadMemberStatus,
   SquadMemberStatusListResponse,
+  SquadEvaluationEntry,
+  SquadActivityResponse,
+  SquadActivityStats,
 } from "./squad";
 
 export type { WorkspaceAsset } from "./asset";
+
+export type {
+  IssueTemplate,
+  CreateIssueTemplateRequest,
+  UpdateIssueTemplateRequest,
+} from "./issue_template";
+
+export type {
+  OutboundWebhook,
+  OutboundWebhookDelivery,
+  CreateOutboundWebhookRequest,
+  UpdateOutboundWebhookRequest,
+  OutboundWebhookEvent,
+} from "./outbound_webhook";
+export { OUTBOUND_WEBHOOK_EVENTS } from "./outbound_webhook";

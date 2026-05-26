@@ -2272,7 +2272,7 @@ func (s *TaskService) HandoffTask(ctx context.Context, taskID pgtype.UUID, to st
 		}
 		targetAgent, err = s.Queries.GetAgentByNameInWorkspace(ctx, db.GetAgentByNameInWorkspaceParams{
 			WorkspaceID: issue.WorkspaceID,
-			Name:        to,
+			Lower:       to,
 		})
 		if err != nil {
 			return db.TaskHandoff{}, fmt.Errorf("agent %q not found in workspace: %w", to, err)

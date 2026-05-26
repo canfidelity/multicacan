@@ -210,6 +210,45 @@ func (q *Queries) GetSquadInWorkspace(ctx context.Context, arg GetSquadInWorkspa
 	return i, err
 }
 
+const getSquadLeaderActivityStats = `-- name: GetSquadLeaderActivityStats :one
+SELECT
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'action')     AS action_count,
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'no_action')  AS no_action_count,
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'failed')     AS failed_count,
+    COUNT(*)                                                       AS total_count
+FROM activity_log al
+WHERE al.workspace_id = $1
+  AND al.actor_id = $2
+  AND al.action = 'squad_leader_evaluated'
+  AND al.created_at >= NOW() - ($3::int * INTERVAL '1 day')
+`
+
+type GetSquadLeaderActivityStatsParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	ActorID     pgtype.UUID `json:"actor_id"`
+	Column3     int32       `json:"column_3"`
+}
+
+type GetSquadLeaderActivityStatsRow struct {
+	ActionCount   int64 `json:"action_count"`
+	NoActionCount int64 `json:"no_action_count"`
+	FailedCount   int64 `json:"failed_count"`
+	TotalCount    int64 `json:"total_count"`
+}
+
+// Aggregated outcome counts for a squad leader over the past N days.
+func (q *Queries) GetSquadLeaderActivityStats(ctx context.Context, arg GetSquadLeaderActivityStatsParams) (GetSquadLeaderActivityStatsRow, error) {
+	row := q.db.QueryRow(ctx, getSquadLeaderActivityStats, arg.WorkspaceID, arg.ActorID, arg.Column3)
+	var i GetSquadLeaderActivityStatsRow
+	err := row.Scan(
+		&i.ActionCount,
+		&i.NoActionCount,
+		&i.FailedCount,
+		&i.TotalCount,
+	)
+	return i, err
+}
+
 const isSquadMember = `-- name: IsSquadMember :one
 SELECT EXISTS(
     SELECT 1 FROM squad_member
@@ -256,6 +295,76 @@ func (q *Queries) ListAllSquads(ctx context.Context, workspaceID pgtype.UUID) ([
 			&i.ArchivedBy,
 			&i.AvatarUrl,
 			&i.Instructions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSquadLeaderEvaluations = `-- name: ListSquadLeaderEvaluations :many
+SELECT
+    al.id              AS id,
+    al.issue_id        AS issue_id,
+    al.details         AS details,
+    al.created_at      AS created_at,
+    i.number           AS issue_number,
+    i.title            AS issue_title,
+    i.status           AS issue_status
+FROM activity_log al
+JOIN issue i ON i.id = al.issue_id
+WHERE al.workspace_id = $1
+  AND al.actor_id = $2
+  AND al.action = 'squad_leader_evaluated'
+ORDER BY al.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListSquadLeaderEvaluationsParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	ActorID     pgtype.UUID `json:"actor_id"`
+	Limit       int32       `json:"limit"`
+	Offset      int32       `json:"offset"`
+}
+
+type ListSquadLeaderEvaluationsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	Details     []byte             `json:"details"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	IssueNumber int32              `json:"issue_number"`
+	IssueTitle  string             `json:"issue_title"`
+	IssueStatus string             `json:"issue_status"`
+}
+
+// Paginated list of squad leader evaluations for the activity dashboard.
+// Returns evaluations newest-first with the associated issue snapshot.
+func (q *Queries) ListSquadLeaderEvaluations(ctx context.Context, arg ListSquadLeaderEvaluationsParams) ([]ListSquadLeaderEvaluationsRow, error) {
+	rows, err := q.db.Query(ctx, listSquadLeaderEvaluations,
+		arg.WorkspaceID,
+		arg.ActorID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSquadLeaderEvaluationsRow{}
+	for rows.Next() {
+		var i ListSquadLeaderEvaluationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.IssueID,
+			&i.Details,
+			&i.CreatedAt,
+			&i.IssueNumber,
+			&i.IssueTitle,
+			&i.IssueStatus,
 		); err != nil {
 			return nil, err
 		}

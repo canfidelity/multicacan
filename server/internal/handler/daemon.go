@@ -1661,8 +1661,8 @@ type TaskCompleteRequest struct {
 func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskId")
 
-	// Verify the caller owns this task's workspace.
-	if _, ok := h.requireDaemonTaskAccess(w, r, taskID); !ok {
+	preTask, ok := h.requireDaemonTaskAccess(w, r, taskID)
+	if !ok {
 		return
 	}
 
@@ -1673,6 +1673,7 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, _ := json.Marshal(req)
+
 	task, err := h.TaskService.CompleteTask(r.Context(), parseUUID(taskID), result, req.SessionID, req.WorkDir)
 	if err != nil {
 		slog.Warn("complete task failed", "task_id", taskID, "error", err)
@@ -1690,6 +1691,12 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	// non-fatal; the expiry / cascade are the durable guards.
 	if err := h.Queries.DeleteTaskTokensByTask(r.Context(), task.ID); err != nil {
 		slog.Warn("complete task: failed to revoke task tokens", "task_id", uuidToString(task.ID), "error", err)
+	}
+
+	if wsID := h.TaskService.ResolveTaskWorkspaceID(r.Context(), preTask); wsID != "" {
+		if wsUUID, err := util.ParseUUID(wsID); err == nil {
+			h.OutboundWebhookService.Deliver(wsUUID, "task.completed", taskToResponse(*task))
+		}
 	}
 
 	slog.Info("task completed", "task_id", taskID, "agent_id", uuidToString(task.AgentID))
@@ -1807,8 +1814,8 @@ type TaskFailRequest struct {
 func (h *Handler) FailTask(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskId")
 
-	// Verify the caller owns this task's workspace.
-	if _, ok := h.requireDaemonTaskAccess(w, r, taskID); !ok {
+	preTask, ok := h.requireDaemonTaskAccess(w, r, taskID)
+	if !ok {
 		return
 	}
 
@@ -1830,6 +1837,12 @@ func (h *Handler) FailTask(w http.ResponseWriter, r *http.Request) {
 	// terminal window. The 24h expiry / cascade are the durable guards.
 	if err := h.Queries.DeleteTaskTokensByTask(r.Context(), task.ID); err != nil {
 		slog.Warn("fail task: failed to revoke task tokens", "task_id", uuidToString(task.ID), "error", err)
+	}
+
+	if wsID := h.TaskService.ResolveTaskWorkspaceID(r.Context(), preTask); wsID != "" {
+		if wsUUID, err := util.ParseUUID(wsID); err == nil {
+			h.OutboundWebhookService.Deliver(wsUUID, "task.failed", taskToResponse(*task))
+		}
 	}
 
 	slog.Info("task failed", "task_id", taskID, "agent_id", uuidToString(task.AgentID), "task_error", req.Error, "failure_reason", req.FailureReason)

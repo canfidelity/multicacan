@@ -15,7 +15,7 @@ import { CreateAgentDialog } from "../../agents/components/create-agent-dialog";
 import { useNavigation } from "../../navigation";
 import { AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
-import { Users, Plus, Trash2, ArrowLeft, ArrowUpRight, Crown, Camera, Loader2, Pencil, FileText, Save } from "lucide-react";
+import { Users, Plus, Trash2, ArrowLeft, ArrowUpRight, Crown, Camera, Loader2, Pencil, FileText, Save, BarChart2, CheckCircle2, MinusCircle, XCircle } from "lucide-react";
 import { Button } from "@multicacan/ui/components/ui/button";
 import { Input } from "@multicacan/ui/components/ui/input";
 import { Label } from "@multicacan/ui/components/ui/label";
@@ -58,7 +58,7 @@ import {
 } from "../../issues/components/pickers/property-picker";
 import { ChevronDown, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import type { Squad, SquadMember, SquadMemberStatus, Agent, CreateAgentRequest, MemberWithUser } from "@multicacan/core/types";
+import type { Squad, SquadMember, SquadMemberStatus, Agent, CreateAgentRequest, MemberWithUser, SquadEvaluationEntry, SquadActivityStats } from "@multicacan/core/types";
 import { useT } from "../../i18n";
 import { matchesPinyin } from "../../editor/extensions/pinyin-match";
 
@@ -251,6 +251,7 @@ export function SquadDetailPage() {
 
         <SquadOverviewPane
           squad={squad}
+          squadId={squadId}
           members={members}
           memberStatusById={memberStatusById}
           isLeader={isLeader}
@@ -985,15 +986,17 @@ function SquadDescriptionEditorBody({
 // Mirrors AgentOverviewPane: dirty-guard via AlertDialog when switching tabs
 // with unsaved Instructions.
 // ---------------------------------------------------------------------------
-type SquadDetailTab = "members" | "instructions";
+type SquadDetailTab = "members" | "instructions" | "activity";
 
 const squadDetailTabs: { id: SquadDetailTab; label: string; icon: typeof FileText }[] = [
   { id: "members", label: "Members", icon: Users },
   { id: "instructions", label: "Instructions", icon: FileText },
+  { id: "activity", label: "Activity", icon: BarChart2 },
 ];
 
 function SquadOverviewPane({
   squad,
+  squadId,
   members,
   memberStatusById,
   isLeader,
@@ -1007,6 +1010,7 @@ function SquadOverviewPane({
   setLeaderPending,
 }: {
   squad: Squad;
+  squadId: string;
   members: SquadMember[];
   memberStatusById: Map<string, SquadMemberStatus>;
   isLeader: (m: SquadMember) => boolean;
@@ -1085,6 +1089,11 @@ function SquadOverviewPane({
               onSave={onSaveInstructions}
               onDirtyChange={setActiveDirty}
             />
+          </div>
+        )}
+        {activeTab === "activity" && (
+          <div className="flex h-full flex-col p-4 md:p-6">
+            <SquadActivityTab squadId={squadId} />
           </div>
         )}
       </div>
@@ -1392,6 +1401,108 @@ function SquadInstructionsTab({
           )}
           {t(($) => $.instructions_tab.save_button)}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+const OUTCOME_CONFIG = {
+  action:    { label: "outcome_action",    icon: CheckCircle2, className: "text-success" },
+  no_action: { label: "outcome_no_action", icon: MinusCircle,  className: "text-muted-foreground" },
+  failed:    { label: "outcome_failed",    icon: XCircle,      className: "text-destructive" },
+} as const;
+
+function SquadActivityTab({ squadId }: { squadId: string }) {
+  const { t } = useT("squads");
+  const timeAgo = useTimeAgo();
+  const p = useWorkspacePaths();
+  const DAYS = 30;
+
+  const { data: statsData } = useQuery<SquadActivityStats>({
+    queryKey: ["squad", squadId, "activity-stats", DAYS],
+    queryFn: () => api.getSquadActivityStats(squadId, DAYS),
+    enabled: !!squadId,
+  });
+
+  const { data: activityData, isLoading } = useQuery<{ items: SquadEvaluationEntry[]; offset: number; limit: number }>({
+    queryKey: ["squad", squadId, "activity"],
+    queryFn: () => api.listSquadActivity(squadId, { limit: 50 }),
+    enabled: !!squadId,
+  });
+
+  const stats = statsData;
+  const items = activityData?.items ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Stat cards */}
+      {stats && (
+        <div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {t(($) => $.activity_tab.stats_period, { days: DAYS })}
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {([
+              { key: "stat_total",     value: stats.total_count,     icon: BarChart2,    className: "text-foreground" },
+              { key: "stat_action",    value: stats.action_count,    icon: CheckCircle2, className: "text-success" },
+              { key: "stat_no_action", value: stats.no_action_count, icon: MinusCircle,  className: "text-muted-foreground" },
+              { key: "stat_failed",    value: stats.failed_count,    icon: XCircle,      className: "text-destructive" },
+            ] as const).map(({ key, value, icon: Icon, className }) => (
+              <div key={key} className="flex flex-col gap-1 rounded-lg border p-3">
+                <div className={`flex items-center gap-1.5 text-xs text-muted-foreground`}>
+                  <Icon className={`h-3.5 w-3.5 ${className}`} />
+                  {t(($) => ($.activity_tab as Record<string, string>)[key] as string)}
+                </div>
+                <span className="text-2xl font-semibold tabular-nums">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Evaluation list */}
+      <div className="flex flex-col gap-2">
+        {isLoading && (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+        )}
+        {!isLoading && items.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-10">
+            {t(($) => $.activity_tab.empty)}
+          </p>
+        )}
+        {items.map((item) => {
+          const outcome = item.outcome in OUTCOME_CONFIG ? item.outcome : "failed";
+          const config = OUTCOME_CONFIG[outcome as keyof typeof OUTCOME_CONFIG];
+          const Icon = config.icon;
+          return (
+            <div key={item.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${config.className}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <AppLink
+                    href={p.issueDetail(item.issue_id)}
+                    className="inline-flex items-center gap-1 hover:underline min-w-0"
+                  >
+                    {item.identifier && (
+                      <span className="font-mono text-[10px] uppercase text-muted-foreground shrink-0">
+                        {item.identifier}
+                      </span>
+                    )}
+                    <span className="truncate font-medium">{item.issue_title}</span>
+                  </AppLink>
+                </div>
+                {item.reason && (
+                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{item.reason}</p>
+                )}
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                {timeAgo(item.created_at)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

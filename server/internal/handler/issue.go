@@ -1986,6 +1986,13 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Trigger @mentioned agents from the issue description at creation time.
+	if issue.Description.Valid && issue.Description.String != "" {
+		h.enqueueMentionedAgentTasksFromContent(r.Context(), issue, issue.Description.String, pgtype.UUID{}, creatorType, actualCreatorID)
+	}
+
+	h.OutboundWebhookService.Deliver(issue.WorkspaceID, "issue.created", resp)
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -2266,6 +2273,22 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// fails best-effort.
 	if statusChanged {
 		h.notifyParentOfChildDone(r.Context(), prevIssue, issue)
+	}
+
+	// Trigger @mentioned agents from newly added description mentions. Only
+	// fire for agents mentioned in the new description but not the old one —
+	// agents already mentioned before the edit were already triggered then.
+	if descriptionChanged && req.Description != nil && *req.Description != "" {
+		h.enqueueMentionedAgentTasksFromContent(r.Context(), issue, *req.Description, pgtype.UUID{}, actorType, actorID)
+	}
+
+	if statusChanged {
+		h.OutboundWebhookService.Deliver(issue.WorkspaceID, "issue.status_changed", map[string]any{
+			"issue":       resp,
+			"prev_status": prevIssue.Status,
+		})
+	} else {
+		h.OutboundWebhookService.Deliver(issue.WorkspaceID, "issue.updated", resp)
 	}
 
 	writeJSON(w, http.StatusOK, resp)

@@ -55,6 +55,31 @@ type SquadMemberResponse struct {
 	CreatedAt  string `json:"created_at"`
 }
 
+type SquadEvaluationResponse struct {
+	ID          string `json:"id"`
+	IssueID     string `json:"issue_id"`
+	Identifier  string `json:"identifier"`
+	IssueTitle  string `json:"issue_title"`
+	IssueStatus string `json:"issue_status"`
+	Outcome     string `json:"outcome"`
+	Reason      string `json:"reason"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type SquadActivityResponse struct {
+	Items  []SquadEvaluationResponse `json:"items"`
+	Offset int                       `json:"offset"`
+	Limit  int                       `json:"limit"`
+}
+
+type SquadActivityStatsResponse struct {
+	TotalCount    int64 `json:"total_count"`
+	ActionCount   int64 `json:"action_count"`
+	NoActionCount int64 `json:"no_action_count"`
+	FailedCount   int64 `json:"failed_count"`
+	Days          int   `json:"days"`
+}
+
 // ── Converters ──────────────────────────────────────────────────────────────
 
 func squadToResponse(s db.Squad) SquadResponse {
@@ -621,6 +646,101 @@ func (h *Handler) ListSquadMemberStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) GetSquadActivityStats(w http.ResponseWriter, r *http.Request) {
+	squad, _, ok := h.loadSquadInWorkspace(w, r)
+	if !ok {
+		return
+	}
+
+	days := 30
+	if d := r.URL.Query().Get("days"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && v > 0 && v <= 365 {
+			days = v
+		}
+	}
+
+	stats, err := h.Queries.GetSquadLeaderActivityStats(r.Context(), db.GetSquadLeaderActivityStatsParams{
+		WorkspaceID: squad.WorkspaceID,
+		ActorID:     squad.LeaderID,
+		Column3:     int32(days),
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load activity stats")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SquadActivityStatsResponse{
+		TotalCount:    stats.TotalCount,
+		ActionCount:   stats.ActionCount,
+		NoActionCount: stats.NoActionCount,
+		FailedCount:   stats.FailedCount,
+		Days:          days,
+	})
+}
+
+func (h *Handler) ListSquadActivity(w http.ResponseWriter, r *http.Request) {
+	squad, _, ok := h.loadSquadInWorkspace(w, r)
+	if !ok {
+		return
+	}
+
+	limit := int32(20)
+	offset := int32(0)
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 100 {
+			limit = int32(v)
+		}
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if v, err := strconv.Atoi(o); err == nil && v >= 0 {
+			offset = int32(v)
+		}
+	}
+
+	rows, err := h.Queries.ListSquadLeaderEvaluations(r.Context(), db.ListSquadLeaderEvaluationsParams{
+		WorkspaceID: squad.WorkspaceID,
+		ActorID:     squad.LeaderID,
+		Limit:       limit,
+		Offset:      offset,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list squad activity")
+		return
+	}
+
+	prefix := h.getIssuePrefix(r.Context(), squad.WorkspaceID)
+	items := make([]SquadEvaluationResponse, 0, len(rows))
+	for _, row := range rows {
+		var details struct {
+			Outcome string `json:"outcome"`
+			Reason  string `json:"reason"`
+		}
+		json.Unmarshal(row.Details, &details) //nolint:errcheck
+
+		identifier := ""
+		if prefix != "" {
+			identifier = prefix + "-" + strconv.Itoa(int(row.IssueNumber))
+		}
+
+		items = append(items, SquadEvaluationResponse{
+			ID:          uuidToString(row.ID),
+			IssueID:     uuidToString(row.IssueID),
+			Identifier:  identifier,
+			IssueTitle:  row.IssueTitle,
+			IssueStatus: row.IssueStatus,
+			Outcome:     details.Outcome,
+			Reason:      details.Reason,
+			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
+		})
+	}
+
+	writeJSON(w, http.StatusOK, SquadActivityResponse{
+		Items:  items,
+		Offset: int(offset),
+		Limit:  int(limit),
+	})
 }
 
 func (h *Handler) AddSquadMember(w http.ResponseWriter, r *http.Request) {

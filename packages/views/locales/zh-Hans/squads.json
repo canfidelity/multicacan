@@ -71,5 +71,17 @@
     "description": "小队指引会在 Leader 智能体处理分配给该小队的 issue 时注入到它的 prompt 中。可用来给 Leader 提供贯穿全队的指导、协作规范，或每次任务都应遵循的上下文。",
     "unsaved_changes": "有未保存的修改",
     "save_button": "保存"
+  },
+  "activity_tab": {
+    "stats_period": "过去 {{days}} 天",
+    "stat_total": "总评估次数",
+    "stat_action": "已采取行动",
+    "stat_no_action": "无需行动",
+    "stat_failed": "失败",
+    "outcome_action": "已行动",
+    "outcome_no_action": "无需行动",
+    "outcome_failed": "失败",
+    "empty": "暂无评估记录。每次 Leader 处理触发事件后会自动记录一条评估。",
+    "view_issue": "查看 Issue"
   }
 }

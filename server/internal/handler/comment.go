@@ -756,6 +756,11 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Pass parentComment so that replies inherit mentions from the thread root.
 	h.enqueueMentionedAgentTasks(r.Context(), issue, comment, parentComment, authorType, authorID)
 
+	h.OutboundWebhookService.Deliver(issue.WorkspaceID, "comment.created", map[string]any{
+		"comment":  resp,
+		"issue_id": issueID,
+	})
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -895,11 +900,26 @@ func shouldInheritParentMentions(parentComment *db.Comment, replyMentions []util
 // Note: no status gate here — @mention is an explicit action and should work
 // even on done/cancelled issues (the agent can reopen the issue if needed).
 func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue, comment db.Comment, parentComment *db.Comment, authorType, authorID string) {
-	wsID := uuidToString(issue.WorkspaceID)
 	mentions := util.ParseMentions(comment.Content)
 	if shouldInheritParentMentions(parentComment, mentions, authorType) {
 		mentions = util.ParseMentions(parentComment.Content)
 	}
+	h.processMentionedAgentTasks(ctx, issue, mentions, comment.ID, authorType, authorID)
+}
+
+// enqueueMentionedAgentTasksFromContent is the same as enqueueMentionedAgentTasks
+// but operates directly on a content string (e.g. an issue description) with an
+// optional trigger comment ID. Pass pgtype.UUID{Valid: false} when there is no
+// associated comment (e.g. mentions parsed from an issue description at create time).
+func (h *Handler) enqueueMentionedAgentTasksFromContent(ctx context.Context, issue db.Issue, content string, triggerCommentID pgtype.UUID, authorType, authorID string) {
+	mentions := util.ParseMentions(content)
+	h.processMentionedAgentTasks(ctx, issue, mentions, triggerCommentID, authorType, authorID)
+}
+
+// processMentionedAgentTasks is the core mention-dispatch loop shared by
+// enqueueMentionedAgentTasks and enqueueMentionedAgentTasksFromContent.
+func (h *Handler) processMentionedAgentTasks(ctx context.Context, issue db.Issue, mentions []util.Mention, triggerCommentID pgtype.UUID, authorType, authorID string) {
+	wsID := uuidToString(issue.WorkspaceID)
 	for _, m := range mentions {
 		if m.Type == "squad" {
 			// @squad mention → trigger the squad's leader agent.
@@ -940,7 +960,7 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 			if err != nil || hasPending {
 				continue
 			}
-			if _, err := h.TaskService.EnqueueTaskForSquadLeader(ctx, issue, leaderID, comment.ID); err != nil {
+			if _, err := h.TaskService.EnqueueTaskForSquadLeader(ctx, issue, leaderID, triggerCommentID); err != nil {
 				slog.Warn("enqueue squad leader mention task failed", "issue_id", uuidToString(issue.ID), "squad_id", m.ID, "error", err)
 			}
 			continue
@@ -975,9 +995,7 @@ func (h *Handler) enqueueMentionedAgentTasks(ctx context.Context, issue db.Issue
 		if err != nil || hasPending {
 			continue
 		}
-		// Always use the current comment as the trigger so the agent reads the
-		// actual reply that mentioned it, not the thread root.
-		if _, err := h.TaskService.EnqueueTaskForMention(ctx, issue, agentUUID, comment.ID); err != nil {
+		if _, err := h.TaskService.EnqueueTaskForMention(ctx, issue, agentUUID, triggerCommentID); err != nil {
 			slog.Warn("enqueue mention agent task failed", "issue_id", uuidToString(issue.ID), "agent_id", m.ID, "error", err)
 		}
 	}

@@ -113,3 +113,28 @@ export interface SquadMemberStatus {
 export interface SquadMemberStatusListResponse {
   members: SquadMemberStatus[];
 }
+
+export interface SquadEvaluationEntry {
+  id: string;
+  issue_id: string;
+  identifier: string;
+  issue_title: string;
+  issue_status: string;
+  outcome: SquadActivityOutcome;
+  reason: string;
+  created_at: string;
+}
+
+export interface SquadActivityResponse {
+  items: SquadEvaluationEntry[];
+  offset: number;
+  limit: number;
+}
+
+export interface SquadActivityStats {
+  total_count: number;
+  action_count: number;
+  no_action_count: number;
+  failed_count: number;
+  days: number;
+}

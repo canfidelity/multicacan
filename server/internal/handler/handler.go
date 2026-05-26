@@ -105,10 +105,11 @@ type Handler struct {
 	WebhookRateLimiter    WebhookRateLimiter
 	WebhookIPRateLimiter  WebhookRateLimiter
 	CloudRuntime          cloudRuntimeProxy
-	NativeIDERelays       *NativeIDERelayHub
-	SimulatorRelays       *SimulatorRelayHub
-	WebPreviewRelays      *WebPreviewRelayHub
-	cfg                   Config
+	NativeIDERelays        *NativeIDERelayHub
+	SimulatorRelays        *SimulatorRelayHub
+	WebPreviewRelays       *WebPreviewRelayHub
+	OutboundWebhookService *service.OutboundWebhookService
+	cfg                    Config
 }
 
 func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *events.Bus, emailService *service.EmailService, store storage.Storage, cfSigner *auth.CloudFrontSigner, analyticsClient analytics.Client, cfg Config, daemonHubs ...*daemonws.Hub) *Handler {
@@ -153,10 +154,11 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 			BaseURL: cfg.CloudRuntimeFleetURL,
 			Timeout: cfg.CloudRuntimeFleetTimeout,
 		}),
-		NativeIDERelays:  NewNativeIDERelayHub(),
-		SimulatorRelays:  NewSimulatorRelayHub(),
-		WebPreviewRelays: NewWebPreviewRelayHub(),
-		cfg:              cfg,
+		NativeIDERelays:        NewNativeIDERelayHub(),
+		SimulatorRelays:        NewSimulatorRelayHub(),
+		WebPreviewRelays:       NewWebPreviewRelayHub(),
+		OutboundWebhookService: service.NewOutboundWebhookService(queries),
+		cfg:                    cfg,
 	}
 }
 

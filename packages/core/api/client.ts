@@ -102,6 +102,13 @@ import type {
   SquadMember,
   SquadMemberStatusListResponse,
   WorkspaceAsset,
+  IssueTemplate,
+  CreateIssueTemplateRequest,
+  UpdateIssueTemplateRequest,
+  OutboundWebhook,
+  OutboundWebhookDelivery,
+  CreateOutboundWebhookRequest,
+  UpdateOutboundWebhookRequest,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type {
@@ -1664,6 +1671,21 @@ export class ApiClient {
     }) as SquadMemberStatusListResponse;
   }
 
+  async listSquadActivity(squadId: string, params?: { limit?: number; offset?: number }): Promise<import("../types/squad").SquadActivityResponse> {
+    const search = new URLSearchParams();
+    if (params?.limit != null) search.set("limit", String(params.limit));
+    if (params?.offset != null) search.set("offset", String(params.offset));
+    const raw = await this.fetch<unknown>(`/api/squads/${squadId}/activity?${search}`);
+    if (raw && typeof raw === "object" && "items" in raw) return raw as import("../types/squad").SquadActivityResponse;
+    return { items: [], offset: 0, limit: 20 };
+  }
+
+  async getSquadActivityStats(squadId: string, days = 30): Promise<import("../types/squad").SquadActivityStats> {
+    const raw = await this.fetch<unknown>(`/api/squads/${squadId}/activity-stats?days=${days}`);
+    if (raw && typeof raw === "object" && "total_count" in raw) return raw as import("../types/squad").SquadActivityStats;
+    return { total_count: 0, action_count: 0, no_action_count: 0, failed_count: 0, days };
+  }
+
   // Autopilots
   async listAutopilots(params?: { status?: string }): Promise<ListAutopilotsResponse> {
     const search = new URLSearchParams();
@@ -1887,5 +1909,52 @@ export class ApiClient {
 
   async stopPairSession(issueId: string): Promise<void> {
     await this.fetch(`/api/issues/${issueId}/pair-session`, { method: "DELETE" });
+  }
+
+  async listIssueTemplates(): Promise<IssueTemplate[]> {
+    const data = await this.fetch<IssueTemplate[]>("/api/issue-templates");
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createIssueTemplate(req: CreateIssueTemplateRequest): Promise<IssueTemplate> {
+    return this.fetch("/api/issue-templates", { method: "POST", body: JSON.stringify(req) });
+  }
+
+  async getIssueTemplate(id: string): Promise<IssueTemplate> {
+    return this.fetch(`/api/issue-templates/${id}`);
+  }
+
+  async updateIssueTemplate(id: string, req: UpdateIssueTemplateRequest): Promise<IssueTemplate> {
+    return this.fetch(`/api/issue-templates/${id}`, { method: "PATCH", body: JSON.stringify(req) });
+  }
+
+  async deleteIssueTemplate(id: string): Promise<void> {
+    await this.fetch(`/api/issue-templates/${id}`, { method: "DELETE" });
+  }
+
+  async listOutboundWebhooks(): Promise<OutboundWebhook[]> {
+    const data = await this.fetch<OutboundWebhook[]>("/api/outbound-webhooks");
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createOutboundWebhook(req: CreateOutboundWebhookRequest): Promise<OutboundWebhook> {
+    return this.fetch("/api/outbound-webhooks", { method: "POST", body: JSON.stringify(req) });
+  }
+
+  async updateOutboundWebhook(id: string, req: UpdateOutboundWebhookRequest): Promise<OutboundWebhook> {
+    return this.fetch(`/api/outbound-webhooks/${id}`, { method: "PATCH", body: JSON.stringify(req) });
+  }
+
+  async deleteOutboundWebhook(id: string): Promise<void> {
+    await this.fetch(`/api/outbound-webhooks/${id}`, { method: "DELETE" });
+  }
+
+  async listOutboundWebhookDeliveries(id: string, params?: { limit?: number; offset?: number }): Promise<OutboundWebhookDelivery[]> {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    const data = await this.fetch<OutboundWebhookDelivery[]>(`/api/outbound-webhooks/${id}/deliveries${qs}`);
+    return Array.isArray(data) ? data : [];
   }
 }

@@ -27,6 +27,8 @@
     "./issues": "./issues/index.ts",
     "./issues/queries": "./issues/queries.ts",
     "./issues/mutations": "./issues/mutations.ts",
+    "./issues/template-queries": "./issues/template-queries.ts",
+    "./issues/webhook-queries": "./issues/webhook-queries.ts",
     "./issues/timeline-sort": "./issues/timeline-sort.ts",
     "./issues/ws-updaters": "./issues/ws-updaters.ts",
     "./issues/config": "./issues/config/index.ts",

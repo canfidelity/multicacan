@@ -116,6 +116,38 @@ SET assignee_type = 'agent',
     updated_at = now()
 WHERE assignee_type = 'squad' AND assignee_id = $1;
 
+-- name: ListSquadLeaderEvaluations :many
+-- Paginated list of squad leader evaluations for the activity dashboard.
+-- Returns evaluations newest-first with the associated issue snapshot.
+SELECT
+    al.id              AS id,
+    al.issue_id        AS issue_id,
+    al.details         AS details,
+    al.created_at      AS created_at,
+    i.number           AS issue_number,
+    i.title            AS issue_title,
+    i.status           AS issue_status
+FROM activity_log al
+JOIN issue i ON i.id = al.issue_id
+WHERE al.workspace_id = $1
+  AND al.actor_id = $2
+  AND al.action = 'squad_leader_evaluated'
+ORDER BY al.created_at DESC
+LIMIT $3 OFFSET $4;
+
+-- name: GetSquadLeaderActivityStats :one
+-- Aggregated outcome counts for a squad leader over the past N days.
+SELECT
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'action')     AS action_count,
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'no_action')  AS no_action_count,
+    COUNT(*) FILTER (WHERE al.details->>'outcome' = 'failed')     AS failed_count,
+    COUNT(*)                                                       AS total_count
+FROM activity_log al
+WHERE al.workspace_id = $1
+  AND al.actor_id = $2
+  AND al.action = 'squad_leader_evaluated'
+  AND al.created_at >= NOW() - ($3::int * INTERVAL '1 day');
+
 -- name: ListSquadMemberStatusRows :many
 -- Per-row join used to build the squad-members status view. One row per
 -- (squad_member × active_task); members with no active task return a

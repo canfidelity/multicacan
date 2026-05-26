@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "../navigation";
 import {
@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Check,
   ChevronRight,
+  FileText,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -43,6 +44,7 @@ import { useIssueDraftStore } from "@multicacan/core/issues/stores/draft-store";
 import { useCreateModeStore } from "@multicacan/core/issues/stores/create-mode-store";
 import { useQuickCreateStore } from "@multicacan/core/issues/stores/quick-create-store";
 import { issueDetailOptions } from "@multicacan/core/issues/queries";
+import { issueTemplateListOptions } from "@multicacan/core/issues/template-queries";
 import { useCreateIssue, useUpdateIssue } from "@multicacan/core/issues/mutations";
 import { useFileUpload } from "@multicacan/core/hooks/use-file-upload";
 import {
@@ -146,6 +148,8 @@ export function ManualCreatePanel({
     enabled: !!parentIssueId,
   });
 
+  const { data: issueTemplates = [] } = useQuery(issueTemplateListOptions(wsId));
+
   // File upload — collect attachment IDs so we can link them after issue creation.
   const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
   const { uploadWithToast } = useFileUpload(api);
@@ -167,6 +171,17 @@ export function ManualCreatePanel({
   };
   const updateStartDate = (v: string | null) => { setStartDate(v); setDraft({ startDate: v }); };
   const updateDueDate = (v: string | null) => { setDueDate(v); setDraft({ dueDate: v }); };
+
+  const applyTemplate = useCallback((tmpl: { name: string; description: string; default_status?: string | null; default_priority?: string | null }) => {
+    updateTitle(tmpl.name);
+    if (tmpl.description) {
+      setDraft({ description: tmpl.description });
+      setFormResetKey((k) => k + 1);
+    }
+    if (tmpl.default_status) updateStatus(tmpl.default_status as IssueStatus);
+    if (tmpl.default_priority) updatePriority(tmpl.default_priority as IssuePriority);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createIssueMutation = useCreateIssue();
   const updateIssueMutation = useUpdateIssue();
@@ -593,6 +608,17 @@ export function ManualCreatePanel({
                   }
                 />
                 <DropdownMenuContent align="start" className="w-auto">
+                  {issueTemplates.length > 0 && (
+                    <>
+                      {issueTemplates.map((tmpl) => (
+                        <DropdownMenuItem key={tmpl.id} onClick={() => applyTemplate(tmpl)}>
+                          <FileText className="h-3.5 w-3.5" />
+                          {tmpl.name}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   {!startDate && (
                     <DropdownMenuItem onClick={() => setStartDatePickerOpen(true)}>
                       <CalendarClock className="h-3.5 w-3.5" />

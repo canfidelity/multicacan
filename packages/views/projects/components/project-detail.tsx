@@ -23,6 +23,7 @@ import {
 import { useUpdateIssue } from "@multicacan/core/issues/mutations";
 import { useModalStore } from "@multicacan/core/modals";
 import { memberListOptions, agentListOptions, squadListOptions } from "@multicacan/core/workspace/queries";
+import { runtimeListOptions, runtimeModelsOptions } from "@multicacan/core/runtimes";
 import { useWorkspaceId } from "@multicacan/core/hooks";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multicacan/core/paths";
 import { useActorName } from "@multicacan/core/workspace/hooks";
@@ -405,17 +406,17 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
 
   // Model pool section
   const [modelPoolOpen, setModelPoolOpen] = useState(false);
-  const [newModelInput, setNewModelInput] = useState("");
-  const [newModelLabel, setNewModelLabel] = useState("");
+  const [selectedRuntimeId, setSelectedRuntimeId] = useState<string | null>(null);
   const modelPool = project?.model_pool ?? [];
-  const handleAddModel = () => {
-    const m = newModelInput.trim();
-    if (!m) return;
-    const entry = { model: m, label: newModelLabel.trim() || m };
-    handleUpdateField({ model_pool: [...modelPool, entry] });
-    setNewModelInput("");
-    setNewModelLabel("");
+  const { data: allRuntimes = [] } = useQuery(runtimeListOptions(wsId));
+  const onlineRuntimes = allRuntimes.filter((r) => r.status === "online");
+  const { data: runtimeModels, isLoading: modelsLoading } = useQuery(runtimeModelsOptions(selectedRuntimeId));
+  const poolModelIds = new Set(modelPool.map((e) => e.model));
+  const handleAddModel = (modelId: string, label: string) => {
+    if (poolModelIds.has(modelId)) return;
+    handleUpdateField({ model_pool: [...modelPool, { model: modelId, label: label || modelId }] });
     setModelPoolOpen(false);
+    setSelectedRuntimeId(null);
   };
   const handleRemoveModel = (model: string) => {
     handleUpdateField({ model_pool: modelPool.filter((e) => e.model !== model) });
@@ -700,7 +701,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                   </button>
                 </div>
               ))}
-              <Popover open={modelPoolOpen} onOpenChange={setModelPoolOpen}>
+              <Popover open={modelPoolOpen} onOpenChange={(v) => { setModelPoolOpen(v); if (!v) setSelectedRuntimeId(null); }}>
                 <PopoverTrigger
                   render={
                     <button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5">
@@ -709,32 +710,66 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                     </button>
                   }
                 />
-                <PopoverContent align="start" className="w-64 p-3 flex flex-col gap-2">
-                  <input
-                    type="text"
-                    value={newModelInput}
-                    onChange={(e) => setNewModelInput(e.target.value)}
-                    placeholder={t(($) => $.model_pool.model_placeholder)}
-                    className="w-full rounded border bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === "Enter") handleAddModel(); }}
-                  />
-                  <input
-                    type="text"
-                    value={newModelLabel}
-                    onChange={(e) => setNewModelLabel(e.target.value)}
-                    placeholder={t(($) => $.model_pool.label_placeholder)}
-                    className="w-full rounded border bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
-                    onKeyDown={(e) => { if (e.key === "Enter") handleAddModel(); }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddModel}
-                    disabled={!newModelInput.trim()}
-                    className="rounded bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                  >
-                    {t(($) => $.model_pool.add_confirm)}
-                  </button>
+                <PopoverContent align="start" className="w-60 p-0">
+                  {!selectedRuntimeId ? (
+                    <div>
+                      <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">{t(($) => $.model_pool.pick_runtime)}</div>
+                      <div className="p-1 max-h-52 overflow-y-auto">
+                        {onlineRuntimes.length === 0 ? (
+                          <div className="px-2 py-3 text-center text-xs text-muted-foreground">{t(($) => $.model_pool.no_runtimes)}</div>
+                        ) : (
+                          onlineRuntimes.map((rt) => (
+                            <button
+                              key={rt.id}
+                              type="button"
+                              onClick={() => setSelectedRuntimeId(rt.id)}
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="truncate">{rt.name}</span>
+                              <span className="ml-auto text-xs text-muted-foreground">{rt.provider}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-1 border-b px-2 py-1.5">
+                        <button type="button" onClick={() => setSelectedRuntimeId(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                          <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+                        </button>
+                        <span className="text-xs font-medium text-muted-foreground truncate">
+                          {onlineRuntimes.find((r) => r.id === selectedRuntimeId)?.name}
+                        </span>
+                      </div>
+                      <div className="p-1 max-h-52 overflow-y-auto">
+                        {modelsLoading ? (
+                          <div className="px-2 py-3 text-center text-xs text-muted-foreground">{t(($) => $.model_pool.loading_models)}</div>
+                        ) : !runtimeModels?.models.length ? (
+                          <div className="px-2 py-3 text-center text-xs text-muted-foreground">{t(($) => $.model_pool.no_models_runtime)}</div>
+                        ) : (
+                          runtimeModels.models.map((m) => {
+                            const already = poolModelIds.has(m.id);
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                disabled={already}
+                                onClick={() => handleAddModel(m.id, m.label)}
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                {m.default && <span className="h-1.5 w-1.5 rounded-full bg-brand shrink-0" />}
+                                <span className="truncate font-mono text-xs">{m.id}</span>
+                                {m.label !== m.id && <span className="ml-auto text-xs text-muted-foreground truncate">{m.label}</span>}
+                                {already && <Check className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>

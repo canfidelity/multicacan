@@ -108,9 +108,10 @@
     "add": "Add model",
     "no_models": "No models configured",
     "remove_aria": "Remove model",
-    "model_placeholder": "Model ID (e.g. claude-opus-4-5)",
-    "label_placeholder": "Label (optional)",
-    "add_confirm": "Add"
+    "pick_runtime": "Select a runtime",
+    "no_runtimes": "No online runtimes",
+    "loading_models": "Loading models...",
+    "no_models_runtime": "No models found"
   },
   "roadmap": {
     "section_title": "Roadmap",

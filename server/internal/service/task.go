@@ -422,39 +422,7 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
 	}
 
-	preferredModel := issue.PreferredModel
-	if !preferredModel.Valid && issue.ProjectID.Valid {
-		if proj, err := s.Queries.GetProject(ctx, issue.ProjectID); err == nil && len(proj.ModelPool) > 0 {
-			var pool []struct {
-				Model     string `json:"model"`
-				Tier      string `json:"tier"`
-				RuntimeID string `json:"runtime_id"`
-			}
-			if json.Unmarshal(proj.ModelPool, &pool) == nil && len(pool) > 0 {
-				// Resolve the agent's runtime provider so we only assign a model
-				// that the executing runtime actually understands.
-				runtimeProvider := ""
-				if rt, err := s.Queries.GetAgentRuntime(ctx, agent.RuntimeID); err == nil {
-					runtimeProvider = rt.Provider
-				}
-				for _, entry := range pool {
-					if entry.Model == "" {
-						continue
-					}
-					// If we know the provider, skip models that target a different one.
-					// A model is considered foreign when it contains a "provider/" prefix
-					// that doesn't match the runtime provider.
-					if runtimeProvider != "" {
-						if i := strings.Index(entry.Model, "/"); i > 0 && entry.Model[:i] != runtimeProvider {
-							continue
-						}
-					}
-					preferredModel = pgtype.Text{String: entry.Model, Valid: true}
-					break
-				}
-			}
-		}
-	}
+	preferredModel := s.resolvePreferredModel(ctx, issue, agent.RuntimeID)
 
 	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 		AgentID:           issue.AssigneeID,
@@ -520,6 +488,8 @@ func (s *TaskService) enqueueMentionTask(ctx context.Context, issue db.Issue, ag
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
 	}
 
+	preferredModel := s.resolvePreferredModel(ctx, issue, agent.RuntimeID)
+
 	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 		AgentID:           agentID,
 		RuntimeID:         agent.RuntimeID,
@@ -529,7 +499,7 @@ func (s *TaskService) enqueueMentionTask(ctx context.Context, issue db.Issue, ag
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		IsLeaderTask:      pgtype.Bool{Bool: isLeader, Valid: isLeader},
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		PreferredModel:    issue.PreferredModel,
+		PreferredModel:    preferredModel,
 	})
 	if err != nil {
 		slog.Error("mention task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "error", err)
@@ -1903,6 +1873,47 @@ func (s *TaskService) broadcastIssueUpdated(issue db.Issue) {
 		ActorID:     "",
 		Payload:     map[string]any{"issue": issueToMap(issue, prefix)},
 	})
+}
+
+// resolvePreferredModel returns the preferred model for a task. It uses
+// issue.PreferredModel when explicitly set, otherwise picks the first
+// compatible entry from the project model pool. Compatibility is determined
+// by matching the "provider/" prefix of the model ID against the runtime's
+// provider, so opencode-go/* models are never assigned to Claude runtimes
+// and vice versa.
+func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue, runtimeID pgtype.UUID) pgtype.Text {
+	if issue.PreferredModel.Valid {
+		return issue.PreferredModel
+	}
+	if !issue.ProjectID.Valid {
+		return pgtype.Text{}
+	}
+	proj, err := s.Queries.GetProject(ctx, issue.ProjectID)
+	if err != nil || len(proj.ModelPool) == 0 {
+		return pgtype.Text{}
+	}
+	var pool []struct {
+		Model string `json:"model"`
+	}
+	if json.Unmarshal(proj.ModelPool, &pool) != nil || len(pool) == 0 {
+		return pgtype.Text{}
+	}
+	runtimeProvider := ""
+	if rt, err := s.Queries.GetAgentRuntime(ctx, runtimeID); err == nil {
+		runtimeProvider = rt.Provider
+	}
+	for _, entry := range pool {
+		if entry.Model == "" {
+			continue
+		}
+		if runtimeProvider != "" {
+			if i := strings.Index(entry.Model, "/"); i > 0 && entry.Model[:i] != runtimeProvider {
+				continue
+			}
+		}
+		return pgtype.Text{String: entry.Model, Valid: true}
+	}
+	return pgtype.Text{}
 }
 
 func (s *TaskService) getIssuePrefix(workspaceID pgtype.UUID) string {

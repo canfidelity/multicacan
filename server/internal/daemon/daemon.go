@@ -2506,6 +2506,18 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	if model == "" {
 		model = entry.Model
 	}
+	// Guard: Claude model aliases (e.g. "opus.4.7", "claude-opus-4-7", "sonnet")
+	// are only understood by the Claude Code provider. Passing them to Hermes,
+	// Opencode, or Codex causes a hard failure at session/model setup. If the
+	// resolved model looks Claude-specific but the provider is not Claude, drop
+	// it so the provider falls back to its own configured default.
+	if provider != "claude" && isClaudeModelAlias(model) {
+		taskLog.Warn("preferred_model is Claude-specific; dropping for non-Claude provider",
+			"provider", provider,
+			"model", model,
+		)
+		model = entry.Model // use runtime's configured default
+	}
 	thinkingLevel := ""
 	if task.Agent != nil {
 		thinkingLevel = task.Agent.ThinkingLevel
@@ -3287,6 +3299,26 @@ func isBlockedEnvKey(key string) bool {
 	}
 	switch upper {
 	case "HOME", "PATH", "USER", "SHELL", "TERM", "CODEX_HOME", "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS":
+		return true
+	}
+	return false
+}
+
+// isClaudeModelAlias reports whether model is a Claude Code-specific identifier
+// that other providers (Hermes, Opencode, Codex) cannot resolve. This includes
+// bare aliases ("opus", "sonnet", "haiku"), dot-version aliases ("opus.4.7"),
+// and the canonical "claude-*" names — all understood only by the Claude CLI.
+func isClaudeModelAlias(model string) bool {
+	if model == "" {
+		return false
+	}
+	if strings.HasPrefix(model, "claude-") {
+		return true
+	}
+	// Bare or dot-version aliases: opus, sonnet, haiku, opus.4.7, sonnet.4.5 …
+	base := strings.ToLower(strings.SplitN(model, ".", 2)[0])
+	switch base {
+	case "opus", "sonnet", "haiku":
 		return true
 	}
 	return false

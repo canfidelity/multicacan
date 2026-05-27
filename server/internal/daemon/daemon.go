@@ -2506,17 +2506,33 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	if model == "" {
 		model = entry.Model
 	}
-	// Guard: Claude model aliases (e.g. "opus.4.7", "claude-opus-4-7", "sonnet")
-	// are only understood by the Claude Code provider. Passing them to Hermes,
-	// Opencode, or Codex causes a hard failure at session/model setup. If the
-	// resolved model looks Claude-specific but the provider is not Claude, drop
-	// it so the provider falls back to its own configured default.
+	// Guard: drop preferred_model when it targets a different provider than the
+	// runtime executing the task. Two cases:
+	//
+	// 1. Claude-specific aliases ("opus.4.7", "claude-opus-4-7", "sonnet") passed
+	//    to a non-Claude runtime (Hermes, Opencode, Codex).
+	// 2. Namespaced "provider/model" strings (e.g. "opencode-go/qwen3.7-max")
+	//    passed to a runtime whose provider does not match the namespace prefix
+	//    (e.g. running on a Claude or Codex runtime).
+	//
+	// In both cases the mismatch causes a hard failure at session/model setup, so
+	// we drop the model and let the runtime fall back to its configured default.
 	if provider != "claude" && isClaudeModelAlias(model) {
 		taskLog.Warn("preferred_model is Claude-specific; dropping for non-Claude provider",
 			"provider", provider,
 			"model", model,
 		)
-		model = entry.Model // use runtime's configured default
+		model = entry.Model
+	} else if i := strings.Index(model, "/"); i > 0 {
+		modelProvider := model[:i]
+		if modelProvider != provider {
+			taskLog.Warn("preferred_model targets a different provider; dropping",
+				"runtime_provider", provider,
+				"model_provider", modelProvider,
+				"model", model,
+			)
+			model = entry.Model
+		}
 	}
 	thinkingLevel := ""
 	if task.Agent != nil {

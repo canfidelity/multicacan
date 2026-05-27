@@ -378,7 +378,14 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		fmt.Fprintf(&b, "2. Run `multicacan issue metadata list %s --output json` to see what prior agents pinned — best-effort, empty `{}` and CLI failures are normal. See the `## Issue Metadata` section above for what to look for.\n", ctx.IssueID)
 		fmt.Fprintf(&b, "3. Run `multicacan issue comment list %s --output json` to read the full comment history (returns all comments, capped server-side at 2000) — this is mandatory, not optional. Earlier comments often carry context the issue body lacks (e.g. which repo to work in, the prior agent's findings, the reason the issue was reassigned to you). Skipping this step is the most common cause of agents acting on stale or incomplete instructions. When the flat dump is too large to ingest in one shot, treat `--recent 20 --output json` plus the `--before` / `--before-id` cursor (from the stderr `Next thread cursor:` line) as a paging strategy: keep walking older threads until you have read enough history to satisfy this mandatory step. `--recent` is a way to read the full history page-by-page, not a shortcut that replaces it.\n", ctx.IssueID)
 		fmt.Fprintf(&b, "4. Run `multicacan issue status %s in_progress`\n", ctx.IssueID)
-		b.WriteString("5. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
+		if ctx.IsSquadLeader && ctx.ProjectModelPool != "" && ctx.ProjectModelPool != "[]" {
+			b.WriteString("5. **Plan and create sub-tasks. For EVERY sub-task you create with `multicacan issue create`, you MUST include `--preferred-model <model>` chosen from the `## Available Models` section above based on task complexity. Never omit `--preferred-model` when a model pool is configured — this is mandatory, not optional.** Guidelines:\n")
+			b.WriteString("   - Simple tasks (research, status check, small text/config edit, single-file fix) → use the smallest/fastest model in the pool\n")
+			b.WriteString("   - Medium tasks (multi-file changes, feature additions, debugging) → use a mid-tier model\n")
+			b.WriteString("   - Complex tasks (large refactors, architecture decisions, full feature implementations, multi-service changes) → use the most capable model\n")
+		} else {
+			b.WriteString("5. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
+		}
 		if ctx.IsSquadLeader {
 			fmt.Fprintf(&b, "6. **Post your final results as a comment** (unless your outcome is `no_action` — in that case, calling `multicacan squad activity %s no_action --reason \"...\"` alone is sufficient; you MUST exit without posting any comment. DO NOT post a comment announcing no_action or saying you are exiting silently): `multicacan issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID, ctx.IssueID)
 		} else {

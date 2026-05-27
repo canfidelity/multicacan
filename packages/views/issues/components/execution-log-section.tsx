@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { api } from "@multicacan/core/api";
 import { issueKeys } from "@multicacan/core/issues/queries";
 import type { AgentTask, TaskFailureReason } from "@multicacan/core/types";
+import { useWorkspaceId } from "@multicacan/core/hooks";
+import { runtimeListOptions } from "@multicacan/core/runtimes";
 import { useTimeAgo } from "../../i18n";
 import {
   Tooltip,
@@ -195,6 +197,31 @@ export function ExecutionLogSection({ issueId }: ExecutionLogSectionProps) {
 // degrade to a short structural label by trigger source. New tasks
 // (post-061 migration) almost always hit the snapshot path.
 
+// ─── Model / runtime meta ──────────────────────────────────────────────────
+
+function shortModelName(model: string): string {
+  // claude-opus-4-7 → opus-4.7  |  claude-sonnet-4-6 → sonnet-4.6
+  // claude-haiku-4-5-20251001   → haiku-4.5
+  return model
+    .replace(/^claude-/, "")
+    .replace(/-\d{8}$/, "")       // strip date suffix
+    .replace(/-(\d)/g, ".$1");    // hyphens before digits → dots
+}
+
+function ModelRuntimeMeta({ task }: { task: AgentTask }) {
+  const wsId = useWorkspaceId();
+  const { data: runtimes = [] } = useQuery(runtimeListOptions(wsId));
+  const rt = runtimes.find((r) => r.id === task.runtime_id);
+  const model = task.preferred_model ? shortModelName(task.preferred_model) : null;
+  const rtName = rt?.name ?? null;
+  if (!model && !rtName) return null;
+  return (
+    <span className="shrink-0 rounded bg-accent/60 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground/80 whitespace-nowrap">
+      {[model, rtName].filter(Boolean).join(" · ")}
+    </span>
+  );
+}
+
 // ─── Row visual config ─────────────────────────────────────────────────────
 
 const STATUS_TONE: Record<AgentTask["status"], string> = {
@@ -288,6 +315,7 @@ function ActiveRow({ task, issueId }: { task: AgentTask; issueId: string }) {
   return (
     <RowShell task={task}>
       <TriggerText text={trigger} />
+      <ModelRuntimeMeta task={task} />
       {/* Status + time always visible — actions append on hover, never
           replace. Same pattern as desktop tab bar / sidebar pins. */}
       <span className="shrink-0 whitespace-nowrap text-xs">
@@ -374,6 +402,7 @@ function PastRow({ task, issueId }: { task: AgentTask; issueId: string }) {
   return (
     <RowShell task={task}>
       <TriggerText text={trigger} />
+      <ModelRuntimeMeta task={task} />
       <span className="shrink-0 whitespace-nowrap text-xs">
         <span className={tone}>{failureLabel ?? label}</span>
         <span className="text-muted-foreground"> · {time}</span>

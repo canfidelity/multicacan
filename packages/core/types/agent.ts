@@ -111,6 +111,8 @@ export interface AgentTask {
    * the daemon reports a work_dir (typically once execution starts).
    */
   work_dir?: string;
+  /** Model override for this task, sourced from issue.preferred_model at creation time. */
+  preferred_model?: string;
 }
 
 export interface Agent {

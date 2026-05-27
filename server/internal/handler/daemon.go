@@ -1706,7 +1706,7 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	// project loop would otherwise stall. Re-trigger the squad leader so it
 	// can review and drive the next step.
 	if task.IssueID.Valid {
-		go h.triggerSquadLeaderOnTaskComplete(r.Context(), *task)
+		go h.triggerSquadLeaderOnTaskComplete(context.Background(), *task)
 	}
 
 	writeJSON(w, http.StatusOK, taskToResponse(*task))

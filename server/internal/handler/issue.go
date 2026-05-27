@@ -2277,14 +2277,14 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// Roadmap: when an issue transitions to done, check if it is a project
 	// milestone and advance the project's autonomous execution loop.
 	if statusChanged && issue.Status == "done" {
-		go h.TriggerNextMilestone(r.Context(), issue.ID)
+		go h.TriggerNextMilestone(context.Background(), issue.ID)
 	}
 
 	// Autonomous loop: when an issue moves to in_review, re-trigger the squad
 	// leader so it can review completed work and drive the next step. Without
 	// this, agent tasks complete but the project loop never continues.
 	if statusChanged && issue.Status == "in_review" && issue.ProjectID.Valid {
-		go h.triggerProjectSquadLeaderForReview(r.Context(), issue)
+		go h.triggerProjectSquadLeaderForReview(context.Background(), issue)
 	}
 
 	// Platform-driven parent notification: when this issue transitions into
@@ -2728,10 +2728,10 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if statusChanged && issue.Status == "done" {
-			go h.TriggerNextMilestone(r.Context(), issue.ID)
+			go h.TriggerNextMilestone(context.Background(), issue.ID)
 		}
 		if statusChanged && issue.Status == "in_review" && issue.ProjectID.Valid {
-			go h.triggerProjectSquadLeaderForReview(r.Context(), issue)
+			go h.triggerProjectSquadLeaderForReview(context.Background(), issue)
 		}
 
 		// Platform-driven parent notification, mirrored from UpdateIssue

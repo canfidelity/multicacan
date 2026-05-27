@@ -104,8 +104,23 @@ export interface AgentTask {
    * Server-computed source discriminator used by the activity row to label
    * tasks that have no linked issue (so e.g. quick-create tasks render
    * with a meaningful title instead of falling through to "Untracked").
+   * "handoff" means this task was created by a prior agent handing off to
+   * a new one via `multicacan task handoff`.
    */
-  kind?: "comment" | "autopilot" | "chat" | "quick_create" | "direct";
+  kind?: "comment" | "autopilot" | "chat" | "quick_create" | "direct" | "handoff";
+  /**
+   * Context string injected into the new agent's prompt when this task was
+   * created via a handoff. Non-empty only when `kind === "handoff"`.
+   * Older backends omit this field; treat undefined as "".
+   */
+  handoff_context?: string;
+  /**
+   * Chain depth: 0 means this task was NOT a handoff; >0 means it was
+   * created by a prior agent handing off (depth N means N levels deep).
+   * Capped at 10 by the service layer. Older backends omit this field;
+   * treat undefined as 0.
+   */
+  handoff_depth?: number;
   /**
    * Local working directory pinned for this task by the daemon. Empty until
    * the daemon reports a work_dir (typically once execution starts).

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Loader2, RotateCcw, Square } from "lucide-react";
+import { ArrowRight, ChevronRight, Loader2, RotateCcw, Square } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@multicacan/core/api";
 import { issueKeys } from "@multicacan/core/issues/queries";
@@ -20,6 +20,7 @@ import { TranscriptButton } from "../../common/task-transcript";
 import { failureReasonLabel } from "../../agents/components/tabs/task-failure";
 import { useT } from "../../i18n";
 import { TerminateTaskConfirmDialog } from "./terminate-task-confirm-dialog";
+import { stripMentionMarkdown } from "../utils/strip-mention-markdown";
 
 // Mask gradient that fades the trigger-summary text into transparency at
 // the right edge. Mirrors the pattern used by the desktop tab bar
@@ -248,7 +249,17 @@ function activeTimeText(task: AgentTask, timeAgo: (dateStr: string) => string): 
 
 // ─── Active row ────────────────────────────────────────────────────────────
 
-import { stripMentionMarkdown } from "../utils/strip-mention-markdown";
+// Small inline badge rendered on handoff tasks to make the agent-to-agent
+// transfer visually distinct from regular runs.
+function HandoffBadge() {
+  const { t } = useT("issues");
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-accent/70 px-1 py-0.5 text-[10px] leading-none font-medium text-muted-foreground">
+      <ArrowRight className="h-2.5 w-2.5" />
+      {t(($) => $.execution_log.handoff_badge)}
+    </span>
+  );
+}
 
 function useTriggerText(task: AgentTask): string {
   const { t } = useT("issues");
@@ -265,6 +276,7 @@ function useTriggerText(task: AgentTask): string {
       ? t(($) => $.execution_log.trigger_retry_attempt, { attempt: task.attempt })
       : t(($) => $.execution_log.trigger_retry);
   }
+  if (task.kind === "handoff") return t(($) => $.execution_log.trigger_handoff);
   if (task.autopilot_run_id) return t(($) => $.execution_log.trigger_autopilot);
   if (task.trigger_comment_id) return t(($) => $.execution_log.trigger_comment);
   return t(($) => $.execution_log.trigger_initial);
@@ -315,6 +327,7 @@ function ActiveRow({ task, issueId }: { task: AgentTask; issueId: string }) {
   return (
     <RowShell task={task}>
       <TriggerText text={trigger} />
+      {task.kind === "handoff" && <HandoffBadge />}
       <ModelRuntimeMeta task={task} />
       {/* Status + time always visible — actions append on hover, never
           replace. Same pattern as desktop tab bar / sidebar pins. */}
@@ -402,6 +415,7 @@ function PastRow({ task, issueId }: { task: AgentTask; issueId: string }) {
   return (
     <RowShell task={task}>
       <TriggerText text={trigger} />
+      {task.kind === "handoff" && <HandoffBadge />}
       <ModelRuntimeMeta task={task} />
       <span className="shrink-0 whitespace-nowrap text-xs">
         <span className={tone}>{failureLabel ?? label}</span>

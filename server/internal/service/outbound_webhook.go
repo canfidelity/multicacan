@@ -43,13 +43,17 @@ func (s *OutboundWebhookService) Deliver(workspaceID pgtype.UUID, event string, 
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+		// Use a long-lived context for the goroutine so retry backoffs
+		// (up to 30 min) are not cancelled by a short per-request timeout.
+		// Individual HTTP calls inside deliver use their own short timeouts.
+		ctx := context.Background()
 
-		hooks, err := s.Queries.ListActiveOutboundWebhooksForEvent(ctx, db.ListActiveOutboundWebhooksForEventParams{
+		listCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		hooks, err := s.Queries.ListActiveOutboundWebhooksForEvent(listCtx, db.ListActiveOutboundWebhooksForEventParams{
 			WorkspaceID: wsID,
 			Column2:     event,
 		})
+		cancel()
 		if err != nil {
 			slog.Warn("outbound webhook: list hooks failed", "event", event, "error", err)
 			return
@@ -59,6 +63,15 @@ func (s *OutboundWebhookService) Deliver(workspaceID pgtype.UUID, event string, 
 			s.deliver(ctx, hook, event, payloadBytes)
 		}
 	}()
+}
+
+// retryBackoffs defines the wait durations between delivery attempts.
+// A delivery is attempted once immediately, then up to len(retryBackoffs)
+// more times on failure — giving maxAttempts = 1 + len(retryBackoffs).
+var retryBackoffs = []time.Duration{
+	1 * time.Minute,
+	5 * time.Minute,
+	30 * time.Minute,
 }
 
 func (s *OutboundWebhookService) deliver(ctx context.Context, hook db.OutboundWebhook, event string, payload []byte) {
@@ -73,14 +86,54 @@ func (s *OutboundWebhookService) deliver(ctx context.Context, hook db.OutboundWe
 		return
 	}
 
-	statusCode, deliveryErr := s.post(hook, event, payload)
+	var (
+		statusCode  int
+		deliveryErr error
+	)
+
+	// First attempt (not counted as a retry).
+	statusCode, deliveryErr = s.post(hook, event, payload)
+
+	// Retry with exponential backoff on failure.
+	for i, backoff := range retryBackoffs {
+		if deliveryErr == nil {
+			break
+		}
+		slog.Warn("outbound webhook: delivery failed, will retry",
+			"webhook_id", hook.ID,
+			"event", event,
+			"url", hook.Url,
+			"attempt", i+1,
+			"backoff", backoff,
+			"error", deliveryErr,
+		)
+
+		// Mark delivery as retrying so callers can see we are still trying.
+		if uErr := s.Queries.UpdateOutboundWebhookDelivery(ctx, db.UpdateOutboundWebhookDeliveryParams{
+			ID:         delivery.ID,
+			Status:     "retrying",
+			StatusCode: pgtype.Int4{Int32: int32(statusCode), Valid: statusCode > 0},
+			Error:      pgtype.Text{String: deliveryErr.Error(), Valid: true},
+		}); uErr != nil {
+			slog.Warn("outbound webhook: update delivery retrying status failed", "delivery_id", delivery.ID, "error", uErr)
+		}
+
+		select {
+		case <-ctx.Done():
+			deliveryErr = ctx.Err()
+			break
+		case <-time.After(backoff):
+		}
+
+		statusCode, deliveryErr = s.post(hook, event, payload)
+	}
 
 	status := "delivered"
 	errStr := pgtype.Text{}
 	if deliveryErr != nil {
 		status = "failed"
 		errStr = pgtype.Text{String: deliveryErr.Error(), Valid: true}
-		slog.Warn("outbound webhook: delivery failed", "webhook_id", hook.ID, "event", event, "url", hook.Url, "error", deliveryErr)
+		slog.Warn("outbound webhook: delivery failed after all retries", "webhook_id", hook.ID, "event", event, "url", hook.Url, "error", deliveryErr)
 	}
 
 	if err := s.Queries.UpdateOutboundWebhookDelivery(ctx, db.UpdateOutboundWebhookDeliveryParams{

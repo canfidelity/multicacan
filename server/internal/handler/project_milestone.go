@@ -332,10 +332,14 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 	}
 }
 
-// triggerSquadLeaderOnTaskComplete is called when any agent task completes. If
-// the issue is still in a non-terminal state (not done/in_review/cancelled),
-// the squad leader is re-triggered so the project loop doesn't stall when an
-// agent finishes work but forgets to update the issue status.
+// triggerSquadLeaderOnTaskComplete is called when any agent task completes.
+//
+// For leader tasks: the leader just finished evaluating an issue. Drive the
+// project forward by triggering the leader on the next pending (backlog/todo)
+// issue in the project so work never stalls.
+//
+// For non-leader tasks: if the issue is still in a non-terminal state the
+// agent didn't update the status, so re-trigger the leader to review.
 func (h *Handler) triggerSquadLeaderOnTaskComplete(ctx context.Context, task db.AgentTaskQueue) {
 	if !task.IssueID.Valid {
 		return
@@ -344,12 +348,62 @@ func (h *Handler) triggerSquadLeaderOnTaskComplete(ctx context.Context, task db.
 	if err != nil {
 		return
 	}
-	// Already handled by UpdateIssue hooks or terminal — nothing to do.
+
+	if task.IsLeaderTask {
+		h.triggerProjectLeaderContinuation(ctx, issue)
+		return
+	}
+
+	// Non-leader task: if the issue is still open (agent didn't advance status),
+	// trigger the leader to review and drive the next step.
 	switch issue.Status {
 	case "done", "in_review", "cancelled":
 		return
 	}
 	h.triggerProjectSquadLeaderForReview(ctx, issue)
+}
+
+// triggerProjectLeaderContinuation is called after a leader task completes.
+// It finds the next pending (backlog/todo) issue in the project and triggers
+// the leader on it, so the autonomous loop continues without human intervention.
+// The current issue is excluded to prevent the leader from looping on the same
+// issue when it recorded no_action.
+func (h *Handler) triggerProjectLeaderContinuation(ctx context.Context, issue db.Issue) {
+	if !issue.ProjectID.Valid {
+		return
+	}
+	project, err := h.Queries.GetProject(ctx, issue.ProjectID)
+	if err != nil || project.ExecutionStatus != "running" {
+		return
+	}
+	squadID, err := h.Queries.GetFirstProjectSquad(ctx, issue.ProjectID)
+	if err != nil {
+		return
+	}
+	squad, err := h.Queries.GetSquad(ctx, squadID)
+	if err != nil {
+		return
+	}
+	next, err := h.Queries.GetNextPendingIssueInProject(ctx, db.GetNextPendingIssueInProjectParams{
+		ProjectID: issue.ProjectID,
+		ID:        issue.ID,
+	})
+	if err != nil {
+		return
+	}
+	hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
+		IssueID: next.ID,
+		AgentID: squad.LeaderID,
+	})
+	if err != nil || hasPending {
+		return
+	}
+	if _, err := h.TaskService.EnqueueTaskForSquadLeader(ctx, next, squad.LeaderID, pgtype.UUID{}); err != nil {
+		slog.Warn("roadmap: failed to trigger leader continuation",
+			"project_id", uuidToString(issue.ProjectID),
+			"next_issue_id", uuidToString(next.ID),
+			"error", err)
+	}
 }
 
 // triggerProjectSquadLeaderForReview re-triggers the squad leader when an issue

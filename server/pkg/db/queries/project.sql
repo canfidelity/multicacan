@@ -87,3 +87,13 @@ SELECT squad_id FROM project_squad WHERE project_id = $1 ORDER BY created_at ASC
 
 -- name: GetFirstIssueInProject :one
 SELECT * FROM issue WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1;
+
+-- name: GetNextPendingIssueInProject :one
+-- Returns the first issue in a project that still has work to start (backlog or todo),
+-- excluding the issue that just triggered the check to avoid re-triggering the same issue.
+SELECT * FROM issue
+WHERE project_id = $1
+  AND id != $2
+  AND status IN ('todo', 'backlog')
+ORDER BY created_at ASC
+LIMIT 1;

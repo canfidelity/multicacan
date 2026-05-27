@@ -159,6 +159,54 @@ func (q *Queries) GetFirstProjectSquad(ctx context.Context, projectID pgtype.UUI
 	return squad_id, err
 }
 
+const getNextPendingIssueInProject = `-- name: GetNextPendingIssueInProject :one
+SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue
+WHERE project_id = $1
+  AND id != $2
+  AND status IN ('todo', 'backlog')
+ORDER BY created_at ASC
+LIMIT 1
+`
+
+type GetNextPendingIssueInProjectParams struct {
+	ProjectID pgtype.UUID `json:"project_id"`
+	ID        pgtype.UUID `json:"id"`
+}
+
+// Returns the first issue in a project that still has work to start (backlog or todo),
+// excluding the issue that just triggered the check to avoid re-triggering the same issue.
+func (q *Queries) GetNextPendingIssueInProject(ctx context.Context, arg GetNextPendingIssueInProjectParams) (Issue, error) {
+	row := q.db.QueryRow(ctx, getNextPendingIssueInProject, arg.ProjectID, arg.ID)
+	var i Issue
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Title,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.AssigneeType,
+		&i.AssigneeID,
+		&i.CreatorType,
+		&i.CreatorID,
+		&i.ParentIssueID,
+		&i.AcceptanceCriteria,
+		&i.ContextRefs,
+		&i.Position,
+		&i.DueDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Number,
+		&i.ProjectID,
+		&i.OriginType,
+		&i.OriginID,
+		&i.FirstExecutedAt,
+		&i.StartDate,
+		&i.Metadata,
+	)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id FROM project
 WHERE id = $1

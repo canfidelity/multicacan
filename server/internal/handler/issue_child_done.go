@@ -84,7 +84,7 @@ func (h *Handler) notifyParentOfChildDone(ctx context.Context, prev, issue db.Is
 	mentionPrefix := h.buildParentAssigneeMention(ctx, parent)
 
 	content := fmt.Sprintf(
-		"%sSub-issue [%s](mention://issue/%s) — \"%s\" — is done. Confirm whether to advance the next step on this parent (and promote any waiting `backlog` sub-issues).",
+		"%sSub-issue [%s](mention://issue/%s) — \"%s\" — is done. Reviewing next steps.",
 		mentionPrefix, identifier, childID, title,
 	)
 
@@ -313,7 +313,11 @@ func (h *Handler) triggerChildDoneSquad(ctx context.Context, parent, child db.Is
 	}
 
 	agent, err := h.Queries.GetAgent(ctx, squad.LeaderID)
-	if err != nil || !agent.RuntimeID.Valid || agent.ArchivedAt.Valid {
+	if err != nil || agent.ArchivedAt.Valid {
+		slog.Warn("child done: squad leader unavailable",
+			"parent_id", uuidToString(parent.ID),
+			"leader_id", uuidToString(squad.LeaderID),
+			"error", err)
 		return
 	}
 
@@ -321,16 +325,20 @@ func (h *Handler) triggerChildDoneSquad(ctx context.Context, parent, child db.Is
 		IssueID: parent.ID,
 		AgentID: squad.LeaderID,
 	})
-	if err != nil || hasPending {
+	if err == nil && hasPending {
+		// Leader already queued on this issue — no need to double-trigger.
 		return
 	}
 
 	if _, err := h.TaskService.EnqueueTaskForSquadLeader(ctx, parent, squad.LeaderID, triggerCommentID); err != nil {
-		slog.Warn("child done: enqueue parent squad leader task failed",
+		slog.Warn("child done: enqueue parent squad leader task failed, falling back to project trigger",
 			"error", err,
 			"parent_id", uuidToString(parent.ID),
 			"squad_id", uuidToString(squad.ID),
 			"leader_id", uuidToString(squad.LeaderID))
+		// Fallback: trigger via the project squad mechanism which is
+		// runtime-agnostic and uses the most recent task's runtime.
+		go h.triggerProjectSquadLeaderForReview(ctx, parent)
 	}
 }
 

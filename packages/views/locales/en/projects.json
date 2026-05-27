@@ -111,7 +111,14 @@
     "pick_runtime": "Select a runtime",
     "no_runtimes": "No online runtimes",
     "loading_models": "Loading models...",
-    "no_models_runtime": "No models found"
+    "no_models_runtime": "No models found",
+    "pick_tier": "What complexity is this model for?",
+    "tier_simple": "Simple",
+    "tier_simple_desc": "Research, status checks, small edits",
+    "tier_medium": "Medium",
+    "tier_medium_desc": "Multi-file changes, feature additions",
+    "tier_complex": "Complex",
+    "tier_complex_desc": "Large refactors, architecture decisions"
   },
   "roadmap": {
     "section_title": "Roadmap",

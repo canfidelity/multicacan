@@ -111,7 +111,14 @@
     "pick_runtime": "选择运行时",
     "no_runtimes": "暂无在线运行时",
     "loading_models": "加载模型中...",
-    "no_models_runtime": "未找到模型"
+    "no_models_runtime": "未找到模型",
+    "pick_tier": "此模型适用于哪种复杂度？",
+    "tier_simple": "简单",
+    "tier_simple_desc": "调研、状态检查、小型编辑",
+    "tier_medium": "中等",
+    "tier_medium_desc": "多文件修改、功能新增",
+    "tier_complex": "复杂",
+    "tier_complex_desc": "大型重构、架构决策"
   },
   "roadmap": {
     "section_title": "路线图",

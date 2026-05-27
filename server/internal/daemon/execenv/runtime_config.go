@@ -371,18 +371,62 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
 		if ctx.IsSquadLeader && ctx.ProjectModelPool != "" && ctx.ProjectModelPool != "[]" {
 			b.WriteString("## Available Models\n\n")
-			b.WriteString("The project owner has configured the following models for use in this project. When creating sub-tasks for worker agents, pass `--preferred-model <model>` to `multicacan issue create` to assign the model at creation time. Select the model that best matches the task complexity: use smaller/faster models for simple tasks (research, status checks, short edits) and larger/more capable models for complex tasks (large refactors, architecture decisions, multi-file changes).\n\n")
-			fmt.Fprintf(&b, "```json\n%s\n```\n\n", ctx.ProjectModelPool)
+			b.WriteString("The project owner has configured the following models. For EVERY sub-task you create with `multicacan issue create`, you MUST pass `--preferred-model <model>` using the model whose **tier** matches the task:\n\n")
+			// Parse pool to emit a human-readable tier table instead of raw JSON.
+			var pool []struct {
+				Model string `json:"model"`
+				Label string `json:"label"`
+				Tier  string `json:"tier"`
+			}
+			if err := json.Unmarshal([]byte(ctx.ProjectModelPool), &pool); err == nil && len(pool) > 0 {
+				hasTiers := false
+				for _, e := range pool {
+					if e.Tier != "" {
+						hasTiers = true
+						break
+					}
+				}
+				if hasTiers {
+					for _, e := range pool {
+						tier := e.Tier
+						if tier == "" {
+							tier = "any"
+						}
+						label := e.Label
+						if label == "" {
+							label = e.Model
+						}
+						var desc string
+						switch tier {
+						case "simple":
+							desc = "research, status checks, small text/config edits, single-file fixes"
+						case "medium":
+							desc = "multi-file changes, feature additions, debugging"
+						case "complex":
+							desc = "large refactors, architecture decisions, full feature implementations, multi-service changes"
+						}
+						fmt.Fprintf(&b, "- **%s** → `--preferred-model %s`", tier, e.Model)
+						if desc != "" {
+							fmt.Fprintf(&b, " (%s)", desc)
+						}
+						fmt.Fprintf(&b, " [%s]\n", label)
+					}
+					b.WriteString("\nPick the tier that matches the sub-task scope. When in doubt: simple < medium < complex. Never omit `--preferred-model` when a model pool is configured.\n\n")
+				} else {
+					// No tiers set — fall back to raw JSON with generic guidance.
+					b.WriteString("Use smaller/faster models for simple tasks and larger/more capable models for complex tasks.\n\n")
+					fmt.Fprintf(&b, "```json\n%s\n```\n\n", ctx.ProjectModelPool)
+				}
+			} else {
+				fmt.Fprintf(&b, "```json\n%s\n```\n\n", ctx.ProjectModelPool)
+			}
 		}
 		fmt.Fprintf(&b, "1. Run `multicacan issue get %s --output json` to understand your task\n", ctx.IssueID)
 		fmt.Fprintf(&b, "2. Run `multicacan issue metadata list %s --output json` to see what prior agents pinned — best-effort, empty `{}` and CLI failures are normal. See the `## Issue Metadata` section above for what to look for.\n", ctx.IssueID)
 		fmt.Fprintf(&b, "3. Run `multicacan issue comment list %s --output json` to read the full comment history (returns all comments, capped server-side at 2000) — this is mandatory, not optional. Earlier comments often carry context the issue body lacks (e.g. which repo to work in, the prior agent's findings, the reason the issue was reassigned to you). Skipping this step is the most common cause of agents acting on stale or incomplete instructions. When the flat dump is too large to ingest in one shot, treat `--recent 20 --output json` plus the `--before` / `--before-id` cursor (from the stderr `Next thread cursor:` line) as a paging strategy: keep walking older threads until you have read enough history to satisfy this mandatory step. `--recent` is a way to read the full history page-by-page, not a shortcut that replaces it.\n", ctx.IssueID)
 		fmt.Fprintf(&b, "4. Run `multicacan issue status %s in_progress`\n", ctx.IssueID)
 		if ctx.IsSquadLeader && ctx.ProjectModelPool != "" && ctx.ProjectModelPool != "[]" {
-			b.WriteString("5. **Plan and create sub-tasks. For EVERY sub-task you create with `multicacan issue create`, you MUST include `--preferred-model <model>` chosen from the `## Available Models` section above based on task complexity. Never omit `--preferred-model` when a model pool is configured — this is mandatory, not optional.** Guidelines:\n")
-			b.WriteString("   - Simple tasks (research, status check, small text/config edit, single-file fix) → use the smallest/fastest model in the pool\n")
-			b.WriteString("   - Medium tasks (multi-file changes, feature additions, debugging) → use a mid-tier model\n")
-			b.WriteString("   - Complex tasks (large refactors, architecture decisions, full feature implementations, multi-service changes) → use the most capable model\n")
+			b.WriteString("5. **Plan and create sub-tasks. For EVERY sub-task, include `--preferred-model <model>` exactly as listed in `## Available Models` above — the tier column tells you which model to use. Never guess or pick arbitrarily; use the tier that matches the task scope.**\n")
 		} else {
 			b.WriteString("5. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
 		}

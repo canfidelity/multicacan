@@ -407,16 +407,27 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   // Model pool section
   const [modelPoolOpen, setModelPoolOpen] = useState(false);
   const [selectedRuntimeId, setSelectedRuntimeId] = useState<string | null>(null);
+  const [pendingModel, setPendingModel] = useState<{ id: string; label: string } | null>(null);
   const modelPool = project?.model_pool ?? [];
   const { data: allRuntimes = [] } = useQuery(runtimeListOptions(wsId));
   const onlineRuntimes = allRuntimes.filter((r) => r.status === "online");
   const { data: runtimeModels, isLoading: modelsLoading } = useQuery(runtimeModelsOptions(selectedRuntimeId));
   const poolModelIds = new Set(modelPool.map((e) => e.model));
-  const handleAddModel = (modelId: string, label: string) => {
+  const handleSelectModel = (modelId: string, label: string) => {
     if (poolModelIds.has(modelId)) return;
-    handleUpdateField({ model_pool: [...modelPool, { model: modelId, label: label || modelId }] });
+    setPendingModel({ id: modelId, label });
+  };
+  const handleAddModel = (tier: "simple" | "medium" | "complex") => {
+    if (!pendingModel || !selectedRuntimeId) return;
+    handleUpdateField({
+      model_pool: [
+        ...modelPool,
+        { model: pendingModel.id, label: pendingModel.label || pendingModel.id, tier, runtime_id: selectedRuntimeId },
+      ],
+    });
     setModelPoolOpen(false);
     setSelectedRuntimeId(null);
+    setPendingModel(null);
   };
   const handleRemoveModel = (model: string) => {
     handleUpdateField({ model_pool: modelPool.filter((e) => e.model !== model) });
@@ -690,6 +701,15 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
               )}
               {modelPool.map((entry) => (
                 <div key={entry.model} className="group inline-flex items-center gap-1.5 rounded bg-accent/60 px-1.5 py-0.5 text-xs w-fit max-w-full">
+                  {entry.tier && (
+                    <span className={`shrink-0 rounded px-1 py-0.5 text-[10px] font-medium leading-none ${
+                      entry.tier === "simple" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
+                      entry.tier === "medium" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                      "bg-purple-500/15 text-purple-600 dark:text-purple-400"
+                    }`}>
+                      {t(($) => ($.model_pool as Record<string, string>)[`tier_${entry.tier}`] ?? entry.tier ?? "")}
+                    </span>
+                  )}
                   <span className="truncate font-mono">{entry.label || entry.model}</span>
                   <button
                     type="button"
@@ -701,7 +721,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                   </button>
                 </div>
               ))}
-              <Popover open={modelPoolOpen} onOpenChange={(v) => { setModelPoolOpen(v); if (!v) setSelectedRuntimeId(null); }}>
+              <Popover open={modelPoolOpen} onOpenChange={(v) => { setModelPoolOpen(v); if (!v) { setSelectedRuntimeId(null); setPendingModel(null); } }}>
                 <PopoverTrigger
                   render={
                     <button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5">
@@ -711,7 +731,35 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                   }
                 />
                 <PopoverContent align="start" className="w-60 p-0">
-                  {!selectedRuntimeId ? (
+                  {pendingModel ? (
+                    <div>
+                      <div className="flex items-center gap-1 border-b px-2 py-1.5">
+                        <button type="button" onClick={() => setPendingModel(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                          <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+                        </button>
+                        <span className="text-xs font-medium truncate font-mono">{pendingModel.label || pendingModel.id}</span>
+                      </div>
+                      <div className="px-3 py-2 text-xs text-muted-foreground">{t(($) => $.model_pool.pick_tier)}</div>
+                      <div className="p-1 flex flex-col gap-0.5 pb-2">
+                        {(["simple", "medium", "complex"] as const).map((tier) => (
+                          <button
+                            key={tier}
+                            type="button"
+                            onClick={() => handleAddModel(tier)}
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors text-left"
+                          >
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${
+                              tier === "simple" ? "bg-emerald-500" : tier === "medium" ? "bg-amber-500" : "bg-purple-500"
+                            }`} />
+                            <div className="flex flex-col">
+                              <span className="text-xs font-medium">{t(($) => ($.model_pool as Record<string, string>)[`tier_${tier}`] ?? tier)}</span>
+                              <span className="text-[10px] text-muted-foreground">{t(($) => ($.model_pool as Record<string, string>)[`tier_${tier}_desc`] ?? "")}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : !selectedRuntimeId ? (
                     <div>
                       <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">{t(($) => $.model_pool.pick_runtime)}</div>
                       <div className="p-1 max-h-52 overflow-y-auto">
@@ -756,7 +804,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                                 key={m.id}
                                 type="button"
                                 disabled={already}
-                                onClick={() => handleAddModel(m.id, m.label)}
+                                onClick={() => handleSelectModel(m.id, m.label)}
                                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 {m.default && <span className="h-1.5 w-1.5 rounded-full bg-brand shrink-0" />}

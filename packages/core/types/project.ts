@@ -22,6 +22,10 @@ export interface ProjectMilestone {
 export interface ModelPoolEntry {
   model: string;
   label: string;
+  /** Task complexity this model is intended for. Squad leaders use this to pick the right model without guessing. */
+  tier?: "simple" | "medium" | "complex";
+  /** Runtime ID this model belongs to. Ensures the model is only passed to a compatible runtime. */
+  runtime_id?: string;
 }
 
 export interface Project {

@@ -492,8 +492,19 @@ function SimulatorViewport({ state, onStateChange, switchingRef }: { state: Simu
   const fetchDevices = useCallback(async () => {
     setDevicesLoading(true);
     try {
-      const res = await execOnHost("xcrun simctl list devices available -j", workspaceId);
-      if (res.exitCode === 0) setDevices(parseSimctlList(res.stdout));
+      // "booted" is fast (<1s); "available" scans all runtimes and can exceed
+      // the 15s exec-relay timeout on machines with many Xcode runtimes.
+      // We try booted first, then fall back to available for non-booted devices.
+      const booted = await execOnHost("xcrun simctl list devices booted -j", workspaceId);
+      if (booted.exitCode === 0) {
+        const bootedDevices = parseSimctlList(booted.stdout);
+        if (bootedDevices.length > 0) {
+          setDevices(bootedDevices);
+          return;
+        }
+      }
+      const avail = await execOnHost("xcrun simctl list devices available -j", workspaceId);
+      if (avail.exitCode === 0) setDevices(parseSimctlList(avail.stdout));
     } finally {
       setDevicesLoading(false);
     }

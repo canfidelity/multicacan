@@ -24,6 +24,7 @@ const (
 // Daemon auth path labels exposed via context for slow-log attribution.
 const (
 	DaemonAuthPathDaemonToken = "daemon_token"
+	DaemonAuthPathAgentTask   = "agent_task_token"
 	DaemonAuthPathPAT         = "pat"
 	DaemonAuthPathJWT         = "jwt"
 )
@@ -83,6 +84,33 @@ func DaemonAuth(queries *db.Queries, patCache *auth.PATCache, daemonCache *auth.
 			if tokenString == authHeader {
 				slog.Debug("daemon_auth: invalid format", "path", r.URL.Path)
 				writeError(w, http.StatusUnauthorized, "invalid authorization format")
+				return
+			}
+
+			// Agent task token: "mat_" prefix. Minted at claim time and injected
+			// into the agent process as MULTICACAN_TOKEN. Validated against the
+			// task_token table; workspace ID is carried on the token row.
+			if strings.HasPrefix(tokenString, "mat_") {
+				if queries == nil {
+					writeError(w, http.StatusUnauthorized, "invalid token")
+					return
+				}
+				tt, err := queries.GetTaskTokenByHash(r.Context(), auth.HashToken(tokenString))
+				if err != nil {
+					slog.Warn("daemon_auth: invalid agent task token", "path", r.URL.Path, "error", err)
+					writeError(w, http.StatusUnauthorized, "invalid token")
+					return
+				}
+				if tt.ExpiresAt.Valid && time.Now().After(tt.ExpiresAt.Time) {
+					writeError(w, http.StatusUnauthorized, "token expired")
+					return
+				}
+				wsID := uuidToString(tt.WorkspaceID)
+				ctx := context.WithValue(r.Context(), ctxKeyDaemonWorkspaceID, wsID)
+				ctx = context.WithValue(ctx, ctxKeyDaemonAuthPath, DaemonAuthPathAgentTask)
+				// Surface the acting user so ownership checks work normally.
+				r.Header.Set("X-User-ID", uuidToString(tt.UserID))
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 

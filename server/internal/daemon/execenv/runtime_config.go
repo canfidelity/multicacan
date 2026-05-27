@@ -369,6 +369,11 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	} else {
 		// Assignment-triggered: defer to agent Skills for workflow specifics.
 		b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
+		if ctx.IsSquadLeader && ctx.ProjectModelPool != "" && ctx.ProjectModelPool != "[]" {
+			b.WriteString("## Available Models\n\n")
+			b.WriteString("The project owner has configured the following models for use in this project. When delegating sub-tasks to worker agents (via `multicacan issue update --preferred-model <model>`), select the model that best matches the task complexity: use smaller/faster models for simple tasks (research, status checks, short edits) and larger/more capable models for complex tasks (large refactors, architecture decisions, multi-file changes).\n\n")
+			fmt.Fprintf(&b, "```json\n%s\n```\n\n", ctx.ProjectModelPool)
+		}
 		fmt.Fprintf(&b, "1. Run `multicacan issue get %s --output json` to understand your task\n", ctx.IssueID)
 		fmt.Fprintf(&b, "2. Run `multicacan issue metadata list %s --output json` to see what prior agents pinned — best-effort, empty `{}` and CLI failures are normal. See the `## Issue Metadata` section above for what to look for.\n", ctx.IssueID)
 		fmt.Fprintf(&b, "3. Run `multicacan issue comment list %s --output json` to read the full comment history (returns all comments, capped server-side at 2000) — this is mandatory, not optional. Earlier comments often carry context the issue body lacks (e.g. which repo to work in, the prior agent's findings, the reason the issue was reassigned to you). Skipping this step is the most common cause of agents acting on stale or incomplete instructions. When the flat dump is too large to ingest in one shot, treat `--recent 20 --output json` plus the `--before` / `--before-id` cursor (from the stderr `Next thread cursor:` line) as a paging strategy: keep walking older threads until you have read enough history to satisfy this mandatory step. `--recent` is a way to read the full history page-by-page, not a shortcut that replaces it.\n", ctx.IssueID)

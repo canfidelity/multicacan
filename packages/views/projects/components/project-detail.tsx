@@ -403,6 +403,24 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
     (s) => !s.archived_at && !assignedSquadIds.has(s.id) && s.name.toLowerCase().includes(squadFilter.toLowerCase()),
   );
 
+  // Model pool section
+  const [modelPoolOpen, setModelPoolOpen] = useState(false);
+  const [newModelInput, setNewModelInput] = useState("");
+  const [newModelLabel, setNewModelLabel] = useState("");
+  const modelPool = project?.model_pool ?? [];
+  const handleAddModel = () => {
+    const m = newModelInput.trim();
+    if (!m) return;
+    const entry = { model: m, label: newModelLabel.trim() || m };
+    handleUpdateField({ model_pool: [...modelPool, entry] });
+    setNewModelInput("");
+    setNewModelLabel("");
+    setModelPoolOpen(false);
+  };
+  const handleRemoveModel = (model: string) => {
+    handleUpdateField({ model_pool: modelPool.filter((e) => e.model !== model) });
+  };
+
   const handleUpdateField = useCallback(
     (data: Parameters<typeof updateProject.mutate>[0] extends { id: string } & infer R ? R : never) => {
       if (!project) return;
@@ -658,6 +676,65 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                       ))
                     )}
                   </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          {/* Model Pool */}
+          <div className="flex min-h-8 items-start gap-2 rounded-md px-2 py-1.5 -mx-2 hover:bg-accent/50 transition-colors">
+            <span className="w-16 shrink-0 text-xs text-muted-foreground mt-0.5">{t(($) => $.model_pool.section_title)}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              {modelPool.length === 0 && (
+                <span className="text-xs text-muted-foreground">{t(($) => $.model_pool.no_models)}</span>
+              )}
+              {modelPool.map((entry) => (
+                <div key={entry.model} className="group inline-flex items-center gap-1.5 rounded bg-accent/60 px-1.5 py-0.5 text-xs w-fit max-w-full">
+                  <span className="truncate font-mono">{entry.label || entry.model}</span>
+                  <button
+                    type="button"
+                    aria-label={t(($) => $.model_pool.remove_aria)}
+                    onClick={() => handleRemoveModel(entry.model)}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ))}
+              <Popover open={modelPoolOpen} onOpenChange={setModelPoolOpen}>
+                <PopoverTrigger
+                  render={
+                    <button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                      <Plus className="h-3 w-3" />
+                      {t(($) => $.model_pool.add)}
+                    </button>
+                  }
+                />
+                <PopoverContent align="start" className="w-64 p-3 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    value={newModelInput}
+                    onChange={(e) => setNewModelInput(e.target.value)}
+                    placeholder={t(($) => $.model_pool.model_placeholder)}
+                    className="w-full rounded border bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAddModel(); }}
+                  />
+                  <input
+                    type="text"
+                    value={newModelLabel}
+                    onChange={(e) => setNewModelLabel(e.target.value)}
+                    placeholder={t(($) => $.model_pool.label_placeholder)}
+                    className="w-full rounded border bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAddModel(); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddModel}
+                    disabled={!newModelInput.trim()}
+                    className="rounded bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  >
+                    {t(($) => $.model_pool.add_confirm)}
+                  </button>
                 </PopoverContent>
               </Popover>
             </div>

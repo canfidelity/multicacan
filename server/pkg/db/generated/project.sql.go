@@ -50,7 +50,7 @@ INSERT INTO project (
     lead_type, lead_id, priority, mission
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
-) RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id
+) RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool
 `
 
 type CreateProjectParams struct {
@@ -93,6 +93,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }
@@ -113,7 +114,7 @@ func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) er
 }
 
 const getFirstIssueInProject = `-- name: GetFirstIssueInProject :one
-SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1
+SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata, preferred_model FROM issue WHERE project_id = $1 ORDER BY created_at ASC LIMIT 1
 `
 
 func (q *Queries) GetFirstIssueInProject(ctx context.Context, projectID pgtype.UUID) (Issue, error) {
@@ -144,6 +145,7 @@ func (q *Queries) GetFirstIssueInProject(ctx context.Context, projectID pgtype.U
 		&i.FirstExecutedAt,
 		&i.StartDate,
 		&i.Metadata,
+		&i.PreferredModel,
 	)
 	return i, err
 }
@@ -160,7 +162,7 @@ func (q *Queries) GetFirstProjectSquad(ctx context.Context, projectID pgtype.UUI
 }
 
 const getNextPendingIssueInProject = `-- name: GetNextPendingIssueInProject :one
-SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue
+SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata, preferred_model FROM issue
 WHERE project_id = $1
   AND id != $2
   AND status IN ('todo', 'backlog')
@@ -203,12 +205,13 @@ func (q *Queries) GetNextPendingIssueInProject(ctx context.Context, arg GetNextP
 		&i.FirstExecutedAt,
 		&i.StartDate,
 		&i.Metadata,
+		&i.PreferredModel,
 	)
 	return i, err
 }
 
 const getNextReviewIssueInProject = `-- name: GetNextReviewIssueInProject :one
-SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue
+SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata, preferred_model FROM issue
 WHERE project_id = $1
   AND id != $2
   AND status = 'in_review'
@@ -251,12 +254,13 @@ func (q *Queries) GetNextReviewIssueInProject(ctx context.Context, arg GetNextRe
 		&i.FirstExecutedAt,
 		&i.StartDate,
 		&i.Metadata,
+		&i.PreferredModel,
 	)
 	return i, err
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id FROM project
+SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool FROM project
 WHERE id = $1
 `
 
@@ -278,12 +282,13 @@ func (q *Queries) GetProject(ctx context.Context, id pgtype.UUID) (Project, erro
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }
 
 const getProjectInWorkspace = `-- name: GetProjectInWorkspace :one
-SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id FROM project
+SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool FROM project
 WHERE id = $1 AND workspace_id = $2
 `
 
@@ -310,6 +315,7 @@ func (q *Queries) GetProjectInWorkspace(ctx context.Context, arg GetProjectInWor
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }
@@ -399,7 +405,7 @@ func (q *Queries) ListProjectSquads(ctx context.Context, projectID pgtype.UUID) 
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id FROM project
+SELECT id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool FROM project
 WHERE workspace_id = $1
   AND ($2::text IS NULL OR status = $2)
   AND ($3::text IS NULL OR priority = $3)
@@ -436,6 +442,7 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]P
 			&i.Mission,
 			&i.ExecutionStatus,
 			&i.MissionIssueID,
+			&i.ModelPool,
 		); err != nil {
 			return nil, err
 		}
@@ -512,7 +519,7 @@ func (q *Queries) RemoveProjectSquad(ctx context.Context, arg RemoveProjectSquad
 }
 
 const setProjectExecutionStatus = `-- name: SetProjectExecutionStatus :one
-UPDATE project SET execution_status = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id
+UPDATE project SET execution_status = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool
 `
 
 type SetProjectExecutionStatusParams struct {
@@ -538,12 +545,13 @@ func (q *Queries) SetProjectExecutionStatus(ctx context.Context, arg SetProjectE
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }
 
 const setProjectMissionIssue = `-- name: SetProjectMissionIssue :one
-UPDATE project SET mission_issue_id = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id
+UPDATE project SET mission_issue_id = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool
 `
 
 type SetProjectMissionIssueParams struct {
@@ -569,6 +577,7 @@ func (q *Queries) SetProjectMissionIssue(ctx context.Context, arg SetProjectMiss
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }
@@ -585,9 +594,10 @@ UPDATE project SET
     mission = COALESCE($9, mission),
     mission_issue_id = COALESCE($10, mission_issue_id),
     execution_status = COALESCE($11, execution_status),
+    model_pool = COALESCE($12::jsonb, model_pool),
     updated_at = now()
 WHERE id = $1
-RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id
+RETURNING id, workspace_id, title, description, icon, status, lead_type, lead_id, created_at, updated_at, priority, mission, execution_status, mission_issue_id, model_pool
 `
 
 type UpdateProjectParams struct {
@@ -602,6 +612,7 @@ type UpdateProjectParams struct {
 	Mission         pgtype.Text `json:"mission"`
 	MissionIssueID  pgtype.UUID `json:"mission_issue_id"`
 	ExecutionStatus pgtype.Text `json:"execution_status"`
+	ModelPool       []byte      `json:"model_pool"`
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -617,6 +628,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.Mission,
 		arg.MissionIssueID,
 		arg.ExecutionStatus,
+		arg.ModelPool,
 	)
 	var i Project
 	err := row.Scan(
@@ -634,6 +646,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.Mission,
 		&i.ExecutionStatus,
 		&i.MissionIssueID,
+		&i.ModelPool,
 	)
 	return i, err
 }

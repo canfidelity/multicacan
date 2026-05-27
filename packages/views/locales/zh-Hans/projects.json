@@ -103,6 +103,15 @@
     "remove_aria": "移除小队",
     "add_placeholder": "搜索小队..."
   },
+  "model_pool": {
+    "section_title": "模型",
+    "add": "添加模型",
+    "no_models": "暂无配置模型",
+    "remove_aria": "移除模型",
+    "model_placeholder": "模型 ID（如 claude-opus-4-5）",
+    "label_placeholder": "标签（可选）",
+    "add_confirm": "添加"
+  },
   "roadmap": {
     "section_title": "路线图",
     "mission_label": "使命",

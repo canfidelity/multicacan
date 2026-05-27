@@ -430,6 +430,7 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 		TriggerCommentID:  triggerCommentID,
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
+		PreferredModel:    issue.PreferredModel,
 	})
 	if err != nil {
 		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", err)
@@ -494,6 +495,7 @@ func (s *TaskService) enqueueMentionTask(ctx context.Context, issue db.Issue, ag
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		IsLeaderTask:      pgtype.Bool{Bool: isLeader, Valid: isLeader},
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
+		PreferredModel:    issue.PreferredModel,
 	})
 	if err != nil {
 		slog.Error("mention task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "error", err)

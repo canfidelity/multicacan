@@ -103,6 +103,15 @@
     "remove_aria": "Remove squad",
     "add_placeholder": "Search squads..."
   },
+  "model_pool": {
+    "section_title": "Models",
+    "add": "Add model",
+    "no_models": "No models configured",
+    "remove_aria": "Remove model",
+    "model_placeholder": "Model ID (e.g. claude-opus-4-5)",
+    "label_placeholder": "Label (optional)",
+    "add_confirm": "Add"
+  },
   "roadmap": {
     "section_title": "Roadmap",
     "mission_label": "Mission",

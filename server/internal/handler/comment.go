@@ -65,7 +65,7 @@ func commentToResponse(c db.Comment, reactions []ReactionResponse, attachments [
 // the all-time max observed is ~1.1k, so 2000 leaves ~2x headroom while still
 // preventing a runaway response if some user manages to accumulate a wild
 // number of rows on a single issue.
-const commentHardCap = 2000
+const commentHardCap = 500
 
 // ListComments returns comments for an issue. The default behaviour is
 // unchanged — full chronological dump capped at commentHardCap — so existing

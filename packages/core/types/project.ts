@@ -19,6 +19,11 @@ export interface ProjectMilestone {
   updated_at: string;
 }
 
+export interface ModelPoolEntry {
+  model: string;
+  label: string;
+}
+
 export interface Project {
   id: string;
   workspace_id: string;
@@ -32,6 +37,7 @@ export interface Project {
   mission?: string | null;
   execution_status?: ProjectExecutionStatus;
   mission_issue_id?: string | null;
+  model_pool?: ModelPoolEntry[];
   created_at: string;
   updated_at: string;
   issue_count: number;
@@ -62,6 +68,7 @@ export interface UpdateProjectRequest {
   lead_type?: "member" | "agent" | null;
   lead_id?: string | null;
   mission?: string | null;
+  model_pool?: ModelPoolEntry[];
 }
 
 export interface CreateMilestoneRequest {

@@ -255,6 +255,7 @@
     "preview_tooltip": "预览",
     "no_content": "*暂无内容*",
     "markdown_placeholder": "输入 Markdown 内容...",
-    "raw_placeholder": "文件内容..."
+    "raw_placeholder": "文件内容...",
+    "token_warning": "约 {tokens} tokens — 超大技能文件会在每次任务中消耗大量上下文"
   }
 }

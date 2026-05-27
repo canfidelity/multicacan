@@ -296,6 +296,7 @@ func init() {
 	issueUpdateCmd.Flags().String("start-date", "", "New start date (RFC3339 format; pass empty string to clear)")
 	issueUpdateCmd.Flags().String("due-date", "", "New due date (RFC3339 format)")
 	issueUpdateCmd.Flags().String("parent", "", "Parent issue ID (use --parent \"\" to clear)")
+	issueUpdateCmd.Flags().String("preferred-model", "", "Override the model used for this issue's next task (e.g. claude-opus-4-5)")
 	issueUpdateCmd.Flags().String("output", "json", "Output format: table or json")
 
 	// issue status
@@ -773,6 +774,10 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 			body["assignee_type"] = aType
 			body["assignee_id"] = aID
 		}
+	}
+	if cmd.Flags().Changed("preferred-model") {
+		v, _ := cmd.Flags().GetString("preferred-model")
+		body["preferred_model"] = v
 	}
 	if cmd.Flags().Changed("parent") {
 		v, _ := cmd.Flags().GetString("parent")

@@ -37,7 +37,8 @@ type ProjectResponse struct {
 	// /api/projects/{id}/resources. Resources themselves stay out of this
 	// payload to keep parent metadata and child collections separate; clients
 	// that need the list call ListProjectResources directly.
-	ResourceCount int64 `json:"resource_count"`
+	ResourceCount int64           `json:"resource_count"`
+	ModelPool     json.RawMessage `json:"model_pool"`
 }
 
 func projectToResponse(p db.Project) ProjectResponse {
@@ -56,6 +57,7 @@ func projectToResponse(p db.Project) ProjectResponse {
 		MissionIssueID:  uuidToPtr(p.MissionIssueID),
 		CreatedAt:       timestampToString(p.CreatedAt),
 		UpdatedAt:       timestampToString(p.UpdatedAt),
+		ModelPool:       jsonbToRaw(p.ModelPool),
 	}
 }
 
@@ -98,14 +100,15 @@ type CreateProjectResourceRequestPayload struct {
 }
 
 type UpdateProjectRequest struct {
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	Icon        *string `json:"icon"`
-	Status      *string `json:"status"`
-	Priority    *string `json:"priority"`
-	LeadType    *string `json:"lead_type"`
-	LeadID      *string `json:"lead_id"`
-	Mission     *string `json:"mission"`
+	Title       *string         `json:"title"`
+	Description *string         `json:"description"`
+	Icon        *string         `json:"icon"`
+	Status      *string         `json:"status"`
+	Priority    *string         `json:"priority"`
+	LeadType    *string         `json:"lead_type"`
+	LeadID      *string         `json:"lead_id"`
+	Mission     *string         `json:"mission"`
+	ModelPool   json.RawMessage `json:"model_pool"`
 }
 
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -432,6 +435,9 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Mission != nil {
 		params.Mission = pgtype.Text{String: *req.Mission, Valid: true}
+	}
+	if _, ok := rawFields["model_pool"]; ok && len(req.ModelPool) > 0 {
+		params.ModelPool = []byte(req.ModelPool)
 	}
 	project, err := h.Queries.UpdateProject(r.Context(), params)
 	if err != nil {

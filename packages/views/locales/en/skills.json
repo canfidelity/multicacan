@@ -243,6 +243,7 @@
     "preview_tooltip": "Preview",
     "no_content": "*No content yet*",
     "markdown_placeholder": "Write markdown content...",
-    "raw_placeholder": "File content..."
+    "raw_placeholder": "File content...",
+    "token_warning": "~{tokens} tokens — large skills consume significant context per task"
   }
 }

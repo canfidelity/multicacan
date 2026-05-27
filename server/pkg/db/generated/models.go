@@ -110,6 +110,7 @@ type AgentTaskQueue struct {
 	HandoffContext    string             `json:"handoff_context"`
 	HandoffDepth      int32              `json:"handoff_depth"`
 	IsLeaderTask      bool               `json:"is_leader_task"`
+	PreferredModel    pgtype.Text        `json:"preferred_model"`
 }
 
 type Attachment struct {
@@ -372,6 +373,7 @@ type Issue struct {
 	FirstExecutedAt    pgtype.Timestamptz `json:"first_executed_at"`
 	StartDate          pgtype.Timestamptz `json:"start_date"`
 	Metadata           []byte             `json:"metadata"`
+	PreferredModel     pgtype.Text        `json:"preferred_model"`
 }
 
 type IssueDependency struct {
@@ -548,6 +550,7 @@ type Project struct {
 	Mission         pgtype.Text        `json:"mission"`
 	ExecutionStatus string             `json:"execution_status"`
 	MissionIssueID  pgtype.UUID        `json:"mission_issue_id"`
+	ModelPool       []byte             `json:"model_pool"`
 }
 
 type ProjectMilestone struct {

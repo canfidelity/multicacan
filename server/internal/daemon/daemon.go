@@ -2294,6 +2294,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		RequestingUserName:               task.RequestingUserName,
 		RequestingUserProfileDescription: task.RequestingUserProfileDescription,
 		WorkspaceContext:                 task.WorkspaceContext,
+		ProjectModelPool:                 string(task.ProjectModelPool),
 	}
 
 	// Mark candidate env roots as active before any env work so the GC loop
@@ -2497,7 +2498,9 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	// cursor regression happened — static guesses drift from
 	// whatever the upstream CLI actually accepts.
 	model := ""
-	if task.Agent != nil && task.Agent.Model != "" {
+	if task.PreferredModel != "" {
+		model = task.PreferredModel
+	} else if task.Agent != nil && task.Agent.Model != "" {
 		model = task.Agent.Model
 	}
 	if model == "" {

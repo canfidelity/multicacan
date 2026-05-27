@@ -58,32 +58,34 @@ type IssueResponse struct {
 	// WS broadcast) emit no `labels` field at all — the client merge then
 	// preserves whatever labels are already in cache. nil pointer = "field
 	// absent, do not touch"; non-nil (incl. empty slice) = authoritative list.
-	Labels *[]LabelResponse `json:"labels,omitempty"`
+	Labels         *[]LabelResponse `json:"labels,omitempty"`
+	PreferredModel *string          `json:"preferred_model,omitempty"`
 }
 
 func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:            uuidToString(i.ID),
-		WorkspaceID:   uuidToString(i.WorkspaceID),
-		Number:        i.Number,
-		Identifier:    identifier,
-		Title:         i.Title,
-		Description:   textToPtr(i.Description),
-		Status:        i.Status,
-		Priority:      i.Priority,
-		AssigneeType:  textToPtr(i.AssigneeType),
-		AssigneeID:    uuidToPtr(i.AssigneeID),
-		CreatorType:   i.CreatorType,
-		CreatorID:     uuidToString(i.CreatorID),
-		ParentIssueID: uuidToPtr(i.ParentIssueID),
-		ProjectID:     uuidToPtr(i.ProjectID),
-		Position:      i.Position,
-		StartDate:     timestampToPtr(i.StartDate),
-		DueDate:       timestampToPtr(i.DueDate),
-		CreatedAt:     timestampToString(i.CreatedAt),
-		UpdatedAt:     timestampToString(i.UpdatedAt),
-		Metadata:      parseIssueMetadata(i.Metadata),
+		ID:             uuidToString(i.ID),
+		WorkspaceID:    uuidToString(i.WorkspaceID),
+		Number:         i.Number,
+		Identifier:     identifier,
+		Title:          i.Title,
+		Description:    textToPtr(i.Description),
+		Status:         i.Status,
+		Priority:       i.Priority,
+		AssigneeType:   textToPtr(i.AssigneeType),
+		AssigneeID:     uuidToPtr(i.AssigneeID),
+		CreatorType:    i.CreatorType,
+		CreatorID:      uuidToString(i.CreatorID),
+		ParentIssueID:  uuidToPtr(i.ParentIssueID),
+		ProjectID:      uuidToPtr(i.ProjectID),
+		Position:       i.Position,
+		StartDate:      timestampToPtr(i.StartDate),
+		DueDate:        timestampToPtr(i.DueDate),
+		CreatedAt:      timestampToString(i.CreatedAt),
+		UpdatedAt:      timestampToString(i.UpdatedAt),
+		Metadata:       parseIssueMetadata(i.Metadata),
+		PreferredModel: textToPtr(i.PreferredModel),
 	}
 }
 
@@ -2020,7 +2022,8 @@ type UpdateIssueRequest struct {
 	// this issue so they surface in `GET /api/issues/:id/attachments` and the
 	// editor's preview Eye keeps working past a refresh. Existing bindings
 	// are idempotent — re-sending the same id is a no-op.
-	AttachmentIDs []string `json:"attachment_ids"`
+	AttachmentIDs  []string `json:"attachment_ids"`
+	PreferredModel *string  `json:"preferred_model"`
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
@@ -2180,6 +2183,10 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			writeError(w, status, msg)
 			return
 		}
+	}
+
+	if req.PreferredModel != nil {
+		params.PreferredModel = pgtype.Text{String: *req.PreferredModel, Valid: true}
 	}
 
 	attachmentIDs, ok := parseUUIDSliceOrBadRequest(w, req.AttachmentIDs, "attachment_ids")

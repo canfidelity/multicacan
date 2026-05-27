@@ -95,6 +95,7 @@ UPDATE issue SET
     due_date = sqlc.narg('due_date'),
     parent_issue_id = sqlc.narg('parent_issue_id'),
     project_id = sqlc.narg('project_id'),
+    preferred_model = COALESCE(sqlc.narg('preferred_model'), preferred_model),
     updated_at = now()
 WHERE id = $1
 RETURNING *;

@@ -33,6 +33,7 @@ UPDATE project SET
     mission = COALESCE(sqlc.narg('mission'), mission),
     mission_issue_id = COALESCE(sqlc.narg('mission_issue_id'), mission_issue_id),
     execution_status = COALESCE(sqlc.narg('execution_status'), execution_status),
+    model_pool = COALESCE(sqlc.narg('model_pool')::jsonb, model_pool),
     updated_at = now()
 WHERE id = $1
 RETURNING *;

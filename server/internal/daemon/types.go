@@ -84,6 +84,13 @@ type Task struct {
 	HandoffContext       string   `json:"handoff_context,omitempty"`
 	HandoffDepth         int32    `json:"handoff_depth,omitempty"`
 	PendingInterventions []string `json:"pending_interventions,omitempty"`
+	// PreferredModel overrides the agent's default model for this task.
+	// Set from issue.preferred_model when the task is created.
+	PreferredModel string `json:"preferred_model,omitempty"`
+	// ProjectModelPool is the list of models the project owner has configured.
+	// Injected into the leader briefing so the leader can pick the right model
+	// for each sub-task without needing explicit instructions.
+	ProjectModelPool json.RawMessage `json:"project_model_pool,omitempty"`
 }
 
 // ChatAttachmentMeta is the structured attachment metadata the daemon

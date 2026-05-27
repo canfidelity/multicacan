@@ -143,16 +143,27 @@ export function FileViewer({
             </Markdown>
           </div>
         ) : (
-          <Textarea
-            value={content}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={
-              isMd
-                ? t(($) => $.file_viewer.markdown_placeholder)
-                : t(($) => $.file_viewer.raw_placeholder)
-            }
-            className="h-full min-h-full resize-none rounded-none border-0 font-mono text-sm leading-relaxed focus-visible:ring-0"
-          />
+          <>
+            <Textarea
+              value={content}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={
+                isMd
+                  ? t(($) => $.file_viewer.markdown_placeholder)
+                  : t(($) => $.file_viewer.raw_placeholder)
+              }
+              className="h-full min-h-full resize-none rounded-none border-0 font-mono text-sm leading-relaxed focus-visible:ring-0"
+            />
+            {(() => {
+              const tokens = Math.ceil(content.length / 4);
+              if (tokens < 2000) return null;
+              return (
+                <div className={`flex items-center gap-1.5 border-t px-3 py-1.5 text-xs ${tokens >= 4000 ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning-foreground"}`}>
+                  <span>⚠ {t(($) => $.file_viewer.token_warning, { tokens: tokens.toLocaleString() })}</span>
+                </div>
+              );
+            })()}
+          </>
         )}
       </div>
     </div>

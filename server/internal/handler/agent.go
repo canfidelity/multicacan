@@ -209,9 +209,11 @@ type AgentTaskResponse struct {
 	// is empty.
 	RequestingUserName               string `json:"requesting_user_name,omitempty"`
 	RequestingUserProfileDescription string `json:"requesting_user_profile_description,omitempty"`
-	HandoffContext                   string `json:"handoff_context,omitempty"` // context passed from the previous agent via handoff
-	HandoffDepth                     int32  `json:"handoff_depth,omitempty"`   // handoff chain depth (0 = not a handoff)
-	Kind                             string `json:"kind"`                      // discriminator: "comment" | "autopilot" | "chat" | "quick_create" | "direct" | "handoff"
+	HandoffContext                   string          `json:"handoff_context,omitempty"` // context passed from the previous agent via handoff
+	HandoffDepth                     int32           `json:"handoff_depth,omitempty"`   // handoff chain depth (0 = not a handoff)
+	Kind                             string          `json:"kind"`                      // discriminator: "comment" | "autopilot" | "chat" | "quick_create" | "direct" | "handoff"
+	PreferredModel                   string          `json:"preferred_model,omitempty"` // model override for this task, sourced from issue.preferred_model
+	ProjectModelPool                 json.RawMessage `json:"project_model_pool,omitempty"` // models configured for the project, injected into leader briefing
 	// AuthToken is the task-scoped `mat_` token the daemon must inject as
 	// MULTICACAN_TOKEN in the agent process environment. The server binds it to
 	// this (agent_id, task_id) pair at claim time and treats any request
@@ -287,9 +289,10 @@ func taskToResponse(t db.AgentTaskQueue) AgentTaskResponse {
 		// with issue_id = "" once a task has no linked issue.
 		ChatSessionID:  uuidToString(t.ChatSessionID),
 		AutopilotRunID: uuidToString(t.AutopilotRunID),
-		HandoffContext: t.HandoffContext,
-		HandoffDepth:   t.HandoffDepth,
-		Kind:           computeTaskKind(t),
+		HandoffContext:  t.HandoffContext,
+		HandoffDepth:    t.HandoffDepth,
+		Kind:            computeTaskKind(t),
+		PreferredModel:  t.PreferredModel.String,
 	}
 }
 

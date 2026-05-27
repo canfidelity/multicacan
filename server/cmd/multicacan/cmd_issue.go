@@ -280,6 +280,7 @@ func init() {
 	issueCreateCmd.Flags().String("start-date", "", "Start date (RFC3339 format)")
 	issueCreateCmd.Flags().String("due-date", "", "Due date (RFC3339 format)")
 	issueCreateCmd.Flags().Bool("allow-duplicate", false, "Allow creating an issue even when an active duplicate exists")
+	issueCreateCmd.Flags().String("preferred-model", "", "Model to use for this issue's first task (e.g. claude-opus-4-7)")
 	issueCreateCmd.Flags().String("output", "json", "Output format: table or json")
 	issueCreateCmd.Flags().StringSlice("attachment", nil, "File path(s) to attach (can be specified multiple times)")
 
@@ -611,6 +612,9 @@ func runIssueCreate(cmd *cobra.Command, _ []string) error {
 	if hasAssignee {
 		body["assignee_type"] = aType
 		body["assignee_id"] = aID
+	}
+	if v, _ := cmd.Flags().GetString("preferred-model"); cmd.Flags().Changed("preferred-model") {
+		body["preferred_model"] = v
 	}
 
 	// Quick-create stamp: when the daemon sets MULTICACAN_QUICK_CREATE_TASK_ID

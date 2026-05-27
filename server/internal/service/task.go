@@ -426,10 +426,32 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 	if !preferredModel.Valid && issue.ProjectID.Valid {
 		if proj, err := s.Queries.GetProject(ctx, issue.ProjectID); err == nil && len(proj.ModelPool) > 0 {
 			var pool []struct {
-				Model string `json:"model"`
+				Model     string `json:"model"`
+				Tier      string `json:"tier"`
+				RuntimeID string `json:"runtime_id"`
 			}
-			if json.Unmarshal(proj.ModelPool, &pool) == nil && len(pool) > 0 && pool[0].Model != "" {
-				preferredModel = pgtype.Text{String: pool[0].Model, Valid: true}
+			if json.Unmarshal(proj.ModelPool, &pool) == nil && len(pool) > 0 {
+				// Resolve the agent's runtime provider so we only assign a model
+				// that the executing runtime actually understands.
+				runtimeProvider := ""
+				if rt, err := s.Queries.GetAgentRuntime(ctx, agent.RuntimeID); err == nil {
+					runtimeProvider = rt.Provider
+				}
+				for _, entry := range pool {
+					if entry.Model == "" {
+						continue
+					}
+					// If we know the provider, skip models that target a different one.
+					// A model is considered foreign when it contains a "provider/" prefix
+					// that doesn't match the runtime provider.
+					if runtimeProvider != "" {
+						if i := strings.Index(entry.Model, "/"); i > 0 && entry.Model[:i] != runtimeProvider {
+							continue
+						}
+					}
+					preferredModel = pgtype.Text{String: entry.Model, Valid: true}
+					break
+				}
 			}
 		}
 	}

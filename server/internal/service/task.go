@@ -422,6 +422,18 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
 	}
 
+	preferredModel := issue.PreferredModel
+	if !preferredModel.Valid && issue.ProjectID.Valid {
+		if proj, err := s.Queries.GetProject(ctx, issue.ProjectID); err == nil && len(proj.ModelPool) > 0 {
+			var pool []struct {
+				Model string `json:"model"`
+			}
+			if json.Unmarshal(proj.ModelPool, &pool) == nil && len(pool) > 0 && pool[0].Model != "" {
+				preferredModel = pgtype.Text{String: pool[0].Model, Valid: true}
+			}
+		}
+	}
+
 	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 		AgentID:           issue.AssigneeID,
 		RuntimeID:         agent.RuntimeID,
@@ -430,7 +442,7 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 		TriggerCommentID:  triggerCommentID,
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		PreferredModel:    issue.PreferredModel,
+		PreferredModel:    preferredModel,
 	})
 	if err != nil {
 		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", err)

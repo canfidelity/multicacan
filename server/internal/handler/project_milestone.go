@@ -259,13 +259,12 @@ func (h *Handler) SetProjectExecution(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Trigger squad leader on mission issue when starting
-	if req.Status == "running" && updated.MissionIssueID.Valid {
-		if missionIssue, err := h.Queries.GetIssue(r.Context(), updated.MissionIssueID); err == nil {
-			if missionIssue.AssigneeType.String == "squad" && missionIssue.AssigneeID.Valid {
-				h.enqueueSquadLeaderTask(r.Context(), missionIssue, pgtype.UUID{}, "member", "")
-			}
-		}
+	// Trigger squad leader on the next pending issue when starting/resuming.
+	// Use triggerProjectLeaderContinuation so it finds the first backlog/todo
+	// issue regardless of how each issue is assigned (agent or squad).
+	if req.Status == "running" {
+		dummyIssue := db.Issue{ProjectID: pgtype.UUID{Bytes: projectUUID.Bytes, Valid: true}}
+		go h.triggerProjectLeaderContinuation(context.Background(), dummyIssue)
 	}
 
 	resp := projectToResponse(updated)

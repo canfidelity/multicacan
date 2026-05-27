@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
+	"github.com/canfidelity/multicacan/server/internal/service"
 	"github.com/canfidelity/multicacan/server/internal/util"
 )
 
@@ -349,6 +350,14 @@ func (h *Handler) triggerSquadLeaderOnTaskComplete(ctx context.Context, task db.
 	}
 
 	if task.IsLeaderTask {
+		// If the leader recorded no_action it means there was nothing to do on
+		// this issue. Driving the project loop forward would just re-trigger the
+		// leader on another idle issue and create an infinite no-action bounce.
+		// Only continue when the leader actually did work.
+		noAction, _ := service.HasSquadLeaderNoActionEvaluationForTask(ctx, h.Queries, task)
+		if noAction {
+			return
+		}
 		h.triggerProjectLeaderContinuation(ctx, issue)
 		return
 	}

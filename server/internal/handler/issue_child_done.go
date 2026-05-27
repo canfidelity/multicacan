@@ -338,7 +338,7 @@ func (h *Handler) triggerChildDoneSquad(ctx context.Context, parent, child db.Is
 			"leader_id", uuidToString(squad.LeaderID))
 		// Fallback: trigger via the project squad mechanism which is
 		// runtime-agnostic and uses the most recent task's runtime.
-		go h.triggerProjectSquadLeaderForReview(ctx, parent)
+		go h.triggerProjectSquadLeaderForReview(context.Background(), parent)
 	}
 }
 

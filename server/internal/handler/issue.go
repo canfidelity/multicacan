@@ -2257,8 +2257,9 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// Trigger the assigned agent when a member moves an issue out of backlog.
 	// Backlog acts as a parking lot — moving to an active status signals the
 	// issue is ready for work.
-	if statusChanged && !assigneeChanged && actorType == "member" &&
-		prevIssue.Status == "backlog" && issue.Status != "done" && issue.Status != "cancelled" {
+	if statusChanged && !assigneeChanged &&
+		(prevIssue.Status == "backlog" || prevIssue.Status == "todo") &&
+		issue.Status != "done" && issue.Status != "cancelled" {
 		if h.isAgentAssigneeReady(r.Context(), issue) {
 			h.TaskService.EnqueueTaskForIssue(r.Context(), issue)
 		}

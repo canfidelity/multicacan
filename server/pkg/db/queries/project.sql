@@ -97,3 +97,13 @@ WHERE project_id = $1
   AND status IN ('todo', 'backlog')
 ORDER BY created_at ASC
 LIMIT 1;
+
+-- name: GetNextReviewIssueInProject :one
+-- Fallback for triggerProjectLeaderContinuation: when no backlog/todo issues remain,
+-- find an in_review issue that the leader may not have actioned yet.
+SELECT * FROM issue
+WHERE project_id = $1
+  AND id != $2
+  AND status = 'in_review'
+ORDER BY created_at ASC
+LIMIT 1;

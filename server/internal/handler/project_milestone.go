@@ -389,7 +389,15 @@ func (h *Handler) triggerProjectLeaderContinuation(ctx context.Context, issue db
 		ID:        issue.ID,
 	})
 	if err != nil {
-		return
+		// No backlog/todo issues left — fall back to in_review so the leader
+		// can still act on work that completed but wasn't moved forward.
+		next, err = h.Queries.GetNextReviewIssueInProject(ctx, db.GetNextReviewIssueInProjectParams{
+			ProjectID: issue.ProjectID,
+			ID:        issue.ID,
+		})
+		if err != nil {
+			return
+		}
 	}
 	hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
 		IssueID: next.ID,

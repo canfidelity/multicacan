@@ -1876,11 +1876,9 @@ func (s *TaskService) broadcastIssueUpdated(issue db.Issue) {
 }
 
 // resolvePreferredModel returns the preferred model for a task. It uses
-// issue.PreferredModel when explicitly set, otherwise picks the first
-// compatible entry from the project model pool. Compatibility is determined
-// by matching the "provider/" prefix of the model ID against the runtime's
-// provider, so opencode-go/* models are never assigned to Claude runtimes
-// and vice versa.
+// issue.PreferredModel when explicitly set, otherwise picks the first pool
+// entry whose runtime_id matches the agent's runtime — the same runtime the
+// user picked when adding the model to the pool.
 func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue, runtimeID pgtype.UUID) pgtype.Text {
 	if issue.PreferredModel.Valid {
 		return issue.PreferredModel
@@ -1893,25 +1891,20 @@ func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue,
 		return pgtype.Text{}
 	}
 	var pool []struct {
-		Model string `json:"model"`
+		Model     string `json:"model"`
+		RuntimeID string `json:"runtime_id"`
 	}
 	if json.Unmarshal(proj.ModelPool, &pool) != nil || len(pool) == 0 {
 		return pgtype.Text{}
 	}
-	runtimeProvider := ""
-	if rt, err := s.Queries.GetAgentRuntime(ctx, runtimeID); err == nil {
-		runtimeProvider = rt.Provider
-	}
+	rtIDStr := util.UUIDToString(runtimeID)
 	for _, entry := range pool {
 		if entry.Model == "" {
 			continue
 		}
-		if runtimeProvider != "" {
-			if i := strings.Index(entry.Model, "/"); i > 0 && entry.Model[:i] != runtimeProvider {
-				continue
-			}
+		if entry.RuntimeID == rtIDStr {
+			return pgtype.Text{String: entry.Model, Valid: true}
 		}
-		return pgtype.Text{String: entry.Model, Valid: true}
 	}
 	return pgtype.Text{}
 }

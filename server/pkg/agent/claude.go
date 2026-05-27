@@ -52,10 +52,27 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		mcpFileCleanup = func() { os.Remove(mcpConfigPath) }
 		args = append(args, "--mcp-config", mcpConfigPath)
 	}
-	// Clean up the temp file if we return before the goroutine takes ownership.
+
+	// Enable automatic context compaction so Claude summarises the conversation
+	// when the context window reaches ~95% capacity. This keeps cache_read tokens
+	// from ballooning on long tasks without sacrificing output quality.
+	// We write a minimal settings file rather than relying on the user's global
+	// Claude settings, since daemon tasks run in isolated environments.
+	var settingsCleanup func()
+	if settingsPath, err := writeClaudeSettingsToTemp(map[string]any{"autoCompact": true}); err == nil {
+		settingsCleanup = func() { os.Remove(settingsPath) }
+		args = append(args, "--settings", settingsPath)
+	} else {
+		b.cfg.Logger.Warn("claude: could not write auto-compact settings file, continuing without it", "error", err)
+	}
+
+	// Clean up the temp files if we return before the goroutine takes ownership.
 	defer func() {
 		if mcpFileCleanup != nil {
 			mcpFileCleanup()
+		}
+		if settingsCleanup != nil {
+			settingsCleanup()
 		}
 	}()
 
@@ -115,6 +132,8 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 	// cmd.Start() succeeded — transfer temp file ownership to the goroutine.
 	mcpFileCleanup = nil
+	capturedSettingsCleanup := settingsCleanup
+	settingsCleanup = nil
 
 	msgCh := make(chan Message, 256)
 	resCh := make(chan Result, 1)
@@ -125,6 +144,9 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		defer close(resCh)
 		if mcpConfigPath != "" {
 			defer os.Remove(mcpConfigPath)
+		}
+		if capturedSettingsCleanup != nil {
+			defer capturedSettingsCleanup()
 		}
 
 		startTime := time.Now()
@@ -649,6 +671,29 @@ func writeMcpConfigToTemp(raw json.RawMessage) (string, error) {
 	if err := f.Close(); err != nil {
 		os.Remove(f.Name())
 		return "", fmt.Errorf("close mcp config temp file: %w", err)
+	}
+	return f.Name(), nil
+}
+
+// writeClaudeSettingsToTemp serialises settings to a temp JSON file and returns
+// its path. The caller is responsible for removing the file when done.
+func writeClaudeSettingsToTemp(settings map[string]any) (string, error) {
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return "", fmt.Errorf("marshal claude settings: %w", err)
+	}
+	f, err := os.CreateTemp("", "multicacan-claude-settings-*.json")
+	if err != nil {
+		return "", fmt.Errorf("create claude settings temp file: %w", err)
+	}
+	if _, err := f.Write(raw); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return "", fmt.Errorf("write claude settings temp file: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(f.Name())
+		return "", fmt.Errorf("close claude settings temp file: %w", err)
 	}
 	return f.Name(), nil
 }

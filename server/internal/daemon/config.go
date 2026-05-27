@@ -79,6 +79,7 @@ type Config struct {
 	AgentTimeout                   time.Duration
 	CodexSemanticInactivityTimeout time.Duration
 	AgentIdleWatchdog              time.Duration // force-stop a run when the backend goes silent this long with an empty queue (0 = disabled)
+	AgentMaxTurns                  int           // cap Claude's --max-turns (0 = no limit; default 50)
 	ClaudeArgs                     []string
 	CodexArgs                      []string
 }

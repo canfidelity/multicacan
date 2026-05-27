@@ -1875,10 +1875,13 @@ func (s *TaskService) broadcastIssueUpdated(issue db.Issue) {
 	})
 }
 
-// resolvePreferredModel returns the preferred model for a task. It uses
-// issue.PreferredModel when explicitly set, otherwise picks the first pool
-// entry whose runtime_id matches the agent's runtime — the same runtime the
-// user picked when adding the model to the pool.
+// resolvePreferredModel returns the preferred model for a task. If
+// issue.PreferredModel is explicitly set (e.g. by a squad leader via CLI),
+// that wins. Otherwise the project model pool is consulted: all entries
+// whose runtime_id matches the agent's runtime are collected, then the
+// best tier match is selected in order medium → simple → complex → any.
+// This ensures routine tasks use a cost-appropriate model rather than
+// always defaulting to the most powerful one.
 func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue, runtimeID pgtype.UUID) pgtype.Text {
 	if issue.PreferredModel.Valid {
 		return issue.PreferredModel
@@ -1892,21 +1895,39 @@ func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue,
 	}
 	var pool []struct {
 		Model     string `json:"model"`
+		Tier      string `json:"tier"`
 		RuntimeID string `json:"runtime_id"`
 	}
 	if json.Unmarshal(proj.ModelPool, &pool) != nil || len(pool) == 0 {
 		return pgtype.Text{}
 	}
 	rtIDStr := util.UUIDToString(runtimeID)
+
+	// Collect all entries that belong to this runtime.
+	byTier := map[string]string{} // tier → model
+	var firstAny string
 	for _, entry := range pool {
-		if entry.Model == "" {
+		if entry.Model == "" || entry.RuntimeID != rtIDStr {
 			continue
 		}
-		if entry.RuntimeID == rtIDStr {
-			return pgtype.Text{String: entry.Model, Valid: true}
+		if firstAny == "" {
+			firstAny = entry.Model
+		}
+		if _, seen := byTier[entry.Tier]; !seen {
+			byTier[entry.Tier] = entry.Model
 		}
 	}
-	return pgtype.Text{}
+	if len(byTier) == 0 && firstAny == "" {
+		return pgtype.Text{}
+	}
+	// Prefer medium as the default for auto-assigned tasks, then simple,
+	// then complex, then whatever is available.
+	for _, tier := range []string{"medium", "simple", "complex"} {
+		if m, ok := byTier[tier]; ok {
+			return pgtype.Text{String: m, Valid: true}
+		}
+	}
+	return pgtype.Text{String: firstAny, Valid: true}
 }
 
 func (s *TaskService) getIssuePrefix(workspaceID pgtype.UUID) string {

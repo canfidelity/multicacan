@@ -59,7 +59,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	// We write a minimal settings file rather than relying on the user's global
 	// Claude settings, since daemon tasks run in isolated environments.
 	var settingsCleanup func()
-	if settingsPath, err := writeClaudeSettingsToTemp(map[string]any{"autoCompact": true}); err == nil {
+	if settingsPath, err := writeClaudeSettingsToTemp(map[string]any{"autoCompactEnabled": true}); err == nil {
 		settingsCleanup = func() { os.Remove(settingsPath) }
 		args = append(args, "--settings", settingsPath)
 	} else {

@@ -1061,6 +1061,11 @@ func (h *Handler) advanceIssueToDone(ctx context.Context, issue db.Issue, worksp
 	// exists, parent not terminal), so calling it unconditionally is safe.
 	h.notifyParentOfChildDone(ctx, issue, updated)
 
+	// Advance the autonomous project loop: check milestone completion and
+	// trigger the squad leader to start the next piece of work.
+	go h.TriggerNextMilestone(context.Background(), issue.ID)
+	go h.triggerProjectLeaderContinuation(context.Background(), updated)
+
 	prefix := h.getIssuePrefix(ctx, issue.WorkspaceID)
 	resp := issueToResponse(updated, prefix)
 	h.publish(protocol.EventIssueUpdated, workspaceID, "system", "", map[string]any{

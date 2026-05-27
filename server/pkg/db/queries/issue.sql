@@ -303,3 +303,12 @@ UPDATE issue
 SET first_executed_at = now()
 WHERE id = $1 AND first_executed_at IS NULL
 RETURNING id, workspace_id, creator_type, creator_id, first_executed_at;
+
+-- name: GetIssueByPRNumberMetadata :one
+-- Finds an issue whose metadata stores a matching pr_number, used to
+-- auto-advance the issue to done when a GitHub PR merge event arrives.
+SELECT * FROM issue
+WHERE workspace_id = $1
+  AND metadata->>'pr_number' = sqlc.arg(pr_number)::text
+  AND status NOT IN ('done', 'cancelled')
+LIMIT 1;

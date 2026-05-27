@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -542,6 +543,13 @@ func (h *Handler) HandleAutopilotWebhook(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// 10c. Platform-level GitHub PR merge hook: independent of autopilot dispatch.
+	// When a PR is merged, find the issue that stored this PR number in its
+	// metadata and advance it to done automatically — no agent instruction needed.
+	if provider == "github" {
+		go h.handleGitHubPRMergeFromWebhook(context.Background(), autopilot.WorkspaceID, envelope)
+	}
+
 	// 11. Dispatch synchronously. DispatchAutopilot publishes WS events,
 	//     persists trigger_payload on autopilot_run, runs the admission
 	//     check (offline runtime → skipped), and bumps last_run_at.
@@ -802,4 +810,40 @@ func addrInPrefixes(addr netip.Addr, prefixes []netip.Prefix) bool {
 		}
 	}
 	return false
+}
+
+// handleGitHubPRMergeFromWebhook is called for every GitHub webhook event that
+// arrives at an autopilot endpoint. When the event is a merged pull_request, it
+// looks for an issue that stored this PR number in its metadata and advances it
+// to done automatically — closing the loop without requiring agents to remember
+// to call `multicacan issue update`.
+func (h *Handler) handleGitHubPRMergeFromWebhook(ctx context.Context, workspaceID pgtype.UUID, env WebhookEnvelope) {
+	if env.Event != "github.pull_request.closed" {
+		return
+	}
+	var payload struct {
+		PullRequest struct {
+			Number int32 `json:"number"`
+			Merged bool  `json:"merged"`
+		} `json:"pull_request"`
+	}
+	if err := json.Unmarshal(env.EventPayload, &payload); err != nil {
+		return
+	}
+	if !payload.PullRequest.Merged {
+		return
+	}
+	prNumber := fmt.Sprintf("%d", payload.PullRequest.Number)
+	issue, err := h.Queries.GetIssueByPRNumberMetadata(ctx, db.GetIssueByPRNumberMetadataParams{
+		WorkspaceID: workspaceID,
+		PrNumber:    prNumber,
+	})
+	if err != nil {
+		return
+	}
+	slog.Info("github webhook: auto-advancing issue to done via PR merge",
+		"issue_id", uuidToString(issue.ID),
+		"pr_number", prNumber,
+	)
+	h.advanceIssueToDone(ctx, issue, uuidToString(workspaceID))
 }

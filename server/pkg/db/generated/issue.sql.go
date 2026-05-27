@@ -580,6 +580,53 @@ func (q *Queries) GetIssueByOrigin(ctx context.Context, arg GetIssueByOriginPara
 	return i, err
 }
 
+const getIssueByPRNumberMetadata = `-- name: GetIssueByPRNumberMetadata :one
+SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue
+WHERE workspace_id = $1
+  AND metadata->>'pr_number' = $2::text
+  AND status NOT IN ('done', 'cancelled')
+LIMIT 1
+`
+
+type GetIssueByPRNumberMetadataParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	PrNumber    string      `json:"pr_number"`
+}
+
+// Finds an issue whose metadata stores a matching pr_number, used to
+// auto-advance the issue to done when a GitHub PR merge event arrives.
+func (q *Queries) GetIssueByPRNumberMetadata(ctx context.Context, arg GetIssueByPRNumberMetadataParams) (Issue, error) {
+	row := q.db.QueryRow(ctx, getIssueByPRNumberMetadata, arg.WorkspaceID, arg.PrNumber)
+	var i Issue
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Title,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.AssigneeType,
+		&i.AssigneeID,
+		&i.CreatorType,
+		&i.CreatorID,
+		&i.ParentIssueID,
+		&i.AcceptanceCriteria,
+		&i.ContextRefs,
+		&i.Position,
+		&i.DueDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Number,
+		&i.ProjectID,
+		&i.OriginType,
+		&i.OriginID,
+		&i.FirstExecutedAt,
+		&i.StartDate,
+		&i.Metadata,
+	)
+	return i, err
+}
+
 const getIssueInWorkspace = `-- name: GetIssueInWorkspace :one
 SELECT id, workspace_id, title, description, status, priority, assignee_type, assignee_id, creator_type, creator_id, parent_issue_id, acceptance_criteria, context_refs, position, due_date, created_at, updated_at, number, project_id, origin_type, origin_id, first_executed_at, start_date, metadata FROM issue
 WHERE id = $1 AND workspace_id = $2

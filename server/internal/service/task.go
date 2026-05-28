@@ -422,17 +422,21 @@ func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, trig
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
 	}
 
-	preferredModel := s.resolvePreferredModel(ctx, issue, agent.RuntimeID)
+	poolRes := s.resolvePreferredModel(ctx, issue)
+	runtimeID := agent.RuntimeID
+	if poolRes.runtimeID.Valid {
+		runtimeID = poolRes.runtimeID
+	}
 
 	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 		AgentID:           issue.AssigneeID,
-		RuntimeID:         agent.RuntimeID,
+		RuntimeID:         runtimeID,
 		IssueID:           issue.ID,
 		Priority:          priorityToInt(issue.Priority),
 		TriggerCommentID:  triggerCommentID,
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		PreferredModel:    preferredModel,
+		PreferredModel:    poolRes.model,
 	})
 	if err != nil {
 		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", err)
@@ -488,18 +492,22 @@ func (s *TaskService) enqueueMentionTask(ctx context.Context, issue db.Issue, ag
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
 	}
 
-	preferredModel := s.resolvePreferredModel(ctx, issue, agent.RuntimeID)
+	poolRes := s.resolvePreferredModel(ctx, issue)
+	runtimeID := agent.RuntimeID
+	if poolRes.runtimeID.Valid {
+		runtimeID = poolRes.runtimeID
+	}
 
 	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 		AgentID:           agentID,
-		RuntimeID:         agent.RuntimeID,
+		RuntimeID:         runtimeID,
 		IssueID:           issue.ID,
 		Priority:          priorityToInt(issue.Priority),
 		TriggerCommentID:  triggerCommentID,
 		TriggerSummary:    s.buildCommentTriggerSummary(ctx, triggerCommentID),
 		IsLeaderTask:      pgtype.Bool{Bool: isLeader, Valid: isLeader},
 		ForceFreshSession: pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		PreferredModel:    preferredModel,
+		PreferredModel:    poolRes.model,
 	})
 	if err != nil {
 		slog.Error("mention task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "error", err)
@@ -1875,23 +1883,32 @@ func (s *TaskService) broadcastIssueUpdated(issue db.Issue) {
 	})
 }
 
-// resolvePreferredModel returns the preferred model for a task. If
-// issue.PreferredModel is explicitly set (e.g. by a squad leader via CLI),
-// that wins. Otherwise the project model pool is consulted: all entries
-// whose runtime_id matches the agent's runtime are collected, then the
-// best tier match is selected in order medium → simple → complex → any.
-// This ensures routine tasks use a cost-appropriate model rather than
-// always defaulting to the most powerful one.
-func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue, runtimeID pgtype.UUID) pgtype.Text {
+// poolResolution holds the model and its owning runtime selected from the
+// project model pool. runtimeID is zero-value when the model was set
+// explicitly on the issue (no pool lookup needed) — callers fall back to
+// the agent's own runtime in that case.
+type poolResolution struct {
+	model     pgtype.Text
+	runtimeID pgtype.UUID // zero when not resolved from pool
+}
+
+// resolvePreferredModel returns the preferred model and its runtime for a
+// task. If issue.PreferredModel is explicitly set (e.g. by a squad leader
+// via CLI), that model wins and runtimeID is left zero (caller uses the
+// agent's own runtime). Otherwise the project model pool is consulted: the
+// best tier match is selected in order medium → simple → complex → any, and
+// the pool entry's runtime_id is returned alongside the model so the task
+// is dispatched to the correct runtime.
+func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue) poolResolution {
 	if issue.PreferredModel.Valid {
-		return issue.PreferredModel
+		return poolResolution{model: issue.PreferredModel}
 	}
 	if !issue.ProjectID.Valid {
-		return pgtype.Text{}
+		return poolResolution{}
 	}
 	proj, err := s.Queries.GetProject(ctx, issue.ProjectID)
 	if err != nil || len(proj.ModelPool) == 0 {
-		return pgtype.Text{}
+		return poolResolution{}
 	}
 	var pool []struct {
 		Model     string `json:"model"`
@@ -1899,35 +1916,52 @@ func (s *TaskService) resolvePreferredModel(ctx context.Context, issue db.Issue,
 		RuntimeID string `json:"runtime_id"`
 	}
 	if json.Unmarshal(proj.ModelPool, &pool) != nil || len(pool) == 0 {
-		return pgtype.Text{}
+		return poolResolution{}
 	}
-	rtIDStr := util.UUIDToString(runtimeID)
 
-	// Collect all entries that belong to this runtime.
-	byTier := map[string]string{} // tier → model
-	var firstAny string
+	type candidate struct {
+		model     string
+		runtimeID string
+	}
+	// Collect best candidate per tier across the entire pool.
+	byTier := map[string]candidate{} // tier → candidate
+	var firstAny candidate
 	for _, entry := range pool {
-		if entry.Model == "" || entry.RuntimeID != rtIDStr {
+		if entry.Model == "" {
 			continue
 		}
-		if firstAny == "" {
-			firstAny = entry.Model
+		c := candidate{model: entry.Model, runtimeID: entry.RuntimeID}
+		if firstAny.model == "" {
+			firstAny = c
 		}
 		if _, seen := byTier[entry.Tier]; !seen {
-			byTier[entry.Tier] = entry.Model
+			byTier[entry.Tier] = c
 		}
 	}
-	if len(byTier) == 0 && firstAny == "" {
-		return pgtype.Text{}
+	if len(byTier) == 0 && firstAny.model == "" {
+		return poolResolution{}
 	}
 	// Prefer medium as the default for auto-assigned tasks, then simple,
 	// then complex, then whatever is available.
+	var chosen candidate
 	for _, tier := range []string{"medium", "simple", "complex"} {
-		if m, ok := byTier[tier]; ok {
-			return pgtype.Text{String: m, Valid: true}
+		if c, ok := byTier[tier]; ok {
+			chosen = c
+			break
 		}
 	}
-	return pgtype.Text{String: firstAny, Valid: true}
+	if chosen.model == "" {
+		chosen = firstAny
+	}
+	res := poolResolution{
+		model: pgtype.Text{String: chosen.model, Valid: true},
+	}
+	if chosen.runtimeID != "" {
+		if uid, err := util.ParseUUID(chosen.runtimeID); err == nil {
+			res.runtimeID = uid
+		}
+	}
+	return res
 }
 
 func (s *TaskService) getIssuePrefix(workspaceID pgtype.UUID) string {

@@ -3184,18 +3184,11 @@ func TestInjectRuntimeConfigAssignmentTriggerMentionsRecent(t *testing.T) {
 	}
 	s := string(data)
 
-	// Mandatory full-history rule (MUL-1124) must stay.
+	// Mandatory history rule: --recent 20 is now the default (MUL-1124).
 	for _, want := range []string{
-		"multicacan issue comment list issue-1 --output json",
+		"multicacan issue comment list issue-1 --recent 20 --output json",
 		"this is mandatory, not optional",
 		"Skipping this step is the most common cause",
-	} {
-		if !strings.Contains(s, want) {
-			t.Errorf("assignment Workflow regressed mandatory-history rule, missing %q\n---\n%s", want, s)
-		}
-	}
-	// AND --recent must be offered as the long-issue alternative.
-	for _, want := range []string{
 		"--recent 20 --output json",
 		"Next thread cursor:",
 	} {

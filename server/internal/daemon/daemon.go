@@ -3328,7 +3328,7 @@ func isClaudeModelAlias(model string) bool {
 	if model == "" {
 		return false
 	}
-	if strings.HasPrefix(model, "claude-") {
+	if strings.HasPrefix(model, "claude-") || strings.HasPrefix(model, "custom:") {
 		return true
 	}
 	// Bare or dot-version aliases: opus, sonnet, haiku, opus.4.7, sonnet.4.5 …

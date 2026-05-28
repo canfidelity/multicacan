@@ -42,3 +42,14 @@ WHERE workspace_id = $1
   AND details->>'to_type' IS NOT NULL
   AND details->>'to_id' IS NOT NULL
 GROUP BY details->>'to_type', details->>'to_id';
+
+-- name: HasProductiveActivitySince :one
+-- Returns true when a status change or issue creation (child issue) was
+-- recorded on this issue after the given timestamp. Used by the squad leader
+-- continuation guard to detect whether the leader actually did work.
+SELECT EXISTS (
+  SELECT 1 FROM activity_log
+  WHERE issue_id = @issue_id
+    AND created_at > @since
+    AND action IN ('status_changed', 'issue_created')
+) AS exists;

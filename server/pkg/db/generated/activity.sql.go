@@ -118,6 +118,30 @@ func (q *Queries) GetActivity(ctx context.Context, id pgtype.UUID) (ActivityLog,
 	return i, err
 }
 
+const hasProductiveActivitySince = `-- name: HasProductiveActivitySince :one
+SELECT EXISTS (
+  SELECT 1 FROM activity_log
+  WHERE issue_id = $1
+    AND created_at > $2
+    AND action IN ('status_changed', 'issue_created')
+) AS exists
+`
+
+type HasProductiveActivitySinceParams struct {
+	IssueID pgtype.UUID        `json:"issue_id"`
+	Since   pgtype.Timestamptz `json:"since"`
+}
+
+// Returns true when a status change or issue creation (child issue) was
+// recorded on this issue after the given timestamp. Used by the squad leader
+// continuation guard to detect whether the leader actually did work.
+func (q *Queries) HasProductiveActivitySince(ctx context.Context, arg HasProductiveActivitySinceParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasProductiveActivitySince, arg.IssueID, arg.Since)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const hasSquadLeaderNoActionEvaluationForTask = `-- name: HasSquadLeaderNoActionEvaluationForTask :one
 SELECT EXISTS (
   SELECT 1

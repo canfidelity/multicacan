@@ -331,24 +331,26 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 	}
 }
 
-// leaderDidWork returns true when the leader created at least one child issue
-// during the task's execution window. This is the server-side signal that the
-// leader actually planned something — as opposed to running briefly and exiting
-// without touching the issue, which produces the idle ping-pong loop.
+// leaderDidWork returns true when the leader made productive progress during
+// the task's execution window. Productive = at least one of:
+//   - a child issue was created (leader planned sub-tasks)
+//   - the issue status changed (leader advanced or blocked the issue)
+//
+// If neither happened, the leader ran and exited without doing anything —
+// triggering the next issue would just create the same idle ping-pong.
 func leaderDidWork(ctx context.Context, q *db.Queries, task db.AgentTaskQueue) bool {
 	if !task.StartedAt.Valid {
 		return false
 	}
-	children, err := q.ListChildIssues(ctx, task.IssueID)
+	since := pgtype.Timestamptz{Time: task.StartedAt.Time, Valid: true}
+	productive, err := q.HasProductiveActivitySince(ctx, db.HasProductiveActivitySinceParams{
+		IssueID: task.IssueID,
+		Since:   since,
+	})
 	if err != nil {
 		return false
 	}
-	for _, c := range children {
-		if c.CreatedAt.Valid && c.CreatedAt.Time.After(task.StartedAt.Time) {
-			return true
-		}
-	}
-	return false
+	return productive
 }
 
 // triggerSquadLeaderOnTaskComplete is called when any agent task completes.

@@ -431,7 +431,10 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			b.WriteString("5. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
 		}
 		if ctx.IsSquadLeader {
-			fmt.Fprintf(&b, "6. **Post your final results as a comment** (unless your outcome is `no_action` — in that case, calling `multicacan squad activity %s no_action --reason \"...\"` alone is sufficient; you MUST exit without posting any comment. DO NOT post a comment announcing no_action or saying you are exiting silently): `multicacan issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID, ctx.IssueID)
+			fmt.Fprintf(&b, "6. **Decide your outcome, then act exactly once:**\n"+
+				"   - **You created sub-tasks or changed status** → post a summary comment: `multicacan issue comment add %s --content \"...\"`\n"+
+				"   - **Nothing to do** (no new human input, no sub-tasks to create, nothing blocked) → run `multicacan squad activity %s no_action --reason \"<one sentence why>\"` and exit immediately. DO NOT post any comment. DO NOT say you are exiting. Just call no_action and stop.\n"+
+				"   Skipping no_action when there is nothing to do causes the platform to re-queue you on the same issue endlessly, wasting compute. Calling no_action is not optional.\n", ctx.IssueID, ctx.IssueID)
 		} else {
 			fmt.Fprintf(&b, "6. **Post your final results as a comment — this step is mandatory**: `multicacan issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID)
 		}

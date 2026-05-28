@@ -397,15 +397,10 @@ func (h *Handler) triggerProjectLeaderContinuation(ctx context.Context, issue db
 		ID:        issue.ID,
 	})
 	if err != nil {
-		// No backlog/todo issues left — fall back to in_review so the leader
-		// can still act on work that completed but wasn't moved forward.
-		next, err = h.Queries.GetNextReviewIssueInProject(ctx, db.GetNextReviewIssueInProjectParams{
-			ProjectID: issue.ProjectID,
-			ID:        issue.ID,
-		})
-		if err != nil {
-			return
-		}
+		// No backlog/todo issues — nothing for the leader to drive. Stop here.
+		// in_review issues are handled by the comment-trigger path when humans
+		// or agents post updates; a proactive loop here just creates ping-pong.
+		return
 	}
 	hasPending, err := h.Queries.HasPendingTaskForIssueAndAgent(ctx, db.HasPendingTaskForIssueAndAgentParams{
 		IssueID: next.ID,

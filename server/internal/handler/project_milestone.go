@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/canfidelity/multicacan/server/pkg/db/generated"
-	"github.com/canfidelity/multicacan/server/internal/service"
 	"github.com/canfidelity/multicacan/server/internal/util"
 )
 
@@ -332,6 +331,26 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 	}
 }
 
+// leaderDidWork returns true when the leader created at least one child issue
+// during the task's execution window. This is the server-side signal that the
+// leader actually planned something — as opposed to running briefly and exiting
+// without touching the issue, which produces the idle ping-pong loop.
+func leaderDidWork(ctx context.Context, q *db.Queries, task db.AgentTaskQueue) bool {
+	if !task.StartedAt.Valid {
+		return false
+	}
+	children, err := q.ListChildIssues(ctx, task.IssueID)
+	if err != nil {
+		return false
+	}
+	for _, c := range children {
+		if c.CreatedAt.Valid && c.CreatedAt.Time.After(task.StartedAt.Time) {
+			return true
+		}
+	}
+	return false
+}
+
 // triggerSquadLeaderOnTaskComplete is called when any agent task completes.
 //
 // For leader tasks: the leader just finished evaluating an issue. Drive the
@@ -350,12 +369,11 @@ func (h *Handler) triggerSquadLeaderOnTaskComplete(ctx context.Context, task db.
 	}
 
 	if task.IsLeaderTask {
-		// If the leader recorded no_action it means there was nothing to do on
-		// this issue. Driving the project loop forward would just re-trigger the
-		// leader on another idle issue and create an infinite no-action bounce.
-		// Only continue when the leader actually did work.
-		noAction, _ := service.HasSquadLeaderNoActionEvaluationForTask(ctx, h.Queries, task)
-		if noAction {
+		// Only continue the project loop when the leader actually did productive
+		// work during this task. Productive = created at least one child issue.
+		// If the leader ran and created nothing, it had nothing to do; jumping
+		// to the next issue would just create a ping-pong between idle issues.
+		if !leaderDidWork(ctx, h.Queries, task) {
 			return
 		}
 		h.triggerProjectLeaderContinuation(ctx, issue)

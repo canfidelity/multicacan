@@ -2003,6 +2003,11 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 
 	h.OutboundWebhookService.Deliver(issue.WorkspaceID, "issue.created", resp)
 
+	// Auto-start: if this issue belongs to an idle project, flip it to running.
+	if issue.ProjectID.Valid {
+		go h.autoStartProject(context.Background(), issue.ProjectID)
+	}
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 

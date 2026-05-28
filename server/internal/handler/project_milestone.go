@@ -119,6 +119,10 @@ func (h *Handler) CreateProjectMilestone(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusCreated, milestoneToResponse(m))
+
+	// Auto-start: if the project is idle, flip it to running and trigger the
+	// squad leader so it picks up the new milestone immediately.
+	go h.autoStartProject(context.Background(), projectUUID)
 }
 
 type UpdateMilestoneRequest struct {
@@ -329,6 +333,36 @@ func (h *Handler) TriggerNextMilestone(ctx context.Context, issueID pgtype.UUID)
 			"pending_milestones", pending,
 		)
 	}
+}
+
+// autoStartProject flips a project from idle → running and triggers the squad
+// leader. Called when a milestone is added or the first issue is created so
+// users don't need to manually press Start.
+func (h *Handler) autoStartProject(ctx context.Context, projectID pgtype.UUID) {
+	project, err := h.Queries.GetProject(ctx, pgtype.UUID{Bytes: projectID.Bytes, Valid: true})
+	if err != nil || project.ExecutionStatus != "idle" {
+		return
+	}
+	if _, err := h.Queries.SetProjectExecutionStatus(ctx, db.SetProjectExecutionStatusParams{
+		ID:              projectID,
+		ExecutionStatus: "running",
+	}); err != nil {
+		return
+	}
+	// Auto-set mission issue if not yet set.
+	if !project.MissionIssueID.Valid {
+		if firstIssue, err := h.Queries.GetFirstIssueInProject(ctx, projectID); err == nil {
+			if _, err := h.Queries.SetProjectMissionIssue(ctx, db.SetProjectMissionIssueParams{
+				ID:             projectID,
+				MissionIssueID: firstIssue.ID,
+			}); err == nil {
+				project.MissionIssueID = firstIssue.ID
+			}
+		}
+	}
+	dummyIssue := db.Issue{ProjectID: pgtype.UUID{Bytes: projectID.Bytes, Valid: true}}
+	h.triggerProjectLeaderContinuation(ctx, dummyIssue)
+	slog.Info("roadmap: auto-started project", "project_id", uuidToString(projectID))
 }
 
 // leaderDidWork returns true when the leader made productive progress during
